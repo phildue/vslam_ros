@@ -10,7 +10,10 @@ project(vslam_ros)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-    message_filters
+  message_filters
+  OpenCV
+  Eigen3
+        cv_bridge
 )
 
 ## System dependencies are found with CMake's conventions
@@ -123,9 +126,10 @@ include_directories(
 execute_process(COMMAND conan install ${CMAKE_CURRENT_LIST_DIR}/src/vslam/ --build=missing)
 add_subdirectory(src/vslam)
 
-add_executable(image_alignment_node src/image_alignment_node.cpp)
-target_link_libraries(image_alignment_node pd::vslam)
-target_link_libraries(image_alignment_node ${catkin_LIBRARIES})
+add_executable(stereo_alignment_node src/stereo_alignment_node.cpp)
+target_link_libraries(stereo_alignment_node pd::vslam)
+target_link_libraries(stereo_alignment_node ${catkin_LIBRARIES})
+target_link_libraries(stereo_alignment_node ${OpenCV_LIBRARIES})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/vslam_ros.cpp
