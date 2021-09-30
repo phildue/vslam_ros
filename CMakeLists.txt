@@ -130,6 +130,11 @@ add_executable(stereo_alignment_node src/stereo_alignment_node.cpp)
 target_link_libraries(stereo_alignment_node pd::vslam)
 target_link_libraries(stereo_alignment_node ${catkin_LIBRARIES})
 target_link_libraries(stereo_alignment_node ${OpenCV_LIBRARIES})
+
+add_executable(data_extractor_node src/data_extractor_node.cpp)
+target_link_libraries(data_extractor_node pd::vslam)
+target_link_libraries(data_extractor_node ${catkin_LIBRARIES})
+target_link_libraries(data_extractor_node ${OpenCV_LIBRARIES})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/vslam_ros.cpp

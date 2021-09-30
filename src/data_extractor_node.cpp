@@ -24,26 +24,18 @@
 
 
 
-class StereoAlignmentROS
+class DataExtractorROS
 {
 public:
-    StereoAlignmentROS(std::shared_ptr<ros::NodeHandle> n, const std::string& imageTopic, const std::string& depthMapTopic, const std::string& cameraTopic)
+    DataExtractorROS(std::shared_ptr<ros::NodeHandle> n, const std::string& imageTopic, const std::string& depthMapTopic, const std::string& cameraTopic)
     : image_sub(*n, imageTopic, 1)
     , depth_sub(*n, depthMapTopic,1)
     , sync(image_sub,depth_sub,10)
-    , camInfoSub(n->subscribe(cameraTopic,1,&StereoAlignmentROS::cameraCallback,this))
-    , config()
+    , camInfoSub(n->subscribe(cameraTopic,1,&DataExtractorROS::cameraCallback,this))
     , pub(n->advertise<nav_msgs::Odometry>("/odom", 10))
     , ready(false)
     , fNo(0)
     {
-        pd::vision::Log::init(3,3,3);
-
-        config.levelMax = 0;
-        config.levelMin = 0;
-        config.desiredFeatures = 200;
-        config.minGradient = 50;
-        config.patchSize = 7;
 
     }
     void imageCallback(sensor_msgs::ImageConstPtr msgImg, stereo_msgs::DisparityImageConstPtr msgDisp)
@@ -67,43 +59,32 @@ public:
         Eigen::MatrixXd depth = msgDisp->f * msgDisp->T /disp.array();
 
         const auto ts = msgImg->header.stamp.toNSec();
-        Sophus::SE3d result = alignment->align(img,depth,ts);
-        //pd::vision::StereoAlignment aligner(config);
-        //auto result = aligner.align(img,depth,ts);
-        nav_msgs::Odometry msgOut;
-        msgOut.header.stamp = msgImg->header.stamp;
-        const auto t = result.translation();
-        const auto q = result.unit_quaternion();
-        msgOut.pose.pose.position.x = t.x();
-        msgOut.pose.pose.position.y = t.y();
-        msgOut.pose.pose.position.z = t.z();
-        msgOut.pose.pose.orientation.w = q.w();
-        msgOut.pose.pose.orientation.x = q.x();
-        msgOut.pose.pose.orientation.y = q.y();
-        msgOut.pose.pose.orientation.z = q.z();
-        pub.publish(msgOut);
+        std::string path = "/home/phil/code/bot_ws/log/";
+        std::stringstream ss;
+
+        ss << path << std::to_string(ts);
+//        pd::vision::utils::saveImage(img,ss.str());
+//        pd::vision::utils::saveDepth(depth, ss.str());
         fNo++;
     }
 
     void cameraCallback(sensor_msgs::CameraInfoConstPtr msg)
     {
-        if ( ready )
-        {
-            return;
-        }
-        config.fx = msg->K[0*3 + 0];
-        config.fy = msg->K[1*3 + 1];
-        config.cx = msg->K[0*3 + 2];
-        config.cy = msg->K[1*3 + 2];
+        auto fx = msg->K[0*3 + 0];
+        auto fy = msg->K[1*3 + 1];
+        auto cx = msg->K[0*3 + 2];
+        auto cy = msg->K[1*3 + 2];
 
-        alignment = std::make_shared<pd::vision::StereoAlignment>(config);
-        sync.registerCallback(boost::bind(&StereoAlignmentROS::imageCallback, this,_1, _2));
-        ROS_INFO("Camera calibration received. Alignment initialized.");
+        ROS_INFO("%s", ("fx:" + std::to_string(fx)).c_str());
+        ROS_INFO("%s", ("fy:" + std::to_string(fy)).c_str());
+        ROS_INFO("%s", ("cx:" + std::to_string(cx)).c_str());
+        ROS_INFO("%s", ("cy:" + std::to_string(cy)).c_str());
+        ROS_INFO("fx : %f, fy: %f, cx: %f, cy: %f",fx,fy,cx,cy);
+
+        sync.registerCallback(boost::bind(&DataExtractorROS::imageCallback, this,_1, _2));
         ready = true;
     }
     bool ready;
-    pd::vision::StereoAlignment::Config config;
-    std::shared_ptr<pd::vision::StereoAlignment> alignment;
     ros::Publisher pub;
     ros::Subscriber camInfoSub;
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
@@ -115,7 +96,7 @@ public:
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "stereo_alignment");
+    ros::init(argc, argv, "data_extractor_node");
     auto n = std::make_shared<ros::NodeHandle> ("~");
     std::string cameraTopic,imageTopic,depthMapTopic;
     n->getParam("camera_info_topic",cameraTopic);
@@ -131,7 +112,7 @@ int main(int argc, char **argv)
     ros::topic::waitForMessage<sensor_msgs::Image>(imageTopic);
     ros::topic::waitForMessage<stereo_msgs::DisparityImage>(depthMapTopic);
 
-    StereoAlignmentROS stereoAlignmentRos(n,imageTopic,depthMapTopic,cameraTopic);
+    DataExtractorROS stereoAlignmentRos(n,imageTopic,depthMapTopic,cameraTopic);
 
     ros::Rate loop_rate(50);
     while (ros::ok())
