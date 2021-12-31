@@ -1,3 +1,0 @@
-[submodule "src/vslam"]
-	path = src/vslam
-	url = git@github.com:phildue/vslam.git

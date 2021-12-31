@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(vslam_ros2_test)
+project(vslam_ros_test)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -43,7 +43,7 @@ conan_cmake_install(PATH_OR_REFERENCE .
                     REMOTE conancenter
                     SETTINGS ${settings})
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
-find_package(vslam_ros2 REQUIRED)
+find_package(vslam_ros REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 
@@ -58,7 +58,7 @@ ament_target_dependencies(test_lukas_kanade_se3
             sensor_msgs 
             nav_msgs 
             stereo_msgs
-            vslam_ros2
+            vslam_ros
             rosbag2_cpp
             rosbag2
             OpenCV
