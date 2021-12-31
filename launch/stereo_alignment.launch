@@ -1,6 +1,0 @@
-<launch>
-
-<node type="stereo_alignment_node" pkg="vslam_ros" name="stereo_alignment">
-          <rosparam file="$(find vslam_ros)/cfg/stereo_alignment.yaml" command="load" />
-    </node>
-</launch>
