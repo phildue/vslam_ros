@@ -36,7 +36,7 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
         int _fNoStart = 0;
         int _nFrames;
         rcutils_time_point_value_t _tStart = 0;
-        
+        bool _visualize = false;
         LukasKanadeSE3Test(){
                 _reader = std::make_unique<rosbag2_cpp::readers::SequentialReader>();
                 rosbag2_storage::StorageOptions storageOptions;
@@ -79,7 +79,7 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
                 {
 
                         rosbag2_storage::SerializedBagMessageSharedPtr msg =  _reader->read_next();
-                        std::cout << fNo << "/" << _nFrames << " t: " << msg->time_stamp << " topic: " << msg->topic_name << std::endl;
+                        //std::cout << fNo << "/" << _nFrames << " t: " << msg->time_stamp << " topic: " << msg->topic_name << std::endl;
 
                         if(msg->topic_name == "/camera/rgb/image_color")
                         {
@@ -93,8 +93,12 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
                                 cv::Mat matGray;
                                 //cv::resize(cvImage->image,matGray,cv::Size(640,480));
                                 cv::cvtColor(cvImage->image,matGray,cv::COLOR_RGB2GRAY);
-                                cv::imshow("RGB",cvImage->image);
-                                cv::waitKey(10);
+                                if (_visualize)
+                                {
+                                        cv::imshow("RGB",cvImage->image);
+                                        cv::waitKey(10);
+                                }
+                                
                                 Image img;
                                 cv::cv2eigen(matGray,img);
                                 img = algorithm::resize(img,_scale);
@@ -134,12 +138,14 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
                                 auto cvImage = cv_bridge::toCvCopy(msgDes);
                                 Image depth;
                                 cv::cv2eigen(cvImage->image,depth);
-                                cv::imshow("Depth",cvImage->image);
-                                cv::waitKey(10);
-                               
                                 Eigen::MatrixXd depthd = depth.cast<double>();
                                 depthd = algorithm::resize(depthd,_scale);
-                                std::cout << depthd.minCoeff() << " --> " << depthd.maxCoeff() << std::endl;
+                                
+                                if (_visualize){
+                                        cv::imshow("Depth",cvImage->image);
+                                        cv::waitKey(10);
+                                        std::cout << depthd.minCoeff() << " --> " << depthd.maxCoeff() << std::endl;
+                                }
                                 
                                 _depths.push_back(depthd);
 
@@ -150,15 +156,44 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
 
         }
 
+        void computeErrorVector(const Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters>& x,  std::vector<double>& errTrans,  std::vector<double>& errAng)
+        {
+                const Eigen::VectorXd xNorm = x.rowwise().norm();
+               
+                for (int i = 0; i < x.rows(); i++)
+                {
+                        errTrans[i] = std::sqrt( std::pow(x(i,0),2) + std::pow(x(i,1),2) + std::pow(x(i,2),2) );
+                        errAng[i] = transforms::rad2deg(std::sqrt( std::pow(x(i,3),2) + std::pow(x(i,4),2) + std::pow(x(i,5),2) ));
 
+                }
+        }
+
+        void plot(const std::vector<double>& errTrans, const std::vector<double>& errAng, Eigen::VectorXd& chiSquared)
+        {
+                plt::figure(1);
+                std::vector<double> chi2v(chiSquared.data(), chiSquared.data() + chiSquared.rows() * chiSquared.cols());
+                plt::named_plot("Chi^2",chi2v);
+                plt::legend();
+             
+                plt::figure(2);
+                plt::named_plot("Translational Error [m]",errTrans);
+                plt::legend();
+                plt::figure(3);
+                plt::named_plot("Angular Error [°]",errAng);
+                plt::legend();
+                if(_visualize)
+                {
+                        plt::show();   
+                }
+        }
         
 };
 
-TEST_P(LukasKanadeSE3Test,LukasKanadeSE3)
+TEST_P(LukasKanadeSE3Test,DISABLED_LukasKanadeSE3ForwardAdditiveGN)
 {
         auto mat0 = vis::drawMat(_imgs[0]);
         auto mat1 = vis::drawMat(_imgs[0]);
-
+        
         Log::getImageLog("I")->append(mat0);
         Log::getImageLog("T")->append(mat1);
         Log::getImageLog("Image Warped")->_block = false;
@@ -181,41 +216,70 @@ TEST_P(LukasKanadeSE3Test,LukasKanadeSE3)
         x.setZero();
 
         gn->solve(lk,chiSquared,stepSize,x);
-        const Eigen::VectorXd xNorm = x.rowwise().norm();
-        plt::figure(1);
-        std::vector<double> chi2v(chiSquared.data(), chiSquared.data() + chiSquared.rows() * chiSquared.cols());
-        plt::named_plot("Chi^2",chi2v);
-        plt::legend();
+        
         std::vector<double> errTrans(gn->maxIterations()),errAng(gn->maxIterations());
-        for (int i = 0; i < gn->maxIterations(); i++)
-        {
-                errTrans[i] = std::sqrt( std::pow(x(i,0),2) + std::pow(x(i,1),2) + std::pow(x(i,2),2) );
-                errAng[i] = transforms::rad2deg(std::sqrt( std::pow(x(i,3),2) + std::pow(x(i,4),2) + std::pow(x(i,5),2) ));
 
-        }
+        computeErrorVector(x,errTrans,errAng);
+
         EXPECT_LE(errTrans[gn->maxIterations()-1], 0.1);
         EXPECT_LE(errAng[gn->maxIterations()-1], 1);
 
-        plt::figure(2);
-        plt::named_plot("Translational Error [m]",errTrans);
-        plt::legend();
-        plt::figure(3);
-        plt::named_plot("Angular Error [°]",errAng);
-        plt::legend();
-        plt::show();
+
+        plot(errTrans,errAng,chiSquared);
+        
+}
+
+TEST_P(LukasKanadeSE3Test,LukasKanadeSE3InverseCompositionalGN)
+{
+        auto mat0 = vis::drawMat(_imgs[0]);
+        auto mat1 = vis::drawMat(_imgs[0]);
+        Log::_blockLevel = Level::Unknown;
+        Log::_showLevel = Level::Unknown;
+        Log::getImageLog("I")->append(mat0);
+        Log::getImageLog("T")->append(mat1);
+        Log::getImageLog("Image Warped")->_block = false;
+
+        auto w = std::make_shared<WarpSE3>(_xInit,_depths[0],_camera);
+        auto gn = std::make_shared<GaussNewton<LukasKanadeInverseCompositional<WarpSE3>,TukeyLoss>> ( _imgs[0].rows()*_imgs[0].cols(),
+                        0.3,
+                        1e-3,
+                        150);
+        auto lk = std::make_shared<LukasKanadeInverseCompositional<WarpSE3>> (_imgs[0],_imgs[0],w);
+        
+        
+        //ASSERT_GT(w->x().norm(), 0.1);
+
+        Eigen::VectorXd chiSquared(gn->maxIterations());
+        chiSquared.setZero();
+        Eigen::VectorXd stepSize(gn->maxIterations());
+        stepSize.setZero();
+        Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters> x(gn->maxIterations(),WarpSE3::nParameters);
+        x.setZero();
+
+        gn->solve(lk,chiSquared,stepSize,x);
+
+        std::vector<double> errTrans(gn->maxIterations()),errAng(gn->maxIterations());
+
+        computeErrorVector(x,errTrans,errAng);
+
+        EXPECT_LE(errTrans[gn->maxIterations()-1], 0.1);
+        EXPECT_LE(errAng[gn->maxIterations()-1], 1);
+
+        plot(errTrans,errAng,chiSquared);
+
         
 }
 
 INSTANTIATE_TEST_CASE_P(Instantiation, LukasKanadeSE3Test, 
 testing::Values(
-        std::make_tuple(3,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",25,0.1,transforms::deg2rad(1)),
-        std::make_tuple(3,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",200,0.1,transforms::deg2rad(1))
-#if 0
+
         std::make_tuple(1,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",1,0.15,0.0),
         std::make_tuple(2,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",10,0.15,0.0),
         std::make_tuple(4,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",100,0.15,0.0),
-        std::make_tuple(5,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",150,0.15,0.0)
-#endif
+        std::make_tuple(5,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",150,0.15,0.0),
+        std::make_tuple(3,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",25,0.1,transforms::deg2rad(1)),
+        std::make_tuple(3,"/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3",200,0.1,transforms::deg2rad(1))
+
 
 ));
 /*
