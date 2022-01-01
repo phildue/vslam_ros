@@ -37,6 +37,8 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
         int _nFrames;
         rcutils_time_point_value_t _tStart = 0;
         bool _visualize = false;
+        std::vector<double> _errTrans,_errAng;
+
         LukasKanadeSE3Test(){
                 _reader = std::make_unique<rosbag2_cpp::readers::SequentialReader>();
                 rosbag2_storage::StorageOptions storageOptions;
@@ -156,14 +158,15 @@ class LukasKanadeSE3Test : public TestWithParam<std::tuple<int,const char*,int,d
 
         }
 
-        void computeErrorVector(const Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters>& x,  std::vector<double>& errTrans,  std::vector<double>& errAng)
+        void computeErrorVector(const Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters>& x)
         {
                 const Eigen::VectorXd xNorm = x.rowwise().norm();
-               
+                _errTrans.resize(x.rows());
+                _errAng.resize(x.rows());
                 for (int i = 0; i < x.rows(); i++)
                 {
-                        errTrans[i] = std::sqrt( std::pow(x(i,0),2) + std::pow(x(i,1),2) + std::pow(x(i,2),2) );
-                        errAng[i] = transforms::rad2deg(std::sqrt( std::pow(x(i,3),2) + std::pow(x(i,4),2) + std::pow(x(i,5),2) ));
+                        _errTrans[i] = std::sqrt( std::pow(x(i,0),2) + std::pow(x(i,1),2) + std::pow(x(i,2),2) );
+                        _errAng[i] = transforms::rad2deg(std::sqrt( std::pow(x(i,3),2) + std::pow(x(i,4),2) + std::pow(x(i,5),2) ));
 
                 }
         }
@@ -213,23 +216,21 @@ TEST_P(LukasKanadeSE3Test,DISABLED_LukasKanadeSE3ForwardAdditiveGN)
         Eigen::VectorXd stepSize(gn->maxIterations());
         stepSize.setZero();
         Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters> x(gn->maxIterations(),WarpSE3::nParameters);
-        x.setZero();
+        x.setConstant(100);
 
         gn->solve(lk,chiSquared,stepSize,x);
-        
-        std::vector<double> errTrans(gn->maxIterations()),errAng(gn->maxIterations());
 
-        computeErrorVector(x,errTrans,errAng);
+        computeErrorVector(x);
 
-        EXPECT_LE(errTrans[gn->maxIterations()-1], 0.1);
-        EXPECT_LE(errAng[gn->maxIterations()-1], 1);
+        EXPECT_LE(_errTrans[gn->maxIterations()-1], 0.1);
+        EXPECT_LE(_errAng[gn->maxIterations()-1], 1);
 
 
-        plot(errTrans,errAng,chiSquared);
+        plot(_errTrans,_errAng,chiSquared);
         
 }
 
-TEST_P(LukasKanadeSE3Test,LukasKanadeSE3InverseCompositionalGN)
+TEST_P(LukasKanadeSE3Test,DISABLED_LukasKanadeSE3InverseCompositionalGN)
 {
         auto mat0 = vis::drawMat(_imgs[0]);
         auto mat1 = vis::drawMat(_imgs[0]);
@@ -260,14 +261,55 @@ TEST_P(LukasKanadeSE3Test,LukasKanadeSE3InverseCompositionalGN)
 
         std::vector<double> errTrans(gn->maxIterations()),errAng(gn->maxIterations());
 
-        computeErrorVector(x,errTrans,errAng);
+        computeErrorVector(x);
 
-        EXPECT_LE(errTrans[gn->maxIterations()-1], 0.1);
-        EXPECT_LE(errAng[gn->maxIterations()-1], 1);
+        EXPECT_LE(_errTrans[gn->maxIterations()-1], 0.1);
+        EXPECT_LE(_errAng[gn->maxIterations()-1], 1);
 
-        plot(errTrans,errAng,chiSquared);
+        plot(_errTrans,_errAng,chiSquared);
+}
 
+TEST_P(LukasKanadeSE3Test,LukasKanadeSE3InverseCompositionalLM)
+{
+        auto mat0 = vis::drawMat(_imgs[0]);
+        auto mat1 = vis::drawMat(_imgs[0]);
+        Log::_blockLevel = Level::Unknown;
+        Log::_showLevel = Level::Unknown;
+        Log::getImageLog("I")->append(mat0);
+        Log::getImageLog("T")->append(mat1);
+        Log::getImageLog("Image Warped")->_block = false;
+
+        auto w = std::make_shared<WarpSE3>(_xInit,_depths[0],_camera);
+        auto solver = std::make_shared<LevenbergMarquardt<LukasKanadeInverseCompositional<WarpSE3>,TukeyLoss>> ( _imgs[0].rows()*_imgs[0].cols(),
+                        100,
+                        1e-3,
+                        1e-3);
+        auto lk = std::make_shared<LukasKanadeInverseCompositional<WarpSE3>> (_imgs[0],_imgs[0],w);
         
+        
+        //ASSERT_GT(w->x().norm(), 0.1);
+
+        Eigen::VectorXd chiSquared(solver->maxIterations());
+        chiSquared.setZero();
+        Eigen::VectorXd chi2pred(solver->maxIterations());
+        chi2pred.setZero();
+       
+        Eigen::VectorXd stepSize(solver->maxIterations());
+        stepSize.setZero();
+        Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters> x(solver->maxIterations(),WarpSE3::nParameters);
+        x.setZero();
+        Eigen::VectorXd lambda(solver->maxIterations());
+        lambda.setZero();
+        
+        solver->solve(lk,chiSquared,chi2pred,stepSize,lambda,x);
+
+
+        computeErrorVector(x);
+
+        EXPECT_LE(_errTrans[solver->maxIterations()-1], 0.1);
+        EXPECT_LE(_errAng[solver->maxIterations()-1], 1);
+
+        plot(_errTrans,_errAng,chiSquared);
 }
 
 INSTANTIATE_TEST_CASE_P(Instantiation, LukasKanadeSE3Test, 
