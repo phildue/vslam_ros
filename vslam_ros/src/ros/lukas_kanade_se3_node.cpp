@@ -90,7 +90,7 @@ class StereoAlignmentROS : public rclcpp::Node
             std::cout << depth.minCoeff() << " --> " << depth.maxCoeff() << std::endl;
 
             auto w = std::make_shared<WarpSE3>(Eigen::Vector6d::Zero(),depth,_camera);
-            auto gn = std::make_shared<GaussNewton<LukasKanadeSE3,TukeyLoss>> ( img.rows()*img.cols(),
+            auto gn = std::make_shared<GaussNewton<LukasKanadeSE3>> ( 
                             0.01,
                             1e-4,
                             10);
