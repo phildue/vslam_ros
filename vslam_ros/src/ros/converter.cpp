@@ -1,14 +1,14 @@
 
 #include "converters.h"
 namespace vslam_ros2{
-pd::vision::Camera convert(const sensor_msgs::msg::CameraInfo& msg)
+pd::vision::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo& msg)
 {
         const double fx = msg.k[0*3 + 0];
         const double fy = msg.k[1*3 + 1];
         const double cx = msg.k[0*3 + 2];
         const double cy = msg.k[1*3 + 2];
 
-        return pd::vision::Camera(fx,cx,cy);
+        return std::make_shared<pd::vision::Camera>(fx,fy,cx,cy);
 }
 
 geometry_msgs::msg::Pose convert(const Sophus::SE3d& se3)

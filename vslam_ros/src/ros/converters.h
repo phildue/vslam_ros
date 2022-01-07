@@ -8,7 +8,7 @@
 #include <sophus/se3.hpp>
 
 namespace vslam_ros2{
-pd::vision::Camera convert(const sensor_msgs::msg::CameraInfo& msg);
+pd::vision::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo& msg);
 geometry_msgs::msg::Pose convert(const Sophus::SE3d& se3);
 
 }

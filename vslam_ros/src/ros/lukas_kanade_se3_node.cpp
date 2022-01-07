@@ -18,7 +18,10 @@
 #include <opencv4/opencv2/opencv.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/core/eigen.hpp>
-#include "vslam_ros2/vslam_ros2.h"
+#include "vslam_ros/vslam_ros.h"
+
+using namespace pd::vision;
+
 class StereoAlignmentROS : public rclcpp::Node
 {
     public:
@@ -45,10 +48,19 @@ class StereoAlignmentROS : public rclcpp::Node
         _pubOdom = this->create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
         _pubPathVo = this->create_publisher<nav_msgs::msg::Path>("/path", 10);
         sync.registerCallback(std::bind(&StereoAlignmentROS::imageCallback, this,std::placeholders::_1, std::placeholders::_2));
-        sync.setMaxIntervalDuration(rclcpp::Duration(10000000));//nanoseconds
+        sync.setMaxIntervalDuration(rclcpp::Duration::from_nanoseconds(10000000));
         //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
         camInfoSub = this->create_subscription<sensor_msgs::msg::CameraInfo>("/camera/rgb/camera_info",1,std::bind(&StereoAlignmentROS::cameraCallback,this,std::placeholders::_1));
         RCLCPP_INFO(this->get_logger(),"Ready.");
+        Log::_blockLevel = Level::Unknown;
+        Log::_showLevel = Level::Info;
+        Log::getImageLog("Image Warped")->_block = false;
+        //Log::getPlotLog("SolverGN",Level::Debug)->_block = true;
+        Log::getPlotLog("SolverGN",Level::Debug)->_show = false;
+        Log::getPlotLog("ErrorDistribution",Level::Debug)->_show = false;
+        Log::getPlotLog("ErrorDistribution",Level::Debug)->_block = false;
+        
+        Log::getImageLog("Depth")->_block = false;
 
     }
     ~StereoAlignmentROS()
@@ -67,41 +79,58 @@ class StereoAlignmentROS : public rclcpp::Node
         cv::cvtColor(mat,mat,cv::COLOR_RGB2GRAY);
         Image img;
         cv::cv2eigen(mat,img);
-        img = pd::vision::algorithm::resize(img,_scale);
+        img = algorithm::resize(img,_scale);
+        auto cvDepth = cv_bridge::toCvCopy(*msgDepth);
+        cv::imshow("CvDepth",cvDepth->image);
+        cv::imshow("CvImg",cvImage->image);
+
+        Eigen::MatrixXd depth;
+        cv::cv2eigen(cvDepth->image,depth);
+        depth = depth.array().isNaN().select(0,depth);
+        depth = algorithm::resize(depth,_scale);
+        
 
         if (_fNo < 1 )
         {
             _lastImg = img;
-
+            _depth = depth;
         }else{
             RCLCPP_INFO(this->get_logger(),"Aligning %d to %d.",_fNo-1,_fNo);
-
-            auto cvDepth = cv_bridge::toCvCopy(*msgDepth);
-            cv::Mat matDepth = cvDepth->image;
-            Eigen::MatrixXd depth;
-            cv::cv2eigen(matDepth,depth);
-            depth = pd::vision::algorithm::resize(depth,_scale);
-            using namespace pd::vision;
-            auto mat1 = vis::drawMat(img);
-            auto mat3 = vis::drawAsImage(depth);
-
-            Log::getImageLog("T")->append(mat1);
-            Log::getImageLog("Depth")->append(mat3);
-            std::cout << depth.minCoeff() << " --> " << depth.maxCoeff() << std::endl;
+            Log::getImageLog("Image")->append(img);
+            Log::getImageLog("Template")->append(_lastImg);
+            Log::getImageLog("Depth")->append(depth);
 
             auto w = std::make_shared<WarpSE3>(Eigen::Vector6d::Zero(),depth,_camera);
-            auto gn = std::make_shared<GaussNewton<LukasKanadeSE3>> ( 
-                            0.01,
+            auto l = std::make_shared<HuberLoss>(10);
+            auto solver = std::make_shared<GaussNewton<LukasKanadeInverseCompositional<WarpSE3>>> ( 
+                            1.0,
                             1e-4,
-                            10);
-            auto lk = std::make_shared<LukasKanadeSE3> (_lastImg,img,w);
+                            20);
             
-            
-            //ASSERT_GT(w->x().norm(), 0.1);
+            for(int i = 4; i > 0; i--)
+            {
+                    const auto s = 1.0/(double)i;
+                    
+                    auto templScaled = algorithm::resize(_lastImg,s);
+                    auto imageScaled = algorithm::resize(img,s);
+                    auto wScaled = std::make_shared<WarpSE3>(w->x(),algorithm::resize(_depth,s),Camera::resize(_camera,s));
 
-            gn->solve(lk);
+                    auto lk = std::make_shared<LukasKanadeInverseCompositional<WarpSE3>> (
+                            templScaled,
+                            imageScaled,
+                            wScaled,l);
 
+                    solver->solve(lk);
+                    
+                    w->setX(wScaled->x());
+                
+            }
+
+            _lastImg = img;
+            _depth = depth;
             _pose = w->pose() * _pose;
+            auto x = _pose.log();
+            RCLCPP_INFO(this->get_logger(),"Pose: %.3f, %.3f, %.3f, %.3f, %.3f, %.3f",x(0),x(1),x(2),x(3),x(4),x(5));
 
             auto pose = vslam_ros2::convert(_pose);
             nav_msgs::msg::Odometry odom;
@@ -140,13 +169,13 @@ class StereoAlignmentROS : public rclcpp::Node
         {
             return;
         }
-        _camera = std::make_shared<pd::vision::Camera>(std::move(vslam_ros2::convert(*msg)));
+        _camera = vslam_ros2::convert(*msg);
 
         RCLCPP_INFO(this->get_logger(),"Camera calibration received. Alignment initialized.");
         ready = true;
     }
     bool ready;
-    const double _scale = 0.25;
+    const double _scale = 1.0;
     nav_msgs::msg::Path _pathImu,_pathVo;
     Sophus::SE3d _pose;
     Image _lastImg;
@@ -154,7 +183,7 @@ class StereoAlignmentROS : public rclcpp::Node
     int _fNo;
     std::string _cameraName;
     int _queueSize = 1000;
-
+    DepthMap _depth;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPathVo;
 

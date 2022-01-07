@@ -49,11 +49,11 @@ find_package(GTest CONFIG REQUIRED)
 
 find_package(vslam REQUIRED)
 
-add_executable(test_lukas_kanade_se3 src/test_lukas_kanade_se3.cpp)
-target_link_libraries(test_lukas_kanade_se3 pd::vslam)
-target_link_libraries(test_lukas_kanade_se3 GTest::gtest_main)
+add_executable(test_lukas_kanade_se3_synth src/test_lukas_kanade_se3_synth.cpp)
+target_link_libraries(test_lukas_kanade_se3_synth pd::vslam)
+target_link_libraries(test_lukas_kanade_se3_synth GTest::gtest_main)
 
-ament_target_dependencies(test_lukas_kanade_se3 
+ament_target_dependencies(test_lukas_kanade_se3_synth 
             std_msgs 
             sensor_msgs 
             nav_msgs 
@@ -64,14 +64,39 @@ ament_target_dependencies(test_lukas_kanade_se3
             OpenCV
             cv_bridge
             )
-            
+                     
 
 install(
-  TARGETS test_lukas_kanade_se3
+  TARGETS test_lukas_kanade_se3_synth
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+
+add_executable(test_lukas_kanade_se3_real src/test_lukas_kanade_se3_real.cpp)
+target_link_libraries(test_lukas_kanade_se3_real pd::vslam)
+target_link_libraries(test_lukas_kanade_se3_real GTest::gtest_main)
+
+ament_target_dependencies(test_lukas_kanade_se3_real
+            std_msgs 
+            sensor_msgs 
+            nav_msgs 
+            stereo_msgs
+            vslam_ros
+            rosbag2_cpp
+            rosbag2
+            OpenCV
+            cv_bridge
+            )
+                     
+
+install(
+  TARGETS test_lukas_kanade_se3_real
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

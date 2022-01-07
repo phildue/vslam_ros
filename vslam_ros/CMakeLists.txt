@@ -109,7 +109,11 @@ install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ros/
     )  
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
     DESTINATION include/
-    )  
+    ) 
+install(DIRECTORY
+    launch
+    DESTINATION share/${PROJECT_NAME}/
+  )
 install(
   TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION lib
