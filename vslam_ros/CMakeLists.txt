@@ -5,12 +5,11 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+
+
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -45,44 +44,30 @@ conan_cmake_install(PATH_OR_REFERENCE ${CMAKE_CURRENT_LIST_DIR}/src/vslam
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 
 add_subdirectory(src/vslam)
-add_library(${PROJECT_NAME} src/ros/converter.cpp)
+add_library(${PROJECT_NAME} SHARED
+    src/ros/converter.cpp 
+    src/ros/Queue.cpp
+    src/ros/nodes/LukasKanadeSE3Node.cpp
+)
 
 target_link_libraries(${PROJECT_NAME} pd::vslam)
 target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ros>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ros/>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}/>
     )
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:include/>
     )
-add_executable(stereo_vo_node src/ros/stereo_vo_node.cpp)
-add_executable(lukas_kanade_se3_node src/ros/lukas_kanade_se3_node.cpp)
 
-target_link_libraries(stereo_vo_node ${PROJECT_NAME})
-target_link_libraries(lukas_kanade_se3_node ${PROJECT_NAME})
+rclcpp_components_register_nodes(
+    ${PROJECT_NAME}
+    "vslam_ros::LukasKanadeSE3Node"
+)
 
-ament_target_dependencies(stereo_vo_node rclcpp
-                                         std_msgs 
-                                         sensor_msgs 
-                                         nav_msgs 
-                                         stereo_msgs
-                                         cv_bridge
-                                         message_filters
-                                         OpenCV
-                                         Eigen3
-                                         )
-ament_target_dependencies(lukas_kanade_se3_node rclcpp
-                                         std_msgs 
-                                         sensor_msgs 
-                                         nav_msgs 
-                                         stereo_msgs
-                                         cv_bridge
-                                         message_filters
-                                         OpenCV
-                                         Eigen3
-                                         )
-ament_target_dependencies(${PROJECT_NAME} rclcpp
+ament_target_dependencies(${PROJECT_NAME} 
+                                        rclcpp
+                                        rclcpp_components
                                          std_msgs 
                                          sensor_msgs 
                                          nav_msgs 
@@ -100,13 +85,8 @@ ament_export_dependencies(vslam)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ros/
     DESTINATION include/${PROJECT_NAME}
     FILES_MATCHING # install only matched files
-    PATTERN "*.h" # select header files
+    PATTERN "*.h*" # select header files
     )
-install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ros/
-    DESTINATION include/${PROJECT_NAME}
-    FILES_MATCHING # install only matched files
-    PATTERN "*.hpp" # select header files
-    )  
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
     DESTINATION include/
     ) 
@@ -121,18 +101,7 @@ install(
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
 )
-install(
-  TARGETS stereo_vo_node
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
-install(
-  TARGETS lukas_kanade_se3_node
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
+
 
 #TODO we should also install the conan lib files
     

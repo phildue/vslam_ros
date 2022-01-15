@@ -1,6 +1,6 @@
 
-#include "converters.h"
-namespace vslam_ros2{
+#include "vslam_ros/converters.h"
+namespace vslam_ros{
 pd::vision::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo& msg)
 {
         const double fx = msg.k[0*3 + 0];

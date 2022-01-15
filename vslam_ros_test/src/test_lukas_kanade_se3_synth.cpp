@@ -133,7 +133,7 @@ class LukasKanadeSE3Test : public TestWithParam<int>{
                                 rclcpp::Serialization<sensor_msgs::msg::CameraInfo> serialization;
                                 serialization.deserialize_message(&extracted_serialized_msg, &camInfo);
 
-                                _camera = vslam_ros2::convert(camInfo);
+                                _camera = vslam_ros::convert(camInfo);
                                 _camera->resize(_scale);
                         }
                      
