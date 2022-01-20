@@ -327,52 +327,6 @@ TEST_P(LukasKanadeSE3Test, LukasKanadeSE3InverseCompositionalGNMultiLevel)
        
 }
 
-TEST_P(LukasKanadeSE3Test,DISABLED_LukasKanadeSE3InverseCompositionalLM)
-{
-        auto mat0 = vis::drawMat(_imgs[0]);
-        auto mat1 = vis::drawMat(_imgs[0]);
-        Log::_blockLevel = Level::Unknown;
-        Log::_showLevel = Level::Debug;
-        Log::getImageLog("I")->append(mat0);
-        Log::getImageLog("T")->append(mat1);
-        Log::getImageLog("Image Warped")->_block = false;
-        //Log::getPlotLog("SolverLM",Level::Debug)->_block = true;
-        Log::getPlotLog("SolverLM",Level::Debug)->_show = true;
-
-        auto w = std::make_shared<WarpSE3>(_xInit,_depths[0],_camera);
-        auto solver = std::make_shared<LevenbergMarquardt<LukasKanadeInverseCompositional<WarpSE3>>> ( 
-                        200,
-                        1e-9,
-                        1e-9,
-                        1e-13,
-                        1e13);
-        auto lk = std::make_shared<LukasKanadeInverseCompositional<WarpSE3>> (_imgs[0],_imgs[0],w);
-        
-        
-        //ASSERT_GT(w->x().norm(), 0.1);
-
-        Eigen::VectorXd chiSquared(solver->maxIterations());
-        chiSquared.setZero();
-        Eigen::VectorXd chi2pred(solver->maxIterations());
-        chi2pred.setZero();
-       
-        Eigen::VectorXd stepSize(solver->maxIterations());
-        stepSize.setZero();
-        Eigen::Matrix<double, Eigen::Dynamic, WarpSE3::nParameters> x(solver->maxIterations(),WarpSE3::nParameters);
-        x.setConstant(100);
-        Eigen::VectorXd lambda(solver->maxIterations());
-        lambda.setZero();
-        
-        solver->solve(lk,chiSquared,chi2pred,stepSize,lambda,x);
-
-
-        computeErrorVector(x);
-
-        EXPECT_LE(_errTrans[solver->maxIterations()-1], 0.1);
-        EXPECT_LE(_errAng[solver->maxIterations()-1], 1);
-
-        plot();
-}
 
 INSTANTIATE_TEST_CASE_P(Instantiation, LukasKanadeSE3Test,testing::Range(1,700,15));
 /*

@@ -30,14 +30,14 @@ class LukasKanadeSE3Node : public rclcpp::Node
     LukasKanadeSE3Node(const rclcpp::NodeOptions& options);
     
     bool ready();
-    void processFrame(sensor_msgs::msg::Image::ConstPtr msgImg, sensor_msgs::msg::Image::ConstPtr msgDepth);
+    void processFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
-    void depthCallback(sensor_msgs::msg::Image::ConstPtr msgDepth);
+    void depthCallback(sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
-    void imageCallback(sensor_msgs::msg::Image::ConstPtr msgImg);
-    void dropCallback(sensor_msgs::msg::Image::ConstPtr msgImg, sensor_msgs::msg::Image::ConstPtr msgDepth);
+    void imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg);
+    void dropCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
-    void cameraCallback(sensor_msgs::msg::CameraInfo::ConstPtr msg);
+    void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
 
     private:
 
@@ -58,7 +58,7 @@ class LukasKanadeSE3Node : public rclcpp::Node
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _imageSub;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depthSub;
     const std::shared_ptr<vslam_ros::Queue> _queue;
-    
+    double _minGradient;
 };
 }
 

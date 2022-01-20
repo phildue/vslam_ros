@@ -12,6 +12,7 @@ namespace vslam_ros{
     , _camInfoReceived(false)
     , _fNo(0)
     , _queue(std::make_shared<vslam_ros::Queue>(1000,10000000))
+    , _minGradient(30)
     {
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
         RCLCPP_INFO(this->get_logger(),"Setting up for camera: %s ..",_cameraName.c_str());
@@ -25,7 +26,7 @@ namespace vslam_ros{
         //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
         
         Log::_blockLevel = Level::Unknown;
-        Log::_showLevel = Level::Info;
+        Log::_showLevel = Level::Unknown;
         Log::getImageLog("Image Warped")->_block = false;
         //Log::getPlotLog("SolverGN",Level::Debug)->_block = true;
         Log::getPlotLog("SolverGN",Level::Debug)->_show = false;
@@ -34,7 +35,7 @@ namespace vslam_ros{
         
         Log::getImageLog("Depth")->_block = false;
         LOG_IMAGE_DEBUG("Residual")->_show = false;
-        LOG_IMAGE_DEBUG("ImageWarped")->_show = true;
+        LOG_IMAGE_DEBUG("ImageWarped")->_show = false;
 
         RCLCPP_INFO(this->get_logger(),"Ready.");
 
@@ -43,17 +44,19 @@ namespace vslam_ros{
     bool LukasKanadeSE3Node::ready(){
         return _queue->size() >= 1;
     } 
-    void LukasKanadeSE3Node::processFrame(sensor_msgs::msg::Image::ConstPtr msgImg,sensor_msgs::msg::Image::ConstPtr msgDepth)
+    void LukasKanadeSE3Node::processFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg,sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
     {
+        TIMED_FUNC(timerF);
+
         try{
 
-            auto cvImage = cv_bridge::toCvCopy(*msgImg);
+            auto cvImage = cv_bridge::toCvShare(msgImg);
             cv::Mat mat = cvImage->image;
             cv::cvtColor(mat,mat,cv::COLOR_RGB2GRAY);
             Image img;
             cv::cv2eigen(mat,img);
             img = algorithm::resize(img,_scale);
-            auto cvDepth = cv_bridge::toCvCopy(*msgDepth);
+            auto cvDepth = cv_bridge::toCvShare(msgDepth);
 
             Eigen::MatrixXd depth;
             cv::cv2eigen(cvDepth->image,depth);
@@ -74,10 +77,12 @@ namespace vslam_ros{
                 auto solver = std::make_shared<GaussNewton<LukasKanadeInverseCompositional<WarpSE3>>> ( 
                                 1.0,
                                 1e-4,
-                                10);
+                                20);
                 
-                for(int i = 4; i > 1; i--)
+                for(int i = 4; i > 0; i--)
                 {
+                        TIMED_SCOPE(timerI,"align at level ( " + std::to_string(i) + " )");
+
                         const auto s = 1.0/(double)i;
                         
                         auto templScaled = algorithm::resize(_lastImg,s);
@@ -88,11 +93,11 @@ namespace vslam_ros{
                         auto lk = std::make_shared<LukasKanadeInverseCompositional<WarpSE3>> (
                                 templScaled,
                                 imageScaled,
-                                w,l);
+                                w,l,_minGradient);
 
                         solver->solve(lk);
                         
-                        dPose = w->pose();
+                        dPose = w->pose().inverse();
                     
                 }
                 _pose = dPose * _pose;
@@ -131,7 +136,7 @@ namespace vslam_ros{
 
     }
 
-    void LukasKanadeSE3Node::depthCallback(sensor_msgs::msg::Image::ConstPtr msgDepth)
+    void LukasKanadeSE3Node::depthCallback(sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
     {
         if ( _camInfoReceived )
         {
@@ -145,7 +150,7 @@ namespace vslam_ros{
         }
     }
 
-    void LukasKanadeSE3Node::imageCallback(sensor_msgs::msg::Image::ConstPtr msgImg)
+    void LukasKanadeSE3Node::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
     {
         if ( _camInfoReceived )
         {
@@ -153,7 +158,7 @@ namespace vslam_ros{
         }
       
     }
-    void LukasKanadeSE3Node::dropCallback(sensor_msgs::msg::Image::ConstPtr msgImg, sensor_msgs::msg::Image::ConstPtr msgDepth)
+    void LukasKanadeSE3Node::dropCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
     {
         RCLCPP_INFO(this->get_logger(), "Message dropped.");
         if(msgImg)
@@ -168,7 +173,7 @@ namespace vslam_ros{
         }
     }
 
-    void LukasKanadeSE3Node::cameraCallback(sensor_msgs::msg::CameraInfo::ConstPtr msg)
+    void LukasKanadeSE3Node::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg)
     {
         if ( _camInfoReceived )
         {

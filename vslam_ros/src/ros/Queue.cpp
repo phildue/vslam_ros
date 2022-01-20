@@ -7,7 +7,7 @@ namespace vslam_ros{
         { 
                 return std::min<int>(_images.size(),_depths.size());
         }
-        void Queue::pushImage(sensor_msgs::msg::Image::ConstPtr img)
+        void Queue::pushImage(sensor_msgs::msg::Image::ConstSharedPtr img)
         {
                 std::lock_guard<std::mutex> g(_mutex);
 
@@ -18,7 +18,7 @@ namespace vslam_ros{
 
                 _images[rclcpp::Time(img->header.stamp.sec,img->header.stamp.nanosec).nanoseconds()] = img;
         }
-        void Queue::pushDepth(sensor_msgs::msg::Image::ConstPtr depth)
+        void Queue::pushDepth(sensor_msgs::msg::Image::ConstSharedPtr depth)
         {
                 std::lock_guard<std::mutex> g(_mutex);
                 if (_depths.size() >= _queueSize)
@@ -29,7 +29,7 @@ namespace vslam_ros{
 
 
         }
-        sensor_msgs::msg::Image::ConstPtr Queue::popClosestImg(std::uint64_t t)
+        sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestImg(std::uint64_t t)
         {
                 std::lock_guard<std::mutex> g(_mutex);
                 if (_images.empty())
@@ -43,7 +43,7 @@ namespace vslam_ros{
                         return msg;
                 }else{
                         int minDiff = std::numeric_limits<int>::max();
-                        sensor_msgs::msg::Image::ConstPtr closestMsg = nullptr;
+                        sensor_msgs::msg::Image::ConstSharedPtr closestMsg = nullptr;
                         std::uint64_t closestT = 0U;
                         for (const auto& t_msg : _images)
                         {
@@ -65,7 +65,7 @@ namespace vslam_ros{
                 }
 
         }
-        sensor_msgs::msg::Image::ConstPtr Queue::popClosestDepth(std::uint64_t t)
+        sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestDepth(std::uint64_t t)
         {
                 std::lock_guard<std::mutex> g(_mutex);
                 if (_depths.empty())
@@ -79,7 +79,7 @@ namespace vslam_ros{
                         return msg;
                 }else{
                         int minDiff = std::numeric_limits<int>::max();
-                        sensor_msgs::msg::Image::ConstPtr closestMsg = nullptr;
+                        sensor_msgs::msg::Image::ConstSharedPtr closestMsg = nullptr;
                         std::uint64_t closestT = 0U;
                         for (const auto& t_msg : _depths)
                         {

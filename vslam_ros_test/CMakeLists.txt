@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_msgs REQUIRED)
 find_package(stereo_msgs REQUIRED)
 find_package(rosbag2_cpp REQUIRED)
 find_package(rosbag2 REQUIRED)
@@ -81,6 +83,8 @@ ament_target_dependencies(test_lukas_kanade_se3_real
             std_msgs 
             sensor_msgs 
             nav_msgs 
+            tf2
+            tf2_msgs
             stereo_msgs
             vslam_ros
             rosbag2_cpp

@@ -8,6 +8,7 @@
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <nav_msgs/msg/path.hpp>
+#include <tf2_msgs/msg/tf_message.hpp>
 #include <gtest/gtest.h>
 
 #include <Eigen/Dense>
@@ -34,6 +35,28 @@ class ImuNode : public rclcpp::Node
         void publish(const nav_msgs::msg::Path& path){_pubPath->publish(path);}
         rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPath;
 };
+
+class NodeImage : public rclcpp::Node
+{
+        public:
+        NodeImage()
+        :rclcpp::Node("NodeImage")
+        ,_pubPath(this->create_publisher<sensor_msgs::msg::Image>("/camera/rgb/image_color",10))
+        {}
+        void publish(const sensor_msgs::msg::Image& path){_pubPath->publish(path);}
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _pubPath;
+};
+
+class NodeTf : public rclcpp::Node
+{
+        public:
+        NodeTf()
+        :rclcpp::Node("TfListener")
+        ,_pubTf(this->create_publisher<tf2_msgs::msg::TFMessage>("/tf",10))
+        {}
+        void publish(const tf2_msgs::msg::TFMessage& tf){_pubTf->publish(tf);}
+        rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr _pubTf;
+};
 class LukasKanadeSE3Test : public testing::Test{
         public:
         std::unique_ptr<rosbag2_cpp::readers::SequentialReader> _reader;
@@ -47,6 +70,8 @@ class LukasKanadeSE3Test : public testing::Test{
         nav_msgs::msg::Path _pathImu;
         std::shared_ptr<vslam_ros::LukasKanadeSE3Node> _node;
         std::shared_ptr<ImuNode> _nodeImu;
+        std::shared_ptr<NodeTf> _nodeTf;
+        std::shared_ptr<NodeImage> _nodeImage;
 
         LukasKanadeSE3Test(){
                 _reader = std::make_unique<rosbag2_cpp::readers::SequentialReader>();
@@ -107,7 +132,7 @@ class LukasKanadeSE3Test : public testing::Test{
                         {
                                 pose0 = pose;
                         }
-                        pose = pose0.inverse() * pose;
+                        //pose = pose0.inverse() * pose;
 
                         std::vector<std::string> tElements;
                         std::string st;
@@ -116,7 +141,7 @@ class LukasKanadeSE3Test : public testing::Test{
                                 tElements.push_back(st);
                         }
                         geometry_msgs::msg::PoseStamped pStamped;
-                        pStamped.header.frame_id = "/openni_rgb_optical_frame";
+                        pStamped.header.frame_id = "/world";
                         pStamped.header.stamp.sec = std::stoull(tElements[0]);
                         pStamped.header.stamp.nanosec = std::stoull(tElements[1])*100000;
 
@@ -136,7 +161,7 @@ class LukasKanadeSE3Test : public testing::Test{
                 {
 
                         rosbag2_storage::SerializedBagMessageSharedPtr msg =  _reader->read_next();
-                        std::cout << fNo << "/" << _nFrames << " t: " << msg->time_stamp << " topic: " << msg->topic_name << std::endl;
+                        //std::cout << fNo << "/" << _nFrames << " t: " << msg->time_stamp << " topic: " << msg->topic_name << std::endl;
                      
                         if(msg->topic_name == "/camera/rgb/image_color")
                         {
@@ -145,6 +170,7 @@ class LukasKanadeSE3Test : public testing::Test{
                                 rclcpp::SerializedMessage extracted_serialized_msg(*msg->serialized_data);
                                 rclcpp::Serialization<sensor_msgs::msg::Image> serialization;
                                 serialization.deserialize_message(&extracted_serialized_msg, img.get());
+                                _nodeImage->publish(*img);
                         }
 
                         if (msg->topic_name == "/camera/rgb/camera_info")
@@ -172,6 +198,7 @@ class LukasKanadeSE3Test : public testing::Test{
                                 }
 
                         }
+
                         if(msg->topic_name == "/imu" && fNo > 1)
                         {
 
@@ -181,10 +208,21 @@ class LukasKanadeSE3Test : public testing::Test{
                                 serialization.deserialize_message(&extracted_serialized_msg, imu.get());
 
                                 _pathImu.header = imu->header;
-                                _pathImu.header.frame_id = "/openni_rgb_optical_frame";
+                                _pathImu.header.frame_id = "/world";
                      
 
                                 _nodeImu->publish(_pathImu);
+                        }
+                        if(msg->topic_name == "/tf" && fNo > 1)
+                        {
+
+                                auto tf = std::make_shared<tf2_msgs::msg::TFMessage>();
+                                rclcpp::SerializedMessage extracted_serialized_msg(*msg->serialized_data);
+                                rclcpp::Serialization<tf2_msgs::msg::TFMessage> serialization;
+                                serialization.deserialize_message(&extracted_serialized_msg, tf.get());
+
+
+                                _nodeTf->publish(*tf);
                         }
                         
                 } 
@@ -201,5 +239,7 @@ TEST_F(LukasKanadeSE3Test, LukasKanadeSE3InverseCompositionalGNMultiLevel)
         rclcpp::init(0, nullptr);
         _node = std::make_shared<vslam_ros::LukasKanadeSE3Node>(rclcpp::NodeOptions());
         _nodeImu = std::make_shared<ImuNode>();
+        _nodeTf = std::make_shared<NodeTf>();
+        _nodeImage = std::make_shared<NodeImage>();
         run();
 }
