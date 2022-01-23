@@ -26,4 +26,42 @@ geometry_msgs::msg::Pose convert(const Sophus::SE3d& se3)
         pose.orientation.z = q.z();
         return pose;
 }
+Sophus::SE3d convert(const geometry_msgs::msg::Pose& ros)
+{
+        return Sophus::SE3d(Eigen::Quaterniond(
+                ros.orientation.w,
+                ros.orientation.x,
+                ros.orientation.y,
+                ros.orientation.z),
+                Eigen::Vector3d(
+                        ros.position.x,
+                        ros.position.y,
+                        ros.position.z
+                ));
+}
+Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped& tf)
+{
+        return Sophus::SE3d(Eigen::Quaterniond(
+                tf.transform.rotation.w,
+                tf.transform.rotation.x,
+                tf.transform.rotation.y,
+                tf.transform.rotation.z),
+                Eigen::Vector3d(
+                        tf.transform.translation.x,
+                        tf.transform.translation.y,
+                        tf.transform.translation.z
+                ));
+}
+void convert(const Sophus::SE3d& sophus, geometry_msgs::msg::TransformStamped& tf)
+{
+        const auto t = sophus.translation();
+        const auto q = sophus.unit_quaternion();
+        tf.transform.translation.x = t.x();
+        tf.transform.translation.y = t.y();
+        tf.transform.translation.z = t.z();
+        tf.transform.rotation.w = q.w();
+        tf.transform.rotation.x = q.x();
+        tf.transform.rotation.y = q.y();
+        tf.transform.rotation.z = q.z();
+}
 }

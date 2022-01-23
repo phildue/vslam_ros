@@ -4,6 +4,12 @@
 #include <chrono>
 #include <memory>
 
+#include <Eigen/Dense>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv4/opencv2/opencv.hpp>
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/core/eigen.hpp>
+
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -13,21 +19,24 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <stereo_msgs/msg/disparity_image.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
-#include <Eigen/Dense>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv4/opencv2/opencv.hpp>
-#include <opencv4/opencv2/imgproc.hpp>
-#include <opencv4/opencv2/core/eigen.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 #include "vslam_ros/Queue.h"
 #include "vslam_ros/visibility_control.h"
 #include "vslam/vslam.h"
+
+
+
 namespace vslam_ros{
-class LukasKanadeSE3Node : public rclcpp::Node
+class RgbdAlignmentNode : public rclcpp::Node
 {
     public:
     COMPOSITION_PUBLIC
-    LukasKanadeSE3Node(const rclcpp::NodeOptions& options);
+    RgbdAlignmentNode(const rclcpp::NodeOptions& options);
     
     bool ready();
     void processFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
@@ -42,7 +51,6 @@ class LukasKanadeSE3Node : public rclcpp::Node
     private:
 
     bool _camInfoReceived;
-    const double _scale = 0.5;
     nav_msgs::msg::Path _pathImu,_pathVo;
     Sophus::SE3d _pose;
     pd::vision::Image _lastImg;
@@ -50,7 +58,10 @@ class LukasKanadeSE3Node : public rclcpp::Node
     rclcpp::Time _lastT;
     pd::vision::Camera::ShPtr _camera;
     int _fNo;
-    std::string _cameraName;
+    geometry_msgs::msg::TransformStamped _camera2base;
+    bool _tfAvailable;
+
+
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPathVo;
 
@@ -58,7 +69,17 @@ class LukasKanadeSE3Node : public rclcpp::Node
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _imageSub;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depthSub;
     const std::shared_ptr<vslam_ros::Queue> _queue;
+    pd::vision::RgbdOdometry::ShPtr _rgbdOdometry;
+    std::unique_ptr<tf2_ros::Buffer> _tfBuffer;
+    std::shared_ptr<tf2_ros::TransformListener> _tfListener;
+    std::shared_ptr<tf2_ros::TransformBroadcaster> _pubTf;
+
+    std::string _frameId;
+    std::string _baseLinkId;
     double _minGradient;
+    std::string _cameraName;
+    const double _scale = 0.5;
+
 };
 }
 
