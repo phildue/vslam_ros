@@ -10,6 +10,7 @@ namespace vslam_ros{
     RgbdAlignmentNode::RgbdAlignmentNode(const rclcpp::NodeOptions& options)
     : rclcpp::Node("RgbdAlignmentNode",options)
     , _camInfoReceived(false)
+    , _pose(std::make_shared<PoseWithCovariance>())
     , _fNo(0)
     , _queue(std::make_shared<vslam_ros::Queue>(1000,10000000))
     , _tfBuffer(std::make_unique<tf2_ros::Buffer>(this->get_clock()))
@@ -18,6 +19,7 @@ namespace vslam_ros{
     , _frameId("odom")
     , _baseLinkId("world")
     , _minGradient(30)
+
     {
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
         RCLCPP_INFO(this->get_logger(),"Setting up for camera: %s ..",_cameraName.c_str());
@@ -67,7 +69,9 @@ namespace vslam_ros{
             cv::cv2eigen(cvDepth->image,depth);
             depth = depth.array().isNaN().select(0,depth);
             depth = algorithm::resize(depth,_scale);
-
+            rclcpp::Time t(msgImg->header.stamp.sec,msgImg->header.stamp.nanosec);
+            long int dT = (t - _lastT).nanoseconds();
+            
             if (_fNo > 1 )
             {
                 RCLCPP_INFO(this->get_logger(),"Aligning %d to %d.",_fNo-1,_fNo);
@@ -75,10 +79,9 @@ namespace vslam_ros{
                 LOG_IMG("Image") << img;
                 LOG_IMG("Template") << _lastImg;
                 LOG_IMG("Depth") << _lastDepth;
-
-                Sophus::SE3d odometry = _rgbdOdometry->estimate(_lastImg,_lastDepth,img);
-                _pose = odometry * _pose;
-
+            
+                const PoseWithCovariance::UnPtr odomEst = _rgbdOdometry->estimate(_lastImg,_lastDepth,img, rclcpp::Time(msgImg->header.stamp.sec,msgImg->header.stamp.nanosec).seconds());
+                _pose = std::make_shared<PoseWithCovariance>(odomEst->pose() * _pose->pose(),odomEst->cov()); //TODO how to integrate covariance?
                 
                 if(!_tfAvailable)
                 {
@@ -86,29 +89,32 @@ namespace vslam_ros{
                             _camera2base = \
                             _tfBuffer->lookupTransform(_baseLinkId,msgImg->header.frame_id.substr(1),tf2::TimePointZero);
                             _tfAvailable = true;
+                            
                         }catch (tf2::TransformException &ex) {
                             RCLCPP_INFO(this->get_logger(),"%s",ex.what());
                         }
                 }
                 if(_tfAvailable)
                 {
-                    Sophus::SE3d poseBase = vslam_ros::convert(_camera2base) * _pose;
+                    PoseWithCovariance twistBase(vslam_ros::convert(_camera2base) * pd::vision::SE3d::exp(odomEst->mean()/dT),odomEst->cov()/dT);//TODO how to transform cov?
+                    PoseWithCovariance poseBase(vslam_ros::convert(_camera2base) * _pose->pose(),odomEst->cov());//TODO how to transform cov?
 
                     geometry_msgs::msg::TransformStamped tf;
                     tf.header.stamp = msgImg->header.stamp;
                     tf.header.frame_id = "world";
-                    tf.child_frame_id = _frameId;
-                    vslam_ros::convert(poseBase,tf);
-                    nav_msgs::msg::Odometry odom;
+                    tf.child_frame_id = msgImg->header.frame_id + "/est";
+                    vslam_ros::convert(poseBase.pose(),tf);
 
+                    nav_msgs::msg::Odometry odom;
                     odom.header = msgImg->header;
-                    odom.header.frame_id = "world";
-                    odom.pose.pose = vslam_ros::convert(poseBase);
+                    odom.header.frame_id = _baseLinkId;
+                    vslam_ros::convert(poseBase,odom.pose);
+                    vslam_ros::convert(twistBase,odom.twist);
 
                     geometry_msgs::msg::PoseStamped poseStamped;
                     poseStamped.header = odom.header;
 
-                    poseStamped.pose = odom.pose.pose;
+                    poseStamped.pose = vslam_ros::convert(poseBase.pose());
                     _pathVo.header = odom.header;
                     _pathVo.poses.push_back(poseStamped);
                             
@@ -116,12 +122,11 @@ namespace vslam_ros{
                     _pubPathVo->publish(_pathVo);
                     _pubTf->sendTransform(tf);
                 }
+
                  
             }
 
-            auto x = _pose.log();
-            rclcpp::Time t(msgImg->header.stamp.sec,msgImg->header.stamp.nanosec);
-            long int dT = (t - _lastT).nanoseconds();
+            auto x = _pose->pose().log();
             RCLCPP_INFO(this->get_logger(),"Dt: %ld Pose: %.3f, %.3f, %.3f, %.3f, %.3f, %.3f",dT,x(0),x(1),x(2),x(3),x(4),x(5));
                 
             _lastImg = img;

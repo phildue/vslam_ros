@@ -1,7 +1,9 @@
-//
+#include <iostream>
+#include <sstream>
+
 #include "rosbag2_cpp/readers/sequential_reader.hpp"
 #include "rosbag2_cpp/reader.hpp"
-#include <iostream>
+
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <stereo_msgs/msg/disparity_image.hpp>
@@ -57,6 +59,43 @@ class NodeTf : public rclcpp::Node
         void publish(const tf2_msgs::msg::TFMessage& tf){_pubTf->publish(tf);}
         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr _pubTf;
 };
+class NodeOdom : public rclcpp::Node
+{
+        public:
+        NodeOdom(const std::string& outputFile)
+        :rclcpp::Node("OdomListener")
+        ,_sub(this->create_subscription<nav_msgs::msg::Odometry>("/odom",10,std::bind(&NodeOdom::callback,this,std::placeholders::_1)))
+        , _outputFile(outputFile)
+        {
+                algoFile.open(_outputFile,std::ios_base::out);
+        }
+        void callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg){
+               
+                if(!algoFile.is_open())
+                {
+                        std::runtime_error("Could not open file at: " + _outputFile);
+                }
+
+                algoFile << msg->header.stamp.sec << "." << msg->header.stamp.nanosec << " "
+                << msg->pose.pose.position.x << " " << msg->pose.pose.position.y << " " << msg->pose.pose.position.z << " "
+                << msg->pose.pose.orientation.w << " " << msg->pose.pose.orientation.x << " " << msg->pose.pose.orientation.y << " " << msg->pose.pose.orientation.z;
+
+                for (int i = 0; i < 36; i++)
+                {
+                        algoFile << " " << msg->pose.covariance[i];
+                }
+                algoFile << std::endl;
+
+        }
+        ~NodeOdom(){
+                algoFile.close();
+
+        }
+        rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _sub;
+        std::string _outputFile;
+        std::fstream algoFile;
+
+};
 class LukasKanadeSE3Test : public testing::Test{
         public:
         std::unique_ptr<rosbag2_cpp::readers::SequentialReader> _reader;
@@ -65,13 +104,14 @@ class LukasKanadeSE3Test : public testing::Test{
         bool _visualize = true;
         int _idx = 0;
 
-        std::string _gtTrajectoryFile;
+        std::string _gtTrajectoryFile, _algoTrajectoryFile;
         std::map<std::string,Sophus::SE3d> _gtTrajectory;
         nav_msgs::msg::Path _pathImu;
-        std::shared_ptr<vslam_ros::LukasKanadeSE3Node> _node;
+        std::shared_ptr<vslam_ros::RgbdAlignmentNode> _node;
         std::shared_ptr<ImuNode> _nodeImu;
         std::shared_ptr<NodeTf> _nodeTf;
         std::shared_ptr<NodeImage> _nodeImage;
+        std::shared_ptr<NodeOdom> _nodeOdom;
 
         LukasKanadeSE3Test(){
                 _reader = std::make_unique<rosbag2_cpp::readers::SequentialReader>();
@@ -81,6 +121,8 @@ class LukasKanadeSE3Test : public testing::Test{
                 rosbag2_cpp::ConverterOptions converterOptions;
                 _reader->open(storageOptions,converterOptions);
                 _gtTrajectoryFile = "/media/data/dataset/rgbd_dataset_freiburg1_xyz/groundtruth.txt";
+                _algoTrajectoryFile = "/media/data/dataset/rgbd_dataset_freiburg1_xyz/algo.txt";
+
                 std::vector<rosbag2_storage::TopicMetadata> meta = _reader->get_all_topics_and_types();
                 //std::cout << "Found: " << _reader->get_metadata().topics_with_message_count.size() << " meta entries.";
               
@@ -151,7 +193,7 @@ class LukasKanadeSE3Test : public testing::Test{
 
                         
                 } 
-
+               
                 int fNo = 0;
                 std::shared_ptr<sensor_msgs::msg::CameraInfo> camInfo = nullptr;
                 std::shared_ptr<sensor_msgs::msg::Image> img = nullptr;
@@ -224,6 +266,7 @@ class LukasKanadeSE3Test : public testing::Test{
 
                                 _nodeTf->publish(*tf);
                         }
+                        rclcpp::spin_some(_nodeOdom);
                         
                 } 
 
@@ -237,9 +280,10 @@ class LukasKanadeSE3Test : public testing::Test{
 TEST_F(LukasKanadeSE3Test, LukasKanadeSE3InverseCompositionalGNMultiLevel)
 {
         rclcpp::init(0, nullptr);
-        _node = std::make_shared<vslam_ros::LukasKanadeSE3Node>(rclcpp::NodeOptions());
+        _node = std::make_shared<vslam_ros::RgbdAlignmentNode>(rclcpp::NodeOptions());
         _nodeImu = std::make_shared<ImuNode>();
         _nodeTf = std::make_shared<NodeTf>();
         _nodeImage = std::make_shared<NodeImage>();
+        _nodeOdom = std::make_shared<NodeOdom>(_algoTrajectoryFile);
         run();
 }

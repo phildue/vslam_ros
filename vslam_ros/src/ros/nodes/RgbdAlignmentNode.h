@@ -52,7 +52,7 @@ class RgbdAlignmentNode : public rclcpp::Node
 
     bool _camInfoReceived;
     nav_msgs::msg::Path _pathImu,_pathVo;
-    Sophus::SE3d _pose;
+    pd::vision::PoseWithCovariance::ShPtr _pose;
     pd::vision::Image _lastImg;
     pd::vision::DepthMap _lastDepth;
     rclcpp::Time _lastT;

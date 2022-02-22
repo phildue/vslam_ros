@@ -39,6 +39,17 @@ Sophus::SE3d convert(const geometry_msgs::msg::Pose& ros)
                         ros.position.z
                 ));
 }
+void convert(const Sophus::SE3d& se3, geometry_msgs::msg::Twist& twist)
+{
+        twist.angular.x = se3.rotationMatrix().eulerAngles(2,1,0).x();
+        twist.angular.y = se3.rotationMatrix().eulerAngles(2,1,0).y();
+        twist.angular.z = se3.rotationMatrix().eulerAngles(2,1,0).z();
+
+        twist.linear.x = se3.log().head(3).x();
+        twist.linear.y = se3.log().head(3).y();
+        twist.linear.z = se3.log().head(3).z();
+
+}
 Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped& tf)
 {
         return Sophus::SE3d(Eigen::Quaterniond(
@@ -63,5 +74,30 @@ void convert(const Sophus::SE3d& sophus, geometry_msgs::msg::TransformStamped& t
         tf.transform.rotation.x = q.x();
         tf.transform.rotation.y = q.y();
         tf.transform.rotation.z = q.z();
+}
+
+void convert(const pd::vision::PoseWithCovariance& p, geometry_msgs::msg::PoseWithCovariance& pRos)
+{
+        pRos.pose = convert(p.pose());
+        for (int i = 0; i < 6; i++)
+        {
+                for (int j = 0; j < 6; j++)
+                {
+                        pRos.covariance[i * 6 + j] = p.cov()(i,j);       
+                }
+
+        }
+}
+void convert(const pd::vision::PoseWithCovariance& p, geometry_msgs::msg::TwistWithCovariance& pRos)
+{
+        convert(p.pose(), pRos.twist);
+        for (int i = 0; i < 6; i++)
+        {
+                for (int j = 0; j < 6; j++)
+                {
+                        pRos.covariance[i * 6 + j] = p.cov()(i,j);       
+                }
+
+        }
 }
 }
