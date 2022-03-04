@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(vslam_ros_test)
+project(vslam_ros_evaluation)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -51,35 +51,10 @@ find_package(GTest CONFIG REQUIRED)
 
 find_package(vslam REQUIRED)
 
-add_executable(test_lukas_kanade_se3_synth src/test_lukas_kanade_se3_synth.cpp)
-target_link_libraries(test_lukas_kanade_se3_synth pd::vslam)
-target_link_libraries(test_lukas_kanade_se3_synth GTest::gtest_main)
+add_executable(evaluation_app src/evaluation_app.cpp)
+target_link_libraries(evaluation_app pd::vslam)
 
-ament_target_dependencies(test_lukas_kanade_se3_synth 
-            std_msgs 
-            sensor_msgs 
-            nav_msgs 
-            stereo_msgs
-            vslam_ros
-            rosbag2_cpp
-            rosbag2
-            OpenCV
-            cv_bridge
-            )
-                     
-
-install(
-  TARGETS test_lukas_kanade_se3_synth
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
-
-add_executable(test_lukas_kanade_se3_real src/test_lukas_kanade_se3_real.cpp)
-target_link_libraries(test_lukas_kanade_se3_real pd::vslam)
-target_link_libraries(test_lukas_kanade_se3_real GTest::gtest_main)
-
-ament_target_dependencies(test_lukas_kanade_se3_real
+ament_target_dependencies(evaluation_app
             std_msgs 
             sensor_msgs 
             nav_msgs 
@@ -95,7 +70,7 @@ ament_target_dependencies(test_lukas_kanade_se3_real
                      
 
 install(
-  TARGETS test_lukas_kanade_se3_real
+  TARGETS evaluation_app
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

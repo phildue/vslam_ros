@@ -11,7 +11,6 @@
 
 #include <nav_msgs/msg/path.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
-#include <gtest/gtest.h>
 
 #include <Eigen/Dense>
 #include <cv_bridge/cv_bridge.h>
@@ -23,7 +22,6 @@
 #include "vslam_ros/vslam_ros.h"
 
 
-using namespace testing;
 using namespace pd;
 using namespace pd::vision;
 
@@ -59,15 +57,18 @@ class NodeTf : public rclcpp::Node
         void publish(const tf2_msgs::msg::TFMessage& tf){_pubTf->publish(tf);}
         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr _pubTf;
 };
-class NodeOdom : public rclcpp::Node
+class NodeValidationWriter : public rclcpp::Node
 {
         public:
-        NodeOdom(const std::string& outputFile)
-        :rclcpp::Node("OdomListener")
-        ,_sub(this->create_subscription<nav_msgs::msg::Odometry>("/odom",10,std::bind(&NodeOdom::callback,this,std::placeholders::_1)))
+        NodeValidationWriter(const std::string& outputFile)
+        :rclcpp::Node("ValidationWriter")
+        ,_sub(this->create_subscription<nav_msgs::msg::Odometry>("/odom",10,std::bind(&NodeValidationWriter::callback,this,std::placeholders::_1)))
         , _outputFile(outputFile)
         {
                 algoFile.open(_outputFile,std::ios_base::out);
+                algoFile << "# Algorithm Trajectory\n";
+                algoFile << "# file: " << outputFile << "\n";
+                algoFile << "# timestamp tx ty tz qx qy qz qw\n";
         }
         void callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg){
                
@@ -78,16 +79,15 @@ class NodeOdom : public rclcpp::Node
 
                 algoFile << msg->header.stamp.sec << "." << msg->header.stamp.nanosec << " "
                 << msg->pose.pose.position.x << " " << msg->pose.pose.position.y << " " << msg->pose.pose.position.z << " "
-                << msg->pose.pose.orientation.w << " " << msg->pose.pose.orientation.x << " " << msg->pose.pose.orientation.y << " " << msg->pose.pose.orientation.z;
-
-                for (int i = 0; i < 36; i++)
+                << msg->pose.pose.orientation.x << " " << msg->pose.pose.orientation.y << " " << msg->pose.pose.orientation.z << " " << msg->pose.pose.orientation.w;
+                /*for (int i = 0; i < 36; i++)
                 {
                         algoFile << " " << msg->pose.covariance[i];
-                }
-                algoFile << std::endl;
+                }*/
+                algoFile << "\n";
 
         }
-        ~NodeOdom(){
+        ~NodeValidationWriter(){
                 algoFile.close();
 
         }
@@ -96,7 +96,7 @@ class NodeOdom : public rclcpp::Node
         std::fstream algoFile;
 
 };
-class LukasKanadeSE3Test : public testing::Test{
+class Replayer {
         public:
         std::unique_ptr<rosbag2_cpp::readers::SequentialReader> _reader;
         int _nFrames;
@@ -111,17 +111,22 @@ class LukasKanadeSE3Test : public testing::Test{
         std::shared_ptr<ImuNode> _nodeImu;
         std::shared_ptr<NodeTf> _nodeTf;
         std::shared_ptr<NodeImage> _nodeImage;
-        std::shared_ptr<NodeOdom> _nodeOdom;
+        std::shared_ptr<NodeValidationWriter> _nodeValWriter;
 
-        LukasKanadeSE3Test(){
+        Replayer(const std::string& sequenceRoot, const std::string& sequenceId, const std::string& outputFile){
+                _nodeImu = std::make_shared<ImuNode>();
+                _nodeTf = std::make_shared<NodeTf>();
+                _nodeImage = std::make_shared<NodeImage>();
+                _nodeValWriter = std::make_shared<NodeValidationWriter>(outputFile);
                 _reader = std::make_unique<rosbag2_cpp::readers::SequentialReader>();
+                _node = std::make_shared<vslam_ros::RgbdAlignmentNode>(rclcpp::NodeOptions());
                 rosbag2_storage::StorageOptions storageOptions;
-                storageOptions.uri = "/media/data/dataset/rgbd_dataset_freiburg1_xyz/rgbd_dataset_freiburg1_xyz.db3";
+                storageOptions.uri = sequenceRoot + "/" + sequenceId + "/" + sequenceId +".db3";
                 storageOptions.storage_id = "sqlite3";
                 rosbag2_cpp::ConverterOptions converterOptions;
                 _reader->open(storageOptions,converterOptions);
-                _gtTrajectoryFile = "/media/data/dataset/rgbd_dataset_freiburg1_xyz/groundtruth.txt";
-                _algoTrajectoryFile = "/media/data/dataset/rgbd_dataset_freiburg1_xyz/algo.txt";
+                _gtTrajectoryFile = sequenceRoot + "/" + sequenceId + "/" + sequenceId + "-groundtruth.txt";
+                _algoTrajectoryFile = outputFile;
 
                 std::vector<rosbag2_storage::TopicMetadata> meta = _reader->get_all_topics_and_types();
                 //std::cout << "Found: " << _reader->get_metadata().topics_with_message_count.size() << " meta entries.";
@@ -137,11 +142,11 @@ class LukasKanadeSE3Test : public testing::Test{
                 }
                 
         }
-        ~LukasKanadeSE3Test(){
+        ~Replayer(){
                 _reader->close();
         }
 
-        void run()
+        void play()
         {
                 _pathImu.header.frame_id = "openni_rgb_optical_frame";
                 std::ifstream gtFile;
@@ -266,7 +271,7 @@ class LukasKanadeSE3Test : public testing::Test{
 
                                 _nodeTf->publish(*tf);
                         }
-                        rclcpp::spin_some(_nodeOdom);
+                        rclcpp::spin_some(_nodeValWriter);
                         
                 } 
 
@@ -277,13 +282,21 @@ class LukasKanadeSE3Test : public testing::Test{
 
 
 
-TEST_F(LukasKanadeSE3Test, LukasKanadeSE3InverseCompositionalGNMultiLevel)
+int main(int argc, char* argv[])
 {
+        if (argc != 4)
+        {
+                throw std::runtime_error ("Usage: evaluation_app sequenceRoot sequenceId outputFile");
+        }
+
         rclcpp::init(0, nullptr);
-        _node = std::make_shared<vslam_ros::RgbdAlignmentNode>(rclcpp::NodeOptions());
-        _nodeImu = std::make_shared<ImuNode>();
-        _nodeTf = std::make_shared<NodeTf>();
-        _nodeImage = std::make_shared<NodeImage>();
-        _nodeOdom = std::make_shared<NodeOdom>(_algoTrajectoryFile);
-        run();
+        const std::string sequenceRoot = argv[1];
+        const std::string sequenceId = argv[2];
+        const std::string outputFile = argv[3];
+
+        auto replayer = std::make_shared<Replayer>(sequenceRoot,sequenceId,outputFile);
+        
+        replayer->play();
+
+        return 0;
 }

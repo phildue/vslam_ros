@@ -52,10 +52,7 @@ class RgbdAlignmentNode : public rclcpp::Node
 
     bool _camInfoReceived;
     nav_msgs::msg::Path _pathImu,_pathVo;
-    pd::vision::PoseWithCovariance::ShPtr _pose;
-    pd::vision::Image _lastImg;
-    pd::vision::DepthMap _lastDepth;
-    rclcpp::Time _lastT;
+    pd::vision::FrameRgbd::ConstShPtr _lastFrame;
     pd::vision::Camera::ShPtr _camera;
     int _fNo;
     geometry_msgs::msg::TransformStamped _camera2base;
@@ -69,6 +66,7 @@ class RgbdAlignmentNode : public rclcpp::Node
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _imageSub;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depthSub;
     const std::shared_ptr<vslam_ros::Queue> _queue;
+    double _minGradient;
     pd::vision::RgbdOdometry::ShPtr _rgbdOdometry;
     std::unique_ptr<tf2_ros::Buffer> _tfBuffer;
     std::shared_ptr<tf2_ros::TransformListener> _tfListener;
@@ -76,9 +74,10 @@ class RgbdAlignmentNode : public rclcpp::Node
 
     std::string _frameId;
     std::string _baseLinkId;
-    double _minGradient;
     std::string _cameraName;
     const double _scale = 0.5;
+    void publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg, const pd::vision::PoseWithCovariance::ConstShPtr poseEst);
+    void lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg);
 
 };
 }

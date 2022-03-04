@@ -19,7 +19,8 @@ class Queue
         std::map<std::uint64_t,sensor_msgs::msg::Image::ConstSharedPtr> _images;
         std::map<std::uint64_t,sensor_msgs::msg::Image::ConstSharedPtr> _depths;
         mutable std::mutex _mutex;
-        const int _maxDiff,_queueSize;
+        const int _maxDiff;
+        const size_t _queueSize;
 
 };
 }
