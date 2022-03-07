@@ -17,6 +17,7 @@ find_package(rosbag2_cpp REQUIRED)
 find_package(rosbag2 REQUIRED)
 find_package(OpenCV 4 QUIET)
 find_package(cv_bridge REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 if (NOT OpenCV_FOUND)
   find_package(OpenCV REQUIRED)
@@ -35,8 +36,7 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 
 conan_cmake_configure(
   REQUIRES sophus/1.0.0 easyloggingpp/9.97.0 eigen/3.4.0 gtest/cci.20210126
-  GENERATORS cmake_find_package_multi
-)
+  GENERATORS cmake_find_package_multi )
 
 conan_cmake_autodetect(settings)
 
@@ -51,10 +51,28 @@ find_package(GTest CONFIG REQUIRED)
 
 find_package(vslam REQUIRED)
 
-add_executable(evaluation_app src/evaluation_app.cpp)
-target_link_libraries(evaluation_app pd::vslam)
 
-ament_target_dependencies(evaluation_app
+add_library(${PROJECT_NAME} SHARED
+src/evaluation_composition.cpp src/NodeGtLoader.cpp src/NodeResultWriter.cpp src/NodeReplayer.cpp
+)
+set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/src)
+target_link_libraries(${PROJECT_NAME} pd::vslam)
+
+rclcpp_components_register_nodes(
+  ${PROJECT_NAME}
+    "NodeResultWriter"
+    "NodeReplayer"
+    "NodeGtLoader"
+)
+add_executable(evaluation_composition
+  src/evaluation_composition.cpp)
+target_link_libraries(evaluation_composition
+${PROJECT_NAME})
+ament_target_dependencies(evaluation_composition
+  "rclcpp")                
+
+ament_target_dependencies(${PROJECT_NAME}
             std_msgs 
             sensor_msgs 
             nav_msgs 
@@ -66,16 +84,21 @@ ament_target_dependencies(evaluation_app
             rosbag2
             OpenCV
             cv_bridge
+            rclcpp_components
+            rclcpp
             )
-                     
-
-install(
-  TARGETS evaluation_app
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
-
+install(DIRECTORY
+            launch
+            DESTINATION share/${PROJECT_NAME}/
+          )
+  install(
+    TARGETS ${PROJECT_NAME} evaluation_composition
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+  )
+          
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

@@ -20,19 +20,21 @@ z_plot = output_dir + "/" + "z.png"
 
 ground_truth_traj = args.sequence_root + "/" + args.sequence_id + "/" + args.sequence_id +"-groundtruth.txt"
 if not os.path.exists(output_dir):
+        if not args.run_algo:
+                raise ValueError("There is no algorithm output for: {}. Create it by setting --run_algo".format(args.experiment_name))
         os.makedirs(output_dir)
 
 if args.run_algo:
         print("---------Running Algorithm-----------------")
-        os.system("/workspaces/ws/install/bin/evaluation_app {} {} {}".format(args.sequence_root, args.sequence_id, algo_traj))
-
+        #os.system("/workspaces/ws/install/bin/evaluation_app {} {} {}".format(args.sequence_root, args.sequence_id, algo_traj))
+        #TODO call launch file here
 #TODO plot
 print("---------Creating Plots-----------------")
 os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/plot/plot_traj.py {} {} --xy_out {} --z_out {}".format(algo_traj, ground_truth_traj,xy_plot,z_plot))
 
 
 print("---------Evaluating Relative Pose Error-----------------")
-os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/tum/evaluate_rpe.py {} {} --verbose --plot {} --fixed_delta".format(algo_traj, ground_truth_traj,rpe_plot))
+os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/tum/evaluate_rpe.py {} {} --verbose --plot {} --fixed_delta --delta_unit s".format(algo_traj, ground_truth_traj,rpe_plot))
 
 print("---------Evaluating Average Trajectory Error------------")
 os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/tum/evaluate_ate.py {} {} --verbose --plot {}".format(algo_traj, ground_truth_traj,ate_plot))

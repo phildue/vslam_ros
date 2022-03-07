@@ -1,0 +1,31 @@
+features:
+  min_gradient: 1
+frame:
+  base_link_id: world
+  frame_id: odom
+loss:
+  function: None
+  huber:
+    c: 10
+prediction:
+  model: NoMotion
+pyramid:
+  levels:
+    max: 4
+    min: 1
+solver:
+  max_iterations: 100
+  min_step_size: 0.00000001
+qos_overrides:
+  /parameter_events:
+    publisher:
+      depth: 1000
+      durability: volatile
+      history: keep_last
+      reliability: reliable
+  /tf:
+    publisher:
+      depth: 100
+      durability: volatile
+      history: keep_last
+      reliability: reliable

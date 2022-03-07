@@ -10,26 +10,49 @@ namespace vslam_ros{
     RgbdAlignmentNode::RgbdAlignmentNode(const rclcpp::NodeOptions& options)
     : rclcpp::Node("RgbdAlignmentNode",options)
     , _camInfoReceived(false)
+    , _tfAvailable(false)
     , _fNo(0)
-    , _queue(std::make_shared<vslam_ros::Queue>(1000,10000000))
-    , _minGradient(30)
-    , _rgbdOdometry (std::make_shared<pd::vision::RgbdOdometry>(_minGradient,4,20,1e-3))
-    , _tfBuffer(std::make_unique<tf2_ros::Buffer>(this->get_clock()))
-    , _tfListener(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer))
-    , _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this))
     , _frameId("odom")
-    , _baseLinkId("world")
+    , _fixedFrameId("world")
+    , _pubOdom(create_publisher<nav_msgs::msg::Odometry>("/odom", 10))
+    , _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10))
+    , _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this))
+    , _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock()))
+    , _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>("/camera/rgb/camera_info",10,std::bind(&RgbdAlignmentNode::cameraCallback,this,std::placeholders::_1)))
+    , _subImage(create_subscription<sensor_msgs::msg::Image>("/camera/rgb/image_color",10,std::bind(&RgbdAlignmentNode::imageCallback,this,std::placeholders::_1)))
+    , _subDepth(create_subscription<sensor_msgs::msg::Image>("/camera/depth/image",10,std::bind(&RgbdAlignmentNode::depthCallback,this,std::placeholders::_1)))
+    , _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer))
+    , _queue(std::make_shared<vslam_ros::Queue>(10,0.20*1e9))
+    
+    {   
+        declare_parameter("frame.base_link_id",_fixedFrameId);
+        declare_parameter("frame.frame_id",_frameId);
+        declare_parameter("features.min_gradient",1);
+        declare_parameter("pyramid.levels.max",4);
+        declare_parameter("pyramid.levels.min",0);
+        declare_parameter("solver.max_iterations",100);
+        declare_parameter("solver.min_step_size",1e7);
+        declare_parameter("loss.function","None");
+        declare_parameter("loss.huber.c",10);
+        declare_parameter("prediction.model","NoMotion");
+        RCLCPP_INFO(get_logger(),"Setting up..");
 
-    {
+        Loss::ShPtr loss;
+        auto paramLoss = get_parameter("loss.function").as_string();
+        if (paramLoss == "Tukey")
+        {
+            loss = std::make_shared<TukeyLoss>();
+        }else if(paramLoss == "Huber")
+        {
+            loss = std::make_shared<HuberLoss>(get_parameter("loss.huber.c").as_double());
+        }else{
+            loss = std::make_shared<QuadraticLoss>();
+        }
+        _rgbdOdometry = std::make_shared<pd::vision::RgbdOdometry>(get_parameter("features.min_gradient").as_int(),
+        get_parameter("pyramid.levels.max").as_int(),get_parameter("pyramid.levels.min").as_int(),
+        get_parameter("solver.max_iterations").as_int(),get_parameter("solver.min_step_size").as_double(),loss);
+
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
-        RCLCPP_INFO(get_logger(),"Setting up for camera: %s ..",_cameraName.c_str());
-
-        _camInfoSub = create_subscription<sensor_msgs::msg::CameraInfo>("/camera/rgb/camera_info",10,std::bind(&RgbdAlignmentNode::cameraCallback,this,std::placeholders::_1));
-        _imageSub = create_subscription<sensor_msgs::msg::Image>("/camera/rgb/image_color",10,std::bind(&RgbdAlignmentNode::imageCallback,this,std::placeholders::_1));
-        _depthSub = create_subscription<sensor_msgs::msg::Image>("/camera/depth/image",10,std::bind(&RgbdAlignmentNode::depthCallback,this,std::placeholders::_1));
-
-        _pubOdom = create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
-        _pubPathVo = create_publisher<nav_msgs::msg::Path>("/path", 10);
         //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
         
         Log::_blockLevel = Level::Unknown;
@@ -62,13 +85,11 @@ namespace vslam_ros{
             cv::cvtColor(mat,mat,cv::COLOR_RGB2GRAY);
             Image img;
             cv::cv2eigen(mat,img);
-            img = algorithm::resize(img,_scale);
             auto cvDepth = cv_bridge::toCvShare(msgDepth);
 
             Eigen::MatrixXd depth;
             cv::cv2eigen(cvDepth->image,depth);
             depth = depth.array().isNaN().select(0,depth);
-            depth = algorithm::resize(depth,_scale);
             const Timestamp t = rclcpp::Time(msgImg->header.stamp.sec,msgImg->header.stamp.nanosec).nanoseconds();
             const long int dT = _lastFrame ? t - _lastFrame->t() : 0;
             
@@ -115,7 +136,7 @@ namespace vslam_ros{
     {
         try{
             _camera2base = \
-            _tfBuffer->lookupTransform(_baseLinkId,msgImg->header.frame_id.substr(1),tf2::TimePointZero);
+            _tfBuffer->lookupTransform(_fixedFrameId,msgImg->header.frame_id.substr(1),tf2::TimePointZero);
             _tfAvailable = true;
             
         }catch (tf2::TransformException &ex) {
@@ -132,29 +153,29 @@ namespace vslam_ros{
             
         auto twistBase = vslam_ros::convert(_camera2base) * PoseWithCovariance( pd::vision::SE3d::exp(odomEst->mean()/dT), odomEst->cov()/dT );
         auto poseBase = vslam_ros::convert(_camera2base) * (*poseEst);
-
+        auto x = poseBase.pose().log();
+        RCLCPP_INFO(get_logger(),"Dt: %ld PoseBase: %.3f, %.3f, %.3f, %.3f, %.3f, %.3f",dT,x(0),x(1),x(2),x(3),x(4),x(5));
+              
         geometry_msgs::msg::TransformStamped tf;
         tf.header.stamp = msgImg->header.stamp;
         tf.header.frame_id = "world";
         tf.child_frame_id = msgImg->header.frame_id + "/est";
         vslam_ros::convert(poseBase.pose(),tf);
+        _pubTf->sendTransform(tf);
 
         nav_msgs::msg::Odometry odom;
         odom.header = msgImg->header;
-        odom.header.frame_id = _baseLinkId;
+        odom.header.frame_id = _fixedFrameId;
         vslam_ros::convert(poseBase,odom.pose);
         vslam_ros::convert(twistBase,odom.twist);
+        _pubOdom->publish(odom);
 
         geometry_msgs::msg::PoseStamped poseStamped;
         poseStamped.header = odom.header;
-
         poseStamped.pose = vslam_ros::convert(poseBase.pose());
-        _pathVo.header = odom.header;
-        _pathVo.poses.push_back(poseStamped);
-                
-        _pubOdom->publish(odom);
-        _pubPathVo->publish(_pathVo);
-        _pubTf->sendTransform(tf);
+        _path.header = odom.header;
+        _path.poses.push_back(poseStamped);
+        _pubPath->publish(_path);
     }
 
     void RgbdAlignmentNode::depthCallback(sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
@@ -165,8 +186,14 @@ namespace vslam_ros{
 
             if(ready())
             {
-                auto img = _queue->popClosestImg();
-                processFrame(img,_queue->popClosestDepth(rclcpp::Time(img->header.stamp.sec,img->header.stamp.nanosec).nanoseconds()));
+                try{
+                    auto img = _queue->popClosestImg();
+                    processFrame(img,_queue->popClosestDepth(rclcpp::Time(img->header.stamp.sec,img->header.stamp.nanosec).nanoseconds()));
+                }catch(const std::runtime_error& e)
+                {
+                    RCLCPP_WARN(get_logger(),"%s",e.what());
+                }
+                
             }
         }
     }
@@ -196,16 +223,12 @@ namespace vslam_ros{
 
     void RgbdAlignmentNode::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg)
     {
-        if ( _camInfoReceived )
-        {
-            return;
-        }
+        if ( _camInfoReceived ){return;}
+
         _camera = vslam_ros::convert(*msg);
-        _camera = Camera::resize(_camera,_scale);
-        
-        
-        RCLCPP_INFO(get_logger(),"Camera calibration received. Alignment initialized.");
         _camInfoReceived = true;
+  
+        RCLCPP_INFO(get_logger(),"Camera calibration received. Alignment initialized.");
     }
     
 }

@@ -51,31 +51,31 @@ class RgbdAlignmentNode : public rclcpp::Node
     private:
 
     bool _camInfoReceived;
-    nav_msgs::msg::Path _pathImu,_pathVo;
-    pd::vision::FrameRgbd::ConstShPtr _lastFrame;
-    pd::vision::Camera::ShPtr _camera;
-    int _fNo;
-    geometry_msgs::msg::TransformStamped _camera2base;
     bool _tfAvailable;
-
+    int _fNo;
+    std::string _frameId;
+    std::string _fixedFrameId;
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPathVo;
-
-    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _camInfoSub;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _imageSub;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _depthSub;
-    const std::shared_ptr<vslam_ros::Queue> _queue;
-    double _minGradient;
-    pd::vision::RgbdOdometry::ShPtr _rgbdOdometry;
-    std::unique_ptr<tf2_ros::Buffer> _tfBuffer;
-    std::shared_ptr<tf2_ros::TransformListener> _tfListener;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPath;
     std::shared_ptr<tf2_ros::TransformBroadcaster> _pubTf;
 
-    std::string _frameId;
-    std::string _baseLinkId;
-    std::string _cameraName;
-    const double _scale = 0.5;
+    std::unique_ptr<tf2_ros::Buffer> _tfBuffer;
+    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _subCamInfo;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _subImage;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _subDepth;
+    std::shared_ptr<tf2_ros::TransformListener> _subTf;
+    
+    const std::shared_ptr<vslam_ros::Queue> _queue;
+
+    pd::vision::RgbdOdometry::ShPtr _rgbdOdometry;
+
+    pd::vision::FrameRgbd::ConstShPtr _lastFrame;
+    pd::vision::Camera::ShPtr _camera;
+    geometry_msgs::msg::TransformStamped _camera2base;
+    nav_msgs::msg::Path _path;
+
+
     void publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg, const pd::vision::PoseWithCovariance::ConstShPtr poseEst);
     void lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg);
 

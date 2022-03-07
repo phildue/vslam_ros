@@ -43,17 +43,17 @@ conan_cmake_autodetect(settings)
 message("Detected settings: ${settings}")
 
 conan_cmake_install(PATH_OR_REFERENCE ${CMAKE_CURRENT_LIST_DIR}/src/vslam
-                   # BUILD missing
+                    BUILD missing
                     REMOTE conancenter
                     SETTINGS ${settings})
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 
 add_subdirectory(src/vslam)
-add_library(${PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME} STATIC
     src/ros/converter.cpp 
     src/ros/Queue.cpp
-    src/ros/nodes/RgbdAlignmentNode.cpp
 )
+set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(${PROJECT_NAME} pd::vslam)
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -65,11 +65,17 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include/>
     )
 
-rclcpp_components_register_nodes(
-    ${PROJECT_NAME}
-    "vslam_ros::RgbdAlignmentNode"
+add_library(rgbdAlignmentComponent SHARED
+src/ros/nodes/RgbdAlignmentNode.cpp
 )
+target_link_libraries(rgbdAlignmentComponent ${PROJECT_NAME})
+set_property(TARGET rgbdAlignmentComponent PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+rclcpp_components_register_node(
+    rgbdAlignmentComponent
+    PLUGIN "vslam_ros::RgbdAlignmentNode"
+    EXECUTABLE rgbdAlignment
+)
 ament_target_dependencies(${PROJECT_NAME}
                                          OpenCV
                                          Eigen3
@@ -103,8 +109,12 @@ install(DIRECTORY
     launch
     DESTINATION share/${PROJECT_NAME}/
   )
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}/
+)
 install(
-  TARGETS ${PROJECT_NAME}
+  TARGETS ${PROJECT_NAME} rgbdAlignmentComponent
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
