@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(stereo_msgs REQUIRED)
@@ -18,7 +19,6 @@ find_package(rosbag2 REQUIRED)
 find_package(OpenCV 4 QUIET)
 find_package(cv_bridge REQUIRED)
 find_package(rclcpp_components REQUIRED)
-
 if (NOT OpenCV_FOUND)
   find_package(OpenCV REQUIRED)
 endif ()
@@ -52,8 +52,7 @@ find_package(GTest CONFIG REQUIRED)
 find_package(vslam REQUIRED)
 
 
-add_library(${PROJECT_NAME} SHARED
-src/evaluation_composition.cpp src/NodeGtLoader.cpp src/NodeResultWriter.cpp src/NodeReplayer.cpp
+add_library(${PROJECT_NAME} SHARED src/NodeGtLoader.cpp src/NodeResultWriter.cpp src/NodeReplayer.cpp
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/src)
@@ -65,12 +64,6 @@ rclcpp_components_register_nodes(
     "NodeReplayer"
     "NodeGtLoader"
 )
-add_executable(evaluation_composition
-  src/evaluation_composition.cpp)
-target_link_libraries(evaluation_composition
-${PROJECT_NAME})
-ament_target_dependencies(evaluation_composition
-  "rclcpp")                
 
 ament_target_dependencies(${PROJECT_NAME}
             std_msgs 
@@ -86,13 +79,14 @@ ament_target_dependencies(${PROJECT_NAME}
             cv_bridge
             rclcpp_components
             rclcpp
+            std_srvs
             )
 install(DIRECTORY
             launch
             DESTINATION share/${PROJECT_NAME}/
           )
   install(
-    TARGETS ${PROJECT_NAME} evaluation_composition
+    TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin

@@ -24,6 +24,7 @@
 
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <std_srvs/srv/set_bool.hpp>
 
 #include "vslam_ros/Queue.h"
 #include "vslam_ros/visibility_control.h"
@@ -65,6 +66,7 @@ class RgbdAlignmentNode : public rclcpp::Node
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _subImage;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _subDepth;
     std::shared_ptr<tf2_ros::TransformListener> _subTf;
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr _cliReplayer;
     
     const std::shared_ptr<vslam_ros::Queue> _queue;
 
@@ -78,6 +80,7 @@ class RgbdAlignmentNode : public rclcpp::Node
 
     void publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg, const pd::vision::PoseWithCovariance::ConstShPtr poseEst);
     void lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg);
+    void signalReplayer();
 
 };
 }

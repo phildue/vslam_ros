@@ -1,6 +1,8 @@
 #/usr/bin/python3
 import os
 import argparse
+import git
+import yaml
 parser = argparse.ArgumentParser(description='''
 Run evaluation of algorithm
 ''')
@@ -10,9 +12,9 @@ parser.add_argument('--sequence_root', help='Root folder for sequences',default=
 parser.add_argument('--run_algo', help='time offset added to the timestamps of the second file (default: 0.0)',action="store_true")
 args = parser.parse_args()
 
-
+repo_dir = '/workspaces/ws/src/vslam_ros'
 output_dir = args.sequence_root + "/" + args.sequence_id + "/" + args.experiment_name
-algo_traj = output_dir + "/" + "algo.txt"
+algo_traj = output_dir + "/" + args.sequence_id+"-algo.txt"
 rpe_plot = output_dir + "/" + "rpe.png"
 ate_plot = output_dir + "/" + "ate.png"
 xy_plot = output_dir + "/" + "xy.png"
@@ -26,8 +28,14 @@ if not os.path.exists(output_dir):
 
 if args.run_algo:
         print("---------Running Algorithm-----------------")
-        #os.system("/workspaces/ws/install/bin/evaluation_app {} {} {}".format(args.sequence_root, args.sequence_id, algo_traj))
-        #TODO call launch file here
+        repo = git.Repo(repo_dir)
+        sha = repo.head.object.hexsha
+        with open(os.path.join(output_dir,'meta.yaml'), 'w') as f:
+                yaml.dump([
+                        {'name': args.experiment_name},
+                        {'code_sha':sha}
+                ],f)
+        os.system("ros2 launch vslam_ros_evaluation evaluation.launch.py sequence_root:={} sequence_id:={} experiment_name:={}".format(args.sequence_root, args.sequence_id, args.experiment_name))
 #TODO plot
 print("---------Creating Plots-----------------")
 os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/plot/plot_traj.py {} {} --xy_out {} --z_out {}".format(algo_traj, ground_truth_traj,xy_plot,z_plot))

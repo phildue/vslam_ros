@@ -9,7 +9,7 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <stereo_msgs/msg/disparity_image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-
+#include <std_srvs/srv/set_bool.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
@@ -37,8 +37,9 @@ public:
         void publishNext();
         void play();
         bool hasNext(){return _reader->has_next();}
-
 private:
+        void srvSetReady( const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                std::shared_ptr<std_srvs::srv::SetBool::Response> response);
         std::unique_ptr<rosbag2_cpp::readers::SequentialReader> _reader;
         int _nFrames;
         rcutils_time_point_value_t _tStart = 0;
@@ -46,13 +47,18 @@ private:
         int _idx = 0;
         int _fNo = 0;
         double _period = 0.05;
+        int _fNoOut = 0;
         std::atomic<bool> _running;
         std::thread _thread;
         rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr _pubTf;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _pubImg;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _pubDepth;
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr _pubCamInfo;
-
+        rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _subOdom;
+        rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr _srvReady;
+        std::condition_variable _cond;
+        std::mutex _mutex;
+        std::atomic<bool> _nodeReady;
 
         
 };

@@ -3,24 +3,27 @@ import launch
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 import os
+import shutil
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.actions import OpaqueFunction
+from launch.substitutions import LaunchConfiguration
 
-def generate_launch_description():
-    """Generate launch description with multiple components."""
+def ld_opaque(context):
     use_sim_time = True
-    
-    #TODO make this launch parameters
-    sequence_root = os.path.join('/media','data','dataset')
-    experiment_name = "experiment"
-    sequence_id = "rgbd_dataset_freiburg1_xyz"
+    sequence_root = LaunchConfiguration('sequence_root').perform(context)
+    sequence_id = LaunchConfiguration('sequence_id').perform(context)
+    experiment_name = LaunchConfiguration('experiment_name').perform(context)
+
     sequence_folder = os.path.join(sequence_root,sequence_id)
-
-
-    if not os.path.exists(os.path.join(sequence_folder,experiment_name)):
-        os.makedirs(os.path.join(sequence_folder,experiment_name))
+    experiment_folder = os.path.join(sequence_folder,experiment_name)
+    if not os.path.exists(experiment_folder):
+        os.makedirs(experiment_folder)
     gt_traj_file = os.path.join(sequence_folder,sequence_id + "-groundtruth.txt")
-    algo_traj_file = os.path.join(sequence_folder,experiment_name,sequence_id + "-algo.txt")
+    algo_traj_file = os.path.join(experiment_folder,sequence_id + "-algo.txt")
     bag_file = os.path.join(sequence_folder,sequence_id + ".db3")
     params_algo = os.path.join(get_package_share_directory('vslam_ros'),'config','RgbdAlignmentNode.yaml')
+    shutil.copy(params_algo,os.path.join(experiment_folder,'params_algo.yaml'))
     container = ComposableNodeContainer(
             name='vslam_container',
             namespace='',
@@ -57,11 +60,31 @@ def generate_launch_description():
                     name='replayer',
                     #remappings=[('/image', '/burgerimage')],
                     parameters=[{'bag_file': bag_file},
-                    {'period': 0.2},
                     {"use_sim_time":use_sim_time}],
                     extra_arguments=[{'use_intra_process_comms': True}]),
             ],
             output='both',
     )
 
-    return launch.LaunchDescription([container])
+    return [container]
+
+def generate_launch_description():
+    """Generate launch description with multiple components."""
+    
+    return LaunchDescription([
+    DeclareLaunchArgument(
+      'sequence_root',
+      default_value=os.path.join('/media','data','dataset'),
+      description='Root folder of sequences'),   
+    DeclareLaunchArgument(
+      'experiment_name',
+      default_value='experiment',
+      description='Name for the experiment'),
+    DeclareLaunchArgument(
+      'sequence_id',
+      default_value="rgbd_dataset_freiburg1_xyz",
+      description='id of the sequence'),   
+
+    OpaqueFunction(function=ld_opaque)  
+  ])
+

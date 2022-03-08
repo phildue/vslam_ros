@@ -5,6 +5,8 @@
 #include "RgbdAlignmentNode.h"
 #include "vslam_ros/converters.h"
 using namespace pd::vision;
+using namespace std::chrono_literals;
+
 namespace vslam_ros{
 
     RgbdAlignmentNode::RgbdAlignmentNode(const rclcpp::NodeOptions& options)
@@ -22,8 +24,8 @@ namespace vslam_ros{
     , _subImage(create_subscription<sensor_msgs::msg::Image>("/camera/rgb/image_color",10,std::bind(&RgbdAlignmentNode::imageCallback,this,std::placeholders::_1)))
     , _subDepth(create_subscription<sensor_msgs::msg::Image>("/camera/depth/image",10,std::bind(&RgbdAlignmentNode::depthCallback,this,std::placeholders::_1)))
     , _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer))
+    , _cliReplayer(create_client<std_srvs::srv::SetBool>("set_ready"))
     , _queue(std::make_shared<vslam_ros::Queue>(10,0.20*1e9))
-    
     {   
         declare_parameter("frame.base_link_id",_fixedFrameId);
         declare_parameter("frame.frame_id",_frameId);
@@ -66,7 +68,6 @@ namespace vslam_ros{
         LOG_IMG("Depth")->_block = false;
         LOG_IMG("Residual")->_show = false;
         LOG_IMG("ImageWarped")->_show = false;
-
 
         RCLCPP_INFO(get_logger(),"Ready.");
     }
@@ -129,7 +130,7 @@ namespace vslam_ros{
         {
             RCLCPP_WARN(this->get_logger(),"%s",e.what());
         }
-
+        signalReplayer();
     }
 
     void RgbdAlignmentNode::lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
@@ -143,6 +144,22 @@ namespace vslam_ros{
             RCLCPP_INFO(get_logger(),"%s",ex.what());
         }
     }
+    void RgbdAlignmentNode::signalReplayer()
+    {
+        if(get_parameter("use_sim_time").as_bool())
+        {
+            while (!_cliReplayer->wait_for_service(1s)) {
+            if (!rclcpp::ok()) {
+                throw std::runtime_error("Interrupted while waiting for the service. Exiting.");
+            }
+                RCLCPP_INFO(get_logger(), "Replayer Service not available, waiting again...");
+            }
+            auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+            request->data = true;
+            auto result = _cliReplayer->async_send_request(request);
+        }
+    }
+
 
     void RgbdAlignmentNode::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg, const pd::vision::PoseWithCovariance::ConstShPtr poseEst)
     {
