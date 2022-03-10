@@ -12,6 +12,7 @@ NodeReplayer::NodeReplayer(const rclcpp::NodeOptions& options)
 {
         declare_parameter("bag_file","/media/data/dataset/rgbd_dataset_freiburg1_desk2/rgbd_dataset_freiburg1_desk2.db3");
         declare_parameter("period",0.05);
+        declare_parameter("timeout",10);
         _period = get_parameter("period").as_double();
         rosbag2_storage::StorageOptions storageOptions;
         storageOptions.uri = get_parameter("bag_file").as_string();
@@ -108,7 +109,7 @@ void NodeReplayer::play()
                         if(!_nodeReady)
                         {
                                 std::unique_lock<std::mutex> lk(_mutex);
-                                if (!_cond.wait_for(lk, std::chrono::seconds(10), [&](){return this->_nodeReady == true;}))
+                                if (!_cond.wait_for(lk, std::chrono::seconds(get_parameter("timeout").as_int()), [&](){return this->_nodeReady == true;}))
                                 {
                                         RCLCPP_WARN(get_logger(),"Timed out during waiting for node to be ready. Continuing..");
                                 }

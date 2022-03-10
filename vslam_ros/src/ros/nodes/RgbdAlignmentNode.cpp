@@ -35,8 +35,41 @@ namespace vslam_ros{
         declare_parameter("solver.max_iterations",100);
         declare_parameter("solver.min_step_size",1e7);
         declare_parameter("loss.function","None");
-        declare_parameter("loss.huber.c",10);
+        declare_parameter("loss.huber.c",10.0);
+        Log::_blockLevel = Level::Unknown;
+        Log::_showLevel = Level::Unknown;
+
+        const std::vector<std::string> imageLogs =
+        {
+            "ImageWarped",
+            "Residual",
+            "Weights",
+            "Template",
+            "Image",
+            "Depth"
+        };
+        const std::vector<std::string> plotLogs =
+        {
+            "ErrorDistribution"
+        };
+        for (const auto& imageLog : imageLogs)
+        {
+            declare_parameter("log.image." + imageLog + ".show", false);
+            declare_parameter("log.image." + imageLog + ".block",false);
+            LOG_IMG(imageLog)->_show = get_parameter("log.image." + imageLog + ".show").as_bool();
+            LOG_IMG(imageLog)->_block = get_parameter("log.image." + imageLog + ".block").as_bool();
+
+        }
+        for (const auto& plotLog : plotLogs)
+        {
+            declare_parameter("log.plot." + plotLog + ".show",false);
+            declare_parameter("log.plot." + plotLog + ".block",false);
+            LOG_PLT(plotLog)->_show = get_parameter("log.plot." + plotLog + ".show").as_bool();
+            LOG_PLT(plotLog)->_block = get_parameter("log.plot." + plotLog + ".block").as_bool();
+
+        }
         declare_parameter("prediction.model","NoMotion");
+
         RCLCPP_INFO(get_logger(),"Setting up..");
 
         Loss::ShPtr loss;
@@ -53,22 +86,10 @@ namespace vslam_ros{
         _rgbdOdometry = std::make_shared<pd::vision::RgbdOdometry>(get_parameter("features.min_gradient").as_int(),
         get_parameter("pyramid.levels.max").as_int(),get_parameter("pyramid.levels.min").as_int(),
         get_parameter("solver.max_iterations").as_int(),get_parameter("solver.min_step_size").as_double(),loss);
-
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
         //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
         
-        Log::_blockLevel = Level::Unknown;
-        Log::_showLevel = Level::Unknown;
-        LOG_IMG("Image Warped")->_block = false;
-        //LOG_PLT("SolverGN",Level::Debug)->_block = true;
-        LOG_PLT("SolverGN")->_show = false;
-        LOG_PLT("ErrorDistribution")->_show = false;
-        LOG_PLT("ErrorDistribution")->_block = false;
         
-        LOG_IMG("Depth")->_block = false;
-        LOG_IMG("Residual")->_show = false;
-        LOG_IMG("ImageWarped")->_show = false;
-
         RCLCPP_INFO(get_logger(),"Ready.");
     }
 

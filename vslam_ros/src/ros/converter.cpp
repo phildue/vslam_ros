@@ -41,9 +41,9 @@ Sophus::SE3d convert(const geometry_msgs::msg::Pose& ros)
 }
 void convert(const Sophus::SE3d& se3, geometry_msgs::msg::Twist& twist)
 {
-        twist.angular.x = se3.rotationMatrix().eulerAngles(2,1,0).x();
-        twist.angular.y = se3.rotationMatrix().eulerAngles(2,1,0).y();
-        twist.angular.z = se3.rotationMatrix().eulerAngles(2,1,0).z();
+        twist.angular.x = se3.log().tail(3).x();
+        twist.angular.y = se3.log().tail(3).y();
+        twist.angular.z = se3.log().tail(3).z();
 
         twist.linear.x = se3.log().head(3).x();
         twist.linear.y = se3.log().head(3).y();

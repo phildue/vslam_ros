@@ -116,7 +116,7 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/
 )
 install(
-  TARGETS ${PROJECT_NAME} rgbdAlignmentComponent
+  TARGETS ${PROJECT_NAME} rgbdAlignmentComponent rgbdAlignment
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

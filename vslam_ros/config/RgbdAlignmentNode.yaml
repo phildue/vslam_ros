@@ -1,21 +1,45 @@
 features:
-  min_gradient: 1
+  min_gradient: 10
 frame:
   base_link_id: world
   frame_id: odom
 loss:
   function: None
   huber:
-    c: 10
+    c: 5.0
 prediction:
   model: NoMotion
 pyramid:
   levels:
-    max: 5
-    min: 2
+    max: 4
+    min: 1
 solver:
-  max_iterations: 20
+  max_iterations: 50
   min_step_size: 0.00000001
+log:
+  image:
+    ImageWarped:
+      show: false
+      block: false
+    Residual:
+      show: false
+      block: false
+    Weights:
+      show: false
+      block: false
+    Image:
+      show: false
+      block: false
+    Template:
+      show: false
+      block: false
+    Depth:
+      show: false
+      block: false
+  plot:
+    ErrorDistribution:
+      show: false
+      block: false
 qos_overrides:
   /parameter_events:
     publisher:

@@ -60,7 +60,9 @@ def ld_opaque(context):
                     name='replayer',
                     #remappings=[('/image', '/burgerimage')],
                     parameters=[{'bag_file': bag_file},
-                    {"use_sim_time":use_sim_time}],
+                    {"use_sim_time":use_sim_time},
+                    {'timeout':10}
+                    ],
                     extra_arguments=[{'use_intra_process_comms': True}]),
             ],
             output='both',
