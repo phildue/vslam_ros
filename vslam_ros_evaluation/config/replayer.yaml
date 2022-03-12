@@ -1,0 +1,11 @@
+/replayer:
+  ros__parameters:
+    bag_file: /media/data/dataset/rgbd_dataset_freiburg1_desk2/rgbd_dataset_freiburg1_desk2.db3
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    use_sim_time: false

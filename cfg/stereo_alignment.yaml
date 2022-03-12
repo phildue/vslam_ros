@@ -1,3 +1,0 @@
-image_topic: "/cam_stereo/left/image_rect"
-camera_info_topic: "/cam_stereo/left/camera_info"
-disparity_topic: "/cam_stereo/disparity"

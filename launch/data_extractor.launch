@@ -1,6 +1,0 @@
-<launch>
-
-<node type="data_extractor_node" pkg="vslam_ros" name="data_extractor">
-          <rosparam file="$(find vslam_ros)/cfg/stereo_alignment.yaml" command="load" />
-    </node>
-</launch>
