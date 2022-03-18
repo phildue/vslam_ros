@@ -95,11 +95,13 @@ namespace vslam_ros{
             loss = std::make_shared<pd::vslam::solver::QuadraticLoss>();
             scaler = std::make_shared<pd::vslam::solver::Scaler>();
         }
+        auto solver = std::make_shared<pd::vslam::solver::GaussNewton<6>>(1.0,get_parameter("solver.min_step_size").as_double(),
+        get_parameter("solver.max_iterations").as_int()
+        );
         _map = std::make_shared<pd::vision::Map>();
-        _odometry = std::make_shared<pd::vision::OdometryRgbd>(get_parameter("features.min_gradient").as_int(),
-        get_parameter("pyramid.levels").as_double_array(),get_parameter("solver.max_iterations").as_int(),
-        get_parameter("solver.min_step_size").as_double(),
-        loss, scaler, _map);
+        _odometry = std::make_shared<pd::vision::OdometryRgbd>(
+            get_parameter("features.min_gradient").as_int(),get_parameter("pyramid.levels").as_double_array(),
+            solver, loss, scaler, _map);
         _prediction = MotionPrediction::make(get_parameter("prediction.model").as_string());
         _keyFrameSelection = std::make_shared<KeyFrameSelectionIdx>(get_parameter("keyframe_selection.idx.period").as_int());
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
