@@ -10,7 +10,7 @@ Run evaluation of algorithm
 parser.add_argument('experiment_name', help='Name for the experiment')
 parser.add_argument('sequence_id', help='Id of the sequence to run on)',default='rgbd_dataset_freiburg1_desk2')
 parser.add_argument('--sequence_root', help='Root folder for sequences',default='/media/data/dataset/')
-parser.add_argument('--run_algo', help='time offset added to the timestamps of the second file (default: 0.0)',action="store_true")
+parser.add_argument('--run_algo', help='Set to create algorithm results',action="store_true")
 args = parser.parse_args()
 
 repo_dir = '/workspaces/ws/src/vslam_ros'
@@ -45,7 +45,7 @@ os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/plot
 
 
 print("---------Evaluating Relative Pose Error-----------------")
-os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/tum/evaluate_rpe.py {} {} --verbose --plot {} --fixed_delta --delta_unit f --save {}".format(algo_traj, ground_truth_traj,rpe_plot,rpe_txt))
+os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/tum/evaluate_rpe.py {} {} --verbose --plot {} --fixed_delta --delta_unit s --save {}".format(algo_traj, ground_truth_traj,rpe_plot,rpe_txt))
 
 print("---------Evaluating Average Trajectory Error------------")
 os.system("python3 /workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/tum/evaluate_ate.py {} {} --verbose --plot {} --save {}".format(ground_truth_traj, algo_traj,ate_plot,ate_txt))

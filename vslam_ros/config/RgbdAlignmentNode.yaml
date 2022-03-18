@@ -1,5 +1,5 @@
 features:
-  min_gradient: 10
+  min_gradient: 30
 frame:
   base_link_id: world
   frame_id: odom
@@ -7,15 +7,19 @@ loss:
   function: None
   huber:
     c: 5.0
+  tdistribution:
+    v: 5.0
 prediction:
-  model: NoMotion
+  model: Constant
 pyramid:
-  levels:
-    max: 4
-    min: 1
+  levels: [0.25, 0.5, 1.0]
 solver:
-  max_iterations: 50
-  min_step_size: 0.00000001
+  max_iterations: 100
+  min_step_size: 0.00000000001
+keyframe_selection:
+  method: idx
+  idx:
+    period: 7
 log:
   image:
     ImageWarped:
