@@ -141,41 +141,50 @@ def ominus(a,b):
     return np.dot(np.linalg.inv(a),b)
 
 if __name__ == "__main__":
-        traj = read_trajectory("/media/data/dataset/rgbd_dataset_freiburg1_xyz/groundtruth.txt")
-
+        traj = read_trajectory("/media/data/dataset/rgbd_dataset_freiburg1_desk2/rgbd_dataset_freiburg1_desk2-groundtruth.txt")
+        nsub = 3
         t = np.array([np.array(t) for t in traj.keys()],dtype=float)
         poses = np.array([np.array(v) for v in traj.values()],dtype=float)
-        velocities = np.zeros((poses.shape[0],6))
+        relative_pose = np.zeros((poses.shape[0],6))
+        dt = np.zeros((poses.shape[0],1))
 
-        for i in range(1,poses.shape[0]):
-                relative_motion = ominus(poses[i-1],poses[i])
-                dt = t[i] - t[i-1]
+        for i in range(nsub,poses.shape[0]):
+                relative_motion = ominus(poses[i-nsub],poses[i])
+                dt[i] = t[i] - t[i-nsub]
                 eulers = rotationMatrixToEulerAngles(relative_motion[:3,:3])
-                velocities[i,:3] = relative_motion[:3,3]/dt
-                velocities[i,3:] = np.array(eulers)/dt #?
+                relative_pose[i,:3] = relative_motion[:3,3]
+                relative_pose[i,3:] = np.array(eulers) 
                 
 
-        mean = velocities.mean(axis=0)
-        std = velocities.std(axis=0)
-        velocities = (velocities - mean)
+        mean = relative_pose.mean(axis=0)
+        std = relative_pose.std(axis=0)
 
-        DT = 0.1
-        relative_motion = velocities * DT
+        cov = np.cov(relative_pose.transpose())
+        t_mag = np.linalg.norm(relative_pose[:,:3],axis=1)
+        a_mag = np.linalg.norm(relative_pose[:,3:],axis=1)
+        t_order = t_mag.argsort()
+        relative_pose_t_ordered = relative_pose[t_order[::-1]]
+        a_order = a_mag.argsort()
+        relative_pose_a_ordered = relative_pose[a_order[::-1]]
 
-        cov = np.cov(relative_motion.transpose())
+        print ( "Mean DT: \n{}".format(np.round(dt.mean(axis=0),4)) )
+        print ( "Mean Relative Pose: \n{}".format(np.round(relative_pose.mean(axis=0),4)) )
+        print ( "Max Per Axis: \n{}".format(np.round(relative_pose.max(axis=0),4)) )
+        print ( "Min Per Axis: \n{}".format(np.round(relative_pose.min(axis=0),4)) )
+        print ( "Cov Relative Pose: \n{}".format(np.round(cov,4) ))
+        print ( "Max Translation: \n{}".format(np.round(relative_pose_t_ordered[:20],4)) )
+        print ( "Max Angular: \n{}".format(np.round(relative_pose_a_ordered[:20],4)) )
 
-        print ( "Mean: \n{}".format(np.round(relative_motion.mean(axis=0),4)) )
-        print ( "Cov: \n{}".format(np.round(cov,4) ))
 
         plt.figure()
         for i,t in enumerate(["tx","ty","tz"]):
                 plt.subplot(2,3,i+1)
                 plt.title(t)
-                plt.hist(relative_motion[:,i])
-                plt.xlabel("Relative Translational Motion [m] ")
+                plt.hist(relative_pose[:,i])
+                plt.xlabel("Translational Motion [m] ")
         for i,t in enumerate(["ax","ay","az"],3):
                 plt.subplot(2,3,i+1)
                 plt.title(t)
-                plt.hist(relative_motion[:,i]/math.pi*180.0)
-                plt.xlabel("Relative Angular [°] ")
+                plt.hist(relative_pose[:,i]/math.pi*180.0)
+                plt.xlabel("Angular Motion [°] ")
         plt.show()

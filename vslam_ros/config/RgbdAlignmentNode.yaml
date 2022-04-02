@@ -1,18 +1,18 @@
 features:
-  min_gradient: 30
+  min_gradient: 10
 frame:
   base_link_id: world
   frame_id: odom
 loss:
-  function: None
+  function: Huber
   huber:
-    c: 5.0
+    c: 1.43
   tdistribution:
     v: 5.0
 prediction:
-  model: Constant
+  model: NoMotion
 pyramid:
-  levels: [0.25, 0.5, 1.0]
+  levels: [1.0,0.5,0.25]
 solver:
   max_iterations: 100
   min_step_size: 0.00000000001

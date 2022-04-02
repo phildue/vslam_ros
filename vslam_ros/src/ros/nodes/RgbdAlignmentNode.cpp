@@ -39,6 +39,7 @@ namespace vslam_ros{
         declare_parameter("loss.tdistribution.v",5.0);
         declare_parameter("keyframe_selection.method","idx");
         declare_parameter("keyframe_selection.idx.period",5);
+        declare_parameter("prediction.model","NoMotion");
         Log::_blockLevel = Level::Unknown;
         Log::_showLevel = Level::Unknown;
 
@@ -71,7 +72,6 @@ namespace vslam_ros{
             LOG_PLT(plotLog)->_block = get_parameter("log.plot." + plotLog + ".block").as_bool();
 
         }
-        declare_parameter("prediction.model","NoMotion");
 
         RCLCPP_INFO(get_logger(),"Setting up..");
 
@@ -100,8 +100,9 @@ namespace vslam_ros{
         );
         _map = std::make_shared<pd::vision::Map>();
         _odometry = std::make_shared<pd::vision::OdometryRgbd>(
-            get_parameter("features.min_gradient").as_int(),get_parameter("pyramid.levels").as_double_array(),
+            get_parameter("features.min_gradient").as_int(),
             solver, loss, scaler, _map);
+        _odometry = std::make_shared<pd::vision::OdometryIcp>(1,10,_map);
         _prediction = MotionPrediction::make(get_parameter("prediction.model").as_string());
         _keyFrameSelection = std::make_shared<KeyFrameSelectionIdx>(get_parameter("keyframe_selection.idx.period").as_int());
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
@@ -123,7 +124,11 @@ namespace vslam_ros{
 
             auto frame = createFrame(msgImg,msgDepth);
 
+            frame->set(*_prediction->predict(frame->t()));
+
             _odometry->update(frame);
+            
+            frame->set(*_odometry->pose());
 
             _prediction->update(_odometry->pose(),frame->t());
 
@@ -132,6 +137,8 @@ namespace vslam_ros{
             if (_keyFrameSelection->isKeyFrame())
             {
                 _map->updateKf(frame);
+            }else{
+                 _map->update(frame);
             }
            
              publish(msgImg);
@@ -172,7 +179,7 @@ namespace vslam_ros{
         }
     }
 
-    pd::vision::FrameRgbd::ConstShPtr  RgbdAlignmentNode::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
+    pd::vision::FrameRgbd::ShPtr  RgbdAlignmentNode::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
     {
         auto cvImage = cv_bridge::toCvShare(msgImg);
         cv::Mat mat = cvImage->image;
@@ -186,7 +193,7 @@ namespace vslam_ros{
         depth = depth.array().isNaN().select(0,depth);
         const Timestamp t = rclcpp::Time(msgImg->header.stamp.sec,msgImg->header.stamp.nanosec).nanoseconds();
         
-        return std::make_shared<const pd::vision::FrameRgbd>(img,depth,_camera,t, *_prediction->predict(t));
+        return std::make_shared<pd::vision::FrameRgbd>(img,depth,_camera,get_parameter("pyramid.levels").as_double_array().size(),t);
     }
     void RgbdAlignmentNode::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
     {

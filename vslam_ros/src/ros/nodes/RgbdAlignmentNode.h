@@ -48,7 +48,7 @@ class RgbdAlignmentNode : public rclcpp::Node
     void dropCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
     void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
-    pd::vision::FrameRgbd::ConstShPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
+    pd::vision::FrameRgbd::ShPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
 
     private:
     const bool _includeKeyFrame;
