@@ -80,29 +80,26 @@ namespace vslam_ros{
         auto paramLoss = get_parameter("loss.function").as_string();
         if (paramLoss == "Tukey")
         {
-            loss = std::make_shared<pd::vslam::solver::TukeyLoss>();
-            scaler = std::make_shared<pd::vslam::solver::MedianScaler>();
+            loss = std::make_shared<pd::vslam::solver::TukeyLoss>( std::make_shared<pd::vslam::solver::MedianScaler>());
         }else if(paramLoss == "Huber")
         {
-            loss = std::make_shared<pd::vslam::solver::HuberLoss>(get_parameter("loss.huber.c").as_double());
-            scaler = std::make_shared<pd::vslam::solver::MedianScaler>();
+            loss = std::make_shared<pd::vslam::solver::HuberLoss>(std::make_shared<pd::vslam::solver::MedianScaler>(),get_parameter("loss.huber.c").as_double());
         }else if(paramLoss == "tdistribution")
         {
-            loss = std::make_shared<pd::vslam::solver::LossTDistribution>(get_parameter("loss.tdistribution.v").as_double());
-            scaler = std::make_shared<pd::vslam::solver::ScalerTDistribution>(get_parameter("loss.tdistribution.v").as_double());
+            loss = std::make_shared<pd::vslam::solver::LossTDistribution>(std::make_shared<pd::vslam::solver::ScalerTDistribution>(get_parameter("loss.tdistribution.v").as_double()),get_parameter("loss.tdistribution.v").as_double());
         }
         else{
-            loss = std::make_shared<pd::vslam::solver::QuadraticLoss>();
-            scaler = std::make_shared<pd::vslam::solver::Scaler>();
+            loss = std::make_shared<pd::vslam::solver::QuadraticLoss>(std::make_shared<pd::vslam::solver::Scaler>());
         }
-        auto solver = std::make_shared<pd::vslam::solver::GaussNewton<6>>(1.0,get_parameter("solver.min_step_size").as_double(),
-        get_parameter("solver.max_iterations").as_int()
+        auto solver = std::make_shared<pd::vslam::solver::GaussNewton<6>>(
+            get_parameter("solver.min_step_size").as_double(),
+            get_parameter("solver.max_iterations").as_int()
         );
         _map = std::make_shared<pd::vision::Map>();
         _odometry = std::make_shared<pd::vision::OdometryRgbd>(
             get_parameter("features.min_gradient").as_int(),
-            solver, loss, scaler, _map);
-        _odometry = std::make_shared<pd::vision::OdometryIcp>(1,10,_map);
+            solver, loss, _map);
+       // _odometry = std::make_shared<pd::vision::OdometryIcp>(1,10,_map);
         _prediction = MotionPrediction::make(get_parameter("prediction.model").as_string());
         _keyFrameSelection = std::make_shared<KeyFrameSelectionIdx>(get_parameter("keyframe_selection.idx.period").as_int());
        // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
@@ -203,7 +200,7 @@ namespace vslam_ros{
             return;
         }
         
-        auto x = _odometry->pose()->pose().log();
+        auto x = _odometry->pose()->pose().inverse().log();
         RCLCPP_INFO(get_logger(),"Pose: %.3f, %.3f, %.3f, %.3f, %.3f, %.3f",x(0),x(1),x(2),x(3),x(4),x(5));
 
         // Send the transformation from fixed frame to origin of optical frame
@@ -219,20 +216,20 @@ namespace vslam_ros{
         tf.header.stamp = msgImg->header.stamp;
         tf.header.frame_id = _frameId;
         tf.child_frame_id = "camera"; //camera name?
-        vslam_ros::convert(_odometry->pose()->pose(),tf);
+        vslam_ros::convert(_odometry->pose()->pose().inverse(),tf);
         _pubTf->sendTransform(tf);
 
         // Send pose, twist and path in optical frame
         nav_msgs::msg::Odometry odom;
         odom.header = msgImg->header;
         odom.header.frame_id = _frameId;
-        vslam_ros::convert(*_odometry->pose(),odom.pose);
-        vslam_ros::convert(*_odometry->speed(),odom.twist);
+        vslam_ros::convert(_odometry->pose()->inverse(),odom.pose);
+        vslam_ros::convert(_odometry->speed()->inverse(),odom.twist);
         _pubOdom->publish(odom);
 
         geometry_msgs::msg::PoseStamped poseStamped;
         poseStamped.header = odom.header;
-        poseStamped.pose = vslam_ros::convert(_odometry->pose()->pose());
+        poseStamped.pose = vslam_ros::convert(_odometry->pose()->pose().inverse());
         _path.header = odom.header;
         _path.poses.push_back(poseStamped);
         _pubPath->publish(_path);
