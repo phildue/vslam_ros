@@ -48,7 +48,7 @@ class RgbdAlignmentNode : public rclcpp::Node
     void dropCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
     void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
-    pd::vision::FrameRgbd::ShPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
+    pd::vslam::FrameRgbd::ShPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
 
     private:
     const bool _includeKeyFrame;
@@ -71,12 +71,12 @@ class RgbdAlignmentNode : public rclcpp::Node
     
     const std::shared_ptr<vslam_ros::Queue> _queue;
 
-    pd::vision::Odometry::ShPtr _odometry;
-    pd::vision::KeyFrameSelection::ShPtr _keyFrameSelection;
-    pd::vision::MotionPrediction::ShPtr _prediction;
-    pd::vision::Map::ShPtr _map;
+    pd::vslam::Odometry::ShPtr _odometry;
+    pd::vslam::KeyFrameSelection::ShPtr _keyFrameSelection;
+    pd::vslam::MotionPrediction::ShPtr _prediction;
+    pd::vslam::Map::ShPtr _map;
 
-    pd::vision::Camera::ShPtr _camera;
+    pd::vslam::Camera::ShPtr _camera;
     geometry_msgs::msg::TransformStamped _world2origin; //transforms from fixed frame to initial pose of optical frame
     nav_msgs::msg::Path _path;
 

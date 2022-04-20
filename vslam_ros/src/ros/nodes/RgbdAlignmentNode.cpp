@@ -4,7 +4,7 @@
 
 #include "RgbdAlignmentNode.h"
 #include "vslam_ros/converters.h"
-using namespace pd::vision;
+using namespace pd::vslam;
 using namespace std::chrono_literals;
 
 namespace vslam_ros{
@@ -75,28 +75,28 @@ namespace vslam_ros{
 
         RCLCPP_INFO(get_logger(),"Setting up..");
 
-        pd::vslam::solver::Loss::ShPtr loss;
-        pd::vslam::solver::Scaler::ShPtr scaler;
+        least_squares::Loss::ShPtr loss;
+        least_squares::Scaler::ShPtr scaler;
         auto paramLoss = get_parameter("loss.function").as_string();
         if (paramLoss == "Tukey")
         {
-            loss = std::make_shared<pd::vslam::solver::TukeyLoss>( std::make_shared<pd::vslam::solver::MedianScaler>());
+            loss = std::make_shared<least_squares::TukeyLoss>( std::make_shared<least_squares::MedianScaler>());
         }else if(paramLoss == "Huber")
         {
-            loss = std::make_shared<pd::vslam::solver::HuberLoss>(std::make_shared<pd::vslam::solver::MedianScaler>(),get_parameter("loss.huber.c").as_double());
+            loss = std::make_shared<least_squares::HuberLoss>(std::make_shared<least_squares::MedianScaler>(),get_parameter("loss.huber.c").as_double());
         }else if(paramLoss == "tdistribution")
         {
-            loss = std::make_shared<pd::vslam::solver::LossTDistribution>(std::make_shared<pd::vslam::solver::ScalerTDistribution>(get_parameter("loss.tdistribution.v").as_double()),get_parameter("loss.tdistribution.v").as_double());
+            loss = std::make_shared<least_squares::LossTDistribution>(std::make_shared<least_squares::ScalerTDistribution>(get_parameter("loss.tdistribution.v").as_double()),get_parameter("loss.tdistribution.v").as_double());
         }
         else{
-            loss = std::make_shared<pd::vslam::solver::QuadraticLoss>(std::make_shared<pd::vslam::solver::Scaler>());
+            loss = std::make_shared<least_squares::QuadraticLoss>(std::make_shared<least_squares::Scaler>());
         }
-        auto solver = std::make_shared<pd::vslam::solver::GaussNewton<6>>(
+        auto solver = std::make_shared<least_squares::GaussNewton<6>>(
             get_parameter("solver.min_step_size").as_double(),
             get_parameter("solver.max_iterations").as_int()
         );
-        _map = std::make_shared<pd::vision::Map>();
-        _odometry = std::make_shared<pd::vision::OdometryRgbd>(
+        _map = std::make_shared<Map>();
+        _odometry = std::make_shared<OdometryRgbd>(
             get_parameter("features.min_gradient").as_int(),
             solver, loss, _map);
        // _odometry = std::make_shared<pd::vision::OdometryIcp>(1,10,_map);
@@ -130,15 +130,10 @@ namespace vslam_ros{
             _prediction->update(_odometry->pose(),frame->t());
 
             _keyFrameSelection->update(frame);
+            
+            _map->update(frame, _keyFrameSelection->isKeyFrame());
 
-            if (_keyFrameSelection->isKeyFrame())
-            {
-                _map->updateKf(frame);
-            }else{
-                 _map->update(frame);
-            }
-           
-             publish(msgImg);
+            publish(msgImg);
 
             _fNo++;
 
@@ -176,7 +171,7 @@ namespace vslam_ros{
         }
     }
 
-    pd::vision::FrameRgbd::ShPtr  RgbdAlignmentNode::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
+    FrameRgbd::ShPtr  RgbdAlignmentNode::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
     {
         auto cvImage = cv_bridge::toCvShare(msgImg);
         cv::Mat mat = cvImage->image;
@@ -190,7 +185,7 @@ namespace vslam_ros{
         depth = depth.array().isNaN().select(0,depth);
         const Timestamp t = rclcpp::Time(msgImg->header.stamp.sec,msgImg->header.stamp.nanosec).nanoseconds();
         
-        return std::make_shared<pd::vision::FrameRgbd>(img,depth,_camera,get_parameter("pyramid.levels").as_double_array().size(),t);
+        return std::make_shared<FrameRgbd>(img,depth,_camera,get_parameter("pyramid.levels").as_double_array().size(),t);
     }
     void RgbdAlignmentNode::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
     {

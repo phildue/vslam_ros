@@ -1,14 +1,14 @@
 
 #include "vslam_ros/converters.h"
 namespace vslam_ros{
-pd::vision::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo& msg)
+pd::vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo& msg)
 {
         const double fx = msg.k[0*3 + 0];
         const double fy = msg.k[1*3 + 1];
         const double cx = msg.k[0*3 + 2];
         const double cy = msg.k[1*3 + 2];
 
-        return std::make_shared<pd::vision::Camera>(fx,fy,cx,cy);
+        return std::make_shared<pd::vslam::Camera>(fx,fy,cx,cy);
 }
 
 geometry_msgs::msg::Pose convert(const Sophus::SE3d& se3)
@@ -76,7 +76,7 @@ void convert(const Sophus::SE3d& sophus, geometry_msgs::msg::TransformStamped& t
         tf.transform.rotation.z = q.z();
 }
 
-void convert(const pd::vision::PoseWithCovariance& p, geometry_msgs::msg::PoseWithCovariance& pRos)
+void convert(const pd::vslam::PoseWithCovariance& p, geometry_msgs::msg::PoseWithCovariance& pRos)
 {
         pRos.pose = convert(p.pose());
         for (int i = 0; i < 6; i++)
@@ -88,7 +88,7 @@ void convert(const pd::vision::PoseWithCovariance& p, geometry_msgs::msg::PoseWi
 
         }
 }
-void convert(const pd::vision::PoseWithCovariance& p, geometry_msgs::msg::TwistWithCovariance& pRos)
+void convert(const pd::vslam::PoseWithCovariance& p, geometry_msgs::msg::TwistWithCovariance& pRos)
 {
         convert(p.pose(), pRos.twist);
         for (int i = 0; i < 6; i++)
