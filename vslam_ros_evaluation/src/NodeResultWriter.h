@@ -12,7 +12,9 @@
 
 #include <nav_msgs/msg/path.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <vslam/vslam.h>
 #include "visibility_control.h"
+
 
 class NodeResultWriter : public rclcpp::Node
 {
