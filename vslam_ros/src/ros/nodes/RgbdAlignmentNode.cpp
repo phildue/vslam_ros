@@ -75,7 +75,7 @@ namespace vslam_ros{
 
         RCLCPP_INFO(get_logger(),"Setting up..");
 
-        least_squares::Loss::ShPtr loss;
+        least_squares::Loss::ShPtr loss = nullptr;
         least_squares::Scaler::ShPtr scaler;
         auto paramLoss = get_parameter("loss.function").as_string();
         if (paramLoss == "Tukey")
@@ -88,9 +88,7 @@ namespace vslam_ros{
         {
             loss = std::make_shared<least_squares::LossTDistribution>(std::make_shared<least_squares::ScalerTDistribution>(get_parameter("loss.tdistribution.v").as_double()),get_parameter("loss.tdistribution.v").as_double());
         }
-        else{
-            loss = std::make_shared<least_squares::QuadraticLoss>(std::make_shared<least_squares::Scaler>());
-        }
+        
         auto solver = std::make_shared<least_squares::GaussNewton<6>>(
             get_parameter("solver.min_step_size").as_double(),
             get_parameter("solver.max_iterations").as_int()
