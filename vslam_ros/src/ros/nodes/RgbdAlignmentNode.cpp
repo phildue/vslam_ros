@@ -89,7 +89,7 @@ namespace vslam_ros{
             loss = std::make_shared<least_squares::LossTDistribution>(std::make_shared<least_squares::ScalerTDistribution>(get_parameter("loss.tdistribution.v").as_double()),get_parameter("loss.tdistribution.v").as_double());
         }
         
-        auto solver = std::make_shared<least_squares::GaussNewton<6>>(
+        auto solver = std::make_shared<least_squares::GaussNewton>(
             get_parameter("solver.min_step_size").as_double(),
             get_parameter("solver.max_iterations").as_int()
         );
