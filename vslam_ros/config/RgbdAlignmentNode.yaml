@@ -19,7 +19,7 @@ solver:
 keyframe_selection:
   method: idx
   idx:
-    period: 5
+    period: -1
 log:
   image:
     ImageWarped:
