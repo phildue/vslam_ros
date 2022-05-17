@@ -4,7 +4,7 @@ frame:
   base_link_id: world
   frame_id: odom
 loss:
-  function: None
+  function: tdistribution
   huber:
     c: 1.43
   tdistribution:
