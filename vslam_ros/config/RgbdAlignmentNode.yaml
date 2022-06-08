@@ -4,7 +4,7 @@ frame:
   base_link_id: world
   frame_id: odom
 loss:
-  function: None
+  function: tdistribution
   huber:
     c: 1.43
   tdistribution:
@@ -19,7 +19,7 @@ solver:
 keyframe_selection:
   method: idx
   idx:
-    period: 5
+    period: -1
 log:
   image:
     ImageWarped:
