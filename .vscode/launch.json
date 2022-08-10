@@ -1,0 +1,149 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(gdb) ROS2 Launch",
+      "type": "ros",
+      "request": "launch",
+      "target": "${workspaceFolder}/install/share/vslam_ros_evaluation/launch/evaluation.launch.py",
+      "additionalSOLibSearchPath": "${workspaceFolder/install/lib",
+    },
+    {
+      "name": "(gdb) Test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/vslam_ros/src/vslam/test/${input:test}",
+      "args": [],
+      "preLaunchTask": "build-debug",
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+    },
+    {
+      "name": "(gdb) Run Executable",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/install/bin/${input:target}",
+      "args": ["--ros-args","--params-file","${workspaceFolder}/RgbdAlignmentNode.yaml"],
+      "preLaunchTask": "build",
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "additionalSOLibSearchPath": "${workspaceFolder/install/lib",
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+    },
+    {
+      "name": "(gdb) Run Rgbd Alignment",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/install/bin/rgbdAlignment",
+      "args": ["--ros-args","--params-file","${workspaceFolder}/src/vslam_ros/vslam_ros/config/RgbdAlignmentNodeParams.yaml"],
+      "preLaunchTask": "build",
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "additionalSOLibSearchPath": "${workspaceFolder/install/lib",
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+    },
+    {
+      "name": "(gdb) Launch Test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/vslam_ros/src/vslam/src/odometry/trackingTest",
+      "args": [],
+      //"preLaunchTask": "build",
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+    // Example launch of a python file
+    {
+      "name": "Python: Current File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+    },
+    // Example gdb launch of a ros executable
+    {
+      "name": "(gdb) Launch",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/install/lib/${input:package}/${input:program}",
+      "args": [],
+      "preLaunchTask": "build",
+      "stopAtEntry": true,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "package",
+      "type": "promptString",
+      "description": "Package name",
+      "default": "examples_rclcpp_minimal_publisher"
+    },
+    {
+      "id": "program",
+      "type": "promptString",
+      "description": "Program name",
+      "default": "publisher_member_function"
+    },    
+    {
+        "id": "target",
+        "type": "pickString",
+        "description": "Run target",
+        "options":[
+          "evaluation_app",
+          "rgbdAlignmentComp",
+          "rgbdAlignment"
+
+        ]
+      }
+  ]
+}

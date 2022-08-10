@@ -1,0 +1,10 @@
+*.idea
+*.a
+*.dll
+*.exe
+*.obj
+*build*
+*install*
+*bin*
+.vscode
+src/odometry/test/resource/rgbd_dataset*

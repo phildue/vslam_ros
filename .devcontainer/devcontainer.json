@@ -1,0 +1,42 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"image": "phildue/vslam:dev",
+	
+	"remoteUser": "ros",
+	"runArgs": [
+		"--network=host",
+		"--cap-add=SYS_PTRACE",
+		"--security-opt=seccomp:unconfined",
+		"--security-opt=apparmor:unconfined",
+		"--volume=/tmp/.X11-unix:/tmp/.X11-unix"
+	],
+	"containerEnv": { "DISPLAY": "${localEnv:DISPLAY}" },
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.profiles.linux": {
+			"bash": {
+				"path": "bash"
+			},
+		},
+		"terminal.integrated.defaultProfile.linux": "bash"
+	},
+	"extensions": [
+		"dotjoshjohnson.xml",
+		"zachflower.uncrustify",
+		"ms-azuretools.vscode-docker",
+		"ms-python.python",
+		"ms-vscode.cpptools",
+		"redhat.vscode-yaml",
+		"smilerobotics.urdf",
+		"streetsidesoftware.code-spell-checker",
+		"twxs.cmake",
+		"yzhang.markdown-all-in-one",
+		"ms-iot.vscode-ros",
+		"ms-vscode.cpptools-extension-pack"
+	],
+	"mounts":[
+		"source=/home/phil/record/,target=/record,type=bind,consistency=cached",
+		"source=/media/data/,target=/media/data,type=bind,consistency=cached"
+
+	]
+}
