@@ -32,11 +32,13 @@
 		"twxs.cmake",
 		"yzhang.markdown-all-in-one",
 		"ms-iot.vscode-ros",
-		"ms-vscode.cpptools-extension-pack"
+		"ms-vscode.cpptools-extension-pack",
+		"xaver.clang-format",
+		"notskm.clang-tidy"
 	],
 	"mounts":[
-		"source=/home/phil/record/,target=/record,type=bind,consistency=cached",
-		"source=/media/data/,target=/media/data,type=bind,consistency=cached"
+		//"source=/home/phil/record/,target=/record,type=bind,consistency=cached",
+		//"source=/media/data/,target=/media/data,type=bind,consistency=cached"
 
 	]
 }

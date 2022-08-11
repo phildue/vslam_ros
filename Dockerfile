@@ -14,7 +14,9 @@ RUN apt update && apt install -y --no-install-recommends libgtk2.0-dev libva-dev
     libgflags-dev \
     libglew-dev \
     libcgal-dev \
-    git-lfs
+    git-lfs \
+    clang-format \
+    clang-tidy
 RUN pip3 install opencv-python GitPython sophuspy
 ENV MAKEFLAGS="-j 2"
 

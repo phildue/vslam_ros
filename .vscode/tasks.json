@@ -278,28 +278,27 @@
     ],
     "inputs": [
         {
-          "id": "package",
-          "type": "promptString",
-          "description": "Package name"
+            "id": "package",
+            "type": "promptString",
+            "description": "Package name"
         },
         {
             "id": "target",
             "type": "pickString",
             "description": "Package",
-            "options":[
-              "vslam_ros",
+            "options": [
+                "vslam_ros",
             ]
-          },
-          {
+        },
+        {
             "id": "build_type",
             "type": "pickString",
             "description": "build type",
-            "options":[
-             "RelWithDebInfo",
-             "Release",
-             "Debug"
+            "options": [
+                "RelWithDebInfo",
+                "Release",
+                "Debug"
             ]
-          }
-      ]
-     
+        }
+    ]
 }
