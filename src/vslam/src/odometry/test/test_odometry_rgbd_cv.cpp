@@ -7,7 +7,7 @@
 #include <core/core.h>
 #include <utils/utils.h>
 #include <lukas_kanade/lukas_kanade.h>
-#include "RgbdAlignmentOpenCv.h"
+#include "odometry/odometry.h"
 
 using namespace testing;
 using namespace pd;

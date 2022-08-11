@@ -1,7 +1,6 @@
 #ifndef VSLAM_FEATURE_TRACKING_H__
 #define VSLAM_FEATURE_TRACKING_H__
 #include "core/core.h"
-#include "Map.h"
 namespace pd::vslam {
   class FeatureTracking {
 public:
@@ -13,10 +12,12 @@ public:
     std::vector < Point3D::ShPtr > track(
       FrameRgbd::ShPtr frameCur,
       const std::vector < FrameRgbd::ShPtr > &framesRef);
+
     void extractFeatures(FrameRgbd::ShPtr frame) const;
     std::vector < Point3D::ShPtr > match(
       FrameRgbd::ShPtr frameCur,
       const std::vector < Feature2D::ShPtr > &featuresRef) const;
+
     std::vector < Feature2D::ShPtr > selectCandidates(
       FrameRgbd::ConstShPtr frameCur,
       const std::vector < FrameRgbd::ShPtr >

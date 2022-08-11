@@ -7,12 +7,7 @@
 #include <core/core.h>
 #include <utils/utils.h>
 #include <lukas_kanade/lukas_kanade.h>
-#include "SE3Alignment.h"
-#include "IterativeClosestPoint.h"
-#include "IterativeClosestPointOcv.h"
-
-#include "RgbdAlignmentOpenCv.h"
-#include "Trajectory.h"
+#include "odometry/odometry.h"
 using namespace testing;
 using namespace pd;
 using namespace pd::vslam;

@@ -3,9 +3,13 @@
 
 #include "MotionPrediction.h"
 #include "KeyFrameSelection.h"
+#include "direct_image_alignment/SE3Alignment.h"
+#include "direct_image_alignment/RgbdAlignmentOpenCv.h"
+#include "iterative_closest_point/IterativeClosestPointOcv.h"
+#include "iterative_closest_point/IterativeClosestPoint.h"
 #include "Odometry.h"
-#include "Map.h"
-#include "BundleAdjustment.h"
 #include "FeatureTracking.h"
-#include "MapOptimization.h"
+#include "mapping/MapOptimization.h"
+#include "mapping/Map.h"
+#include "mapping/BundleAdjustment.h"
 #endif

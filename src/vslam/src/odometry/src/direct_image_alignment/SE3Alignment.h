@@ -5,8 +5,10 @@
 #include "lukas_kanade/lukas_kanade.h"
 #include "least_squares/least_squares.h"
 #include "AlignmentSE3.h"
-namespace pd::vslam {
-  class SE3Alignment: public AlignmentSE3 {
+namespace pd::vslam
+{
+  class SE3Alignment: public AlignmentSE3
+  {
 public:
     typedef std::shared_ptr < SE3Alignment > ShPtr;
     typedef std::unique_ptr < SE3Alignment > UnPtr;

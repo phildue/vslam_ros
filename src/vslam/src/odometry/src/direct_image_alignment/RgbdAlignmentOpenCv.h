@@ -5,8 +5,10 @@
 #include "lukas_kanade/lukas_kanade.h"
 #include "AlignmentSE3.h"
 
-namespace pd::vslam {
-  class RgbdAlignmentOpenCv: public AlignmentSE3 {
+namespace pd::vslam
+{
+  class RgbdAlignmentOpenCv: public AlignmentSE3
+  {
 public:
     typedef std::shared_ptr < RgbdAlignmentOpenCv > ShPtr;
     typedef std::unique_ptr < RgbdAlignmentOpenCv > UnPtr;

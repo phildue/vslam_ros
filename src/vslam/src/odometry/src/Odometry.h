@@ -2,12 +2,11 @@
 #define VSLAM_ODOMETRY
 
 #include <core/core.h>
-#include <least_squares/least_squares.h>
-#include "SE3Alignment.h"
-#include "Map.h"
-#include "IterativeClosestPoint.h"
-#include "RgbdAlignmentOpenCv.h"
-#include "IterativeClosestPointOcv.h"
+#include "mapping/Map.h"
+#include "direct_image_alignment/SE3Alignment.h"
+#include "direct_image_alignment/RgbdAlignmentOpenCv.h"
+#include "iterative_closest_point/IterativeClosestPointOcv.h"
+#include "iterative_closest_point/IterativeClosestPoint.h"
 
 namespace pd::vslam {
   class Odometry {

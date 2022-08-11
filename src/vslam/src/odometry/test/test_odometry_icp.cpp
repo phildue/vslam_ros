@@ -6,7 +6,7 @@
 #include <opencv2/highgui.hpp>
 #include <core/core.h>
 #include <utils/utils.h>
-#include "IterativeClosestPoint.h"
+#include "odometry/odometry.h"
 
 using namespace testing;
 using namespace pd;

@@ -4,28 +4,29 @@ project(odometry VERSION 1.0.0)
 set(sources
         src/MotionPrediction.cpp
         src/KeyFrameSelection.cpp
-        src/Map.cpp
         src/Odometry.cpp
-        src/IterativeClosestPoint.cpp
-        src/IterativeClosestPointOcv.cpp
-        src/SE3Alignment.cpp
-        src/RgbdAlignmentOpenCv.cpp
-        src/BundleAdjustment.cpp
+        src/iterative_closest_point/IterativeClosestPoint.cpp
+        src/iterative_closest_point/IterativeClosestPointOcv.cpp
+        src/direct_image_alignment/SE3Alignment.cpp
+        src/direct_image_alignment/RgbdAlignmentOpenCv.cpp
         src/FeatureTracking.cpp
-        src/MapOptimization.cpp
+        src/mapping/BundleAdjustment.cpp
+        src/mapping/MapOptimization.cpp
+        src/mapping/Map.cpp
         )
 
 set(headers
         src/MotionPrediction.h
         src/KeyFrameSelection.h
         src/Odometry.h
-        src/IterativeClosestPoint.h
-        src/IterativeClosestPointOcv.h
-        src/SE3Alignment.h
-        src/RgbdAlignmentOpenCv.h
-        src/BundleAdjustment.h
+        src/iterative_closest_point/IterativeClosestPoint.h
+        src/iterative_closest_point/IterativeClosestPointOcv.h
+        src/direct_image_alignment/SE3Alignment.h
+        src/direct_image_alignment/RgbdAlignmentOpenCv.h
         src/FeatureTracking.h
-        src/MapOptimization.h
+        src/mapping/BundleAdjustment.h
+        src/mapping/MapOptimization.h
+        src/mapping/Map.h
         include/odometry/odometry.h
         )
 
