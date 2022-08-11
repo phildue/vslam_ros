@@ -95,6 +95,10 @@ if(VSLAM_ODOMETRY_BUILD_TESTS)
         pd_add_test(tracking ${PROJECT_NAME})
         target_compile_definitions(trackingTest PUBLIC TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource")
 
+        pd_add_test(descriptor_vo ${PROJECT_NAME})
+        target_compile_definitions(descriptor_voTest PUBLIC TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource")
+
+
         option(VSLAM_TEST_VISUALIZE "Enable visuals in unit test" Off)
         if(VSLAM_TEST_VISUALIZE)
                 target_compile_definitions(odometry_icpTest TEST_VISUALIZE)
