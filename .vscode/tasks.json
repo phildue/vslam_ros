@@ -7,7 +7,7 @@
             "label": "build",
             "detail": "Build workspace (default)",
             "type": "shell",
-            "command": "colcon build --packages-up-to ${input:target} --parallel-workers 1 --symlink-install --event-handler console_direct+ --cmake-args '-DCMAKE_BUILD_TYPE=${input:build_type}' -DVSLAM_BUILD_TESTS=On '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic",
+            "command": "colcon build --symlink-install --event-handler console_direct+ --cmake-args '-DCMAKE_BUILD_TYPE=${input:build_type}' -DVSLAM_BUILD_TESTS=On '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic",
             "problemMatcher": "$gcc",
             "group": {
                 "kind": "build",
