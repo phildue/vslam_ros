@@ -7,7 +7,7 @@
             "label": "build",
             "detail": "Build workspace (default)",
             "type": "shell",
-            "command": "colcon build --symlink-install --event-handler console_direct+ --cmake-args '-DCMAKE_BUILD_TYPE=${input:build_type}' -DVSLAM_BUILD_TESTS=On '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic",
+            "command": "colcon build --symlink-install --event-handler console_direct+ --cmake-args -DCMAKE_BUILD_TYPE=${input:build_type} -DCMAKE_EXPORT_COMPILE_COMMANDS=On -Wall -Wextra -Wpedantic",
             "problemMatcher": "$gcc",
             "group": {
                 "kind": "build",
@@ -18,7 +18,7 @@
             "label": "test",
             "detail": "Run all unit tests and show results.",
             "type": "shell",
-            "command": "colcon test --event-handler console_direct+; colcon test-result --event-handler console_direct+",
+            "command": "colcon test --event-handler console_direct+; colcon test-result",
             "group": "build",
             "problemMatcher": []
         },
@@ -100,7 +100,7 @@
             "label": "cppcheck",
             "detail": "Run static code checker cppcheck.",
             "type": "shell",
-            "command": "ament_cppcheck src/",
+            "command": "ament_cppcheck src/ --language c++",
             "presentation": {
                 "panel": "dedicated",
                 "reveal": "silent",

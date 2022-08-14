@@ -1,5 +1,5 @@
 {
-    "editor.tabSize": 8,
+    "editor.tabSize": 4,
     "editor.rulers": [
         100
     ],
@@ -122,9 +122,9 @@
     ],
     "C_Cpp.default.intelliSenseMode": "clang-x64",
     "C_Cpp.formatting": "Disabled",
-    "uncrustify.configPath.linux": ".uncrustify.cfg",
+    "uncrustify.configPath.linux": "uncrustify.cfg",
     "[cpp]": {
-        "editor.defaultFormatter": "zachflower.uncrustify"
+        "editor.defaultFormatter": "xaver.clang-format"
     },
     "search.exclude": {
         "**/node_modules": true,
@@ -139,7 +139,7 @@
     },
     "editor.formatOnSave": true,
     "clang-format.executable": "/usr/bin/clang-format",
-    "clang-format.style": "google",
+    "clang-format.assumeFilename": "/opt/ros/galactic/lib/python3.8/site-packages/ament_clang_format/configuration/.clang-format",
     "cSpell.words": [
         "athackst",
         "autopep",
@@ -178,4 +178,6 @@
         ".devcontainer/devcontainer.json"
     ],
     "ros.distro": "galactic",
+"editor.defaultFormatter": "xaver.clang-format",
+"editor.detectIndentation": false,
 }
