@@ -30,8 +30,8 @@ using namespace pd::vslam;
 
 TEST(TrackingTest, Track)
 {
-  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
-  Image img = utils::loadImage(TEST_RESOURCE "/rgb.png");
+  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
+  Image img = utils::loadImage(TEST_RESOURCE "/rgb.jpg");
 
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
   auto f0 = std::make_shared<FrameRgbd>(img, depth, cam, 3, 0);

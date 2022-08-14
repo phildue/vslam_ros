@@ -35,8 +35,8 @@ using namespace pd::vslam::lukas_kanade;
 #endif
 TEST(FrameTest, CreatePyramid)
 {
-  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
-  Image img = utils::loadImage(TEST_RESOURCE "/rgb.png");
+  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
+  Image img = utils::loadImage(TEST_RESOURCE "/rgb.jpg");
 
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
   auto f = std::make_shared<FrameRgbd>(img, depth, cam, 3, 0);
@@ -82,8 +82,8 @@ TEST(FrameTest, CreatePyramid)
 
 TEST(WarpTest, Warp)
 {
-  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
-  Image img = utils::loadImage(TEST_RESOURCE "/rgb.png");
+  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
+  Image img = utils::loadImage(TEST_RESOURCE "/rgb.jpg");
 
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
   auto f0 = std::make_shared<FrameRgbd>(img, depth, cam, 3, 0);
@@ -104,7 +104,7 @@ TEST(WarpTest, Warp)
           const Eigen::Matrix<double, 2, 6> Jw = w->J(u, v);
           const Eigen::Matrix<double, 1, 6> Jwi =
             Jw.row(0) * f0->dIx(i)(v, u) + Jw.row(1) * f0->dIx(i)(v, u);
-          //std::cout << "J = " << Jwi << std::endl;
+          // std::cout << "J = " << Jwi << std::endl;
           for (int j = 0; j < 6; j++) {
             Js[j](v, u) = Jwi(j);
           }

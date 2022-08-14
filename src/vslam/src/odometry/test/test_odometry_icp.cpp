@@ -43,8 +43,8 @@ public:
 
     // tum depth format:
     // https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
-    _depth = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
-    _img = utils::loadImage(TEST_RESOURCE "/rgb.png");
+    _depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
+    _img = utils::loadImage(TEST_RESOURCE "/rgb.jpg");
     _cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
 
     /* Max Relative Poses within 0.03 seconds estimated from
