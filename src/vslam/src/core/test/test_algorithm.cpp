@@ -37,9 +37,9 @@ TEST(AlgorithmTest, Gradient)
   Eigen::Matrix<std::uint8_t, 3, 3> m;
   m << 128, 128, 128, 255, 128, 255, 255, 255, 255;
 
-  const auto ix = algorithm::gradX(m);
-  const auto iy = algorithm::gradY(m);
-  const auto r = algorithm::gradient(m);
+  const Eigen::MatrixXi ix = algorithm::gradX(m);
+  const Eigen::MatrixXi iy = algorithm::gradY(m);
+  const Image r = algorithm::gradient(m);
 
   EXPECT_EQ(ix(0, 0), 0);
   EXPECT_EQ(ix(1, 0), -127);

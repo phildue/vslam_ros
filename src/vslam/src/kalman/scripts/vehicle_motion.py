@@ -62,9 +62,7 @@ class EKFConstantVelocitySE3:
         self._t = 0
 
     def _J_f_x(self, pose):
-        """
-        Computes Jacobian of f(x) = pose * exp(twist * dt)
-        """
+        """Compute Jacobian of f(x) = pose * exp(twist * dt)."""
         J_f_x = np.zeros((12, 12))
         t = pose.translation()
         R = pose.rotationMatrix()
@@ -76,9 +74,7 @@ class EKFConstantVelocitySE3:
         return J_f_x
 
     def _J_h_x(self, dt):
-        """
-        Computes Jacobian of measurement function h(x) = twist*dt
-        """
+        """Compute Jacobian of measurement function h(x) = twist*dt."""
         return np.hstack([np.zeros((6, 6)), np.identity((6))*dt])
 
     def predict(self, t):

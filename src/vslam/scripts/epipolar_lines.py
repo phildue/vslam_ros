@@ -55,8 +55,6 @@ def extract_matches(img1, img2):
 
 
 def drawlines(img1, img2, lines, pts1, pts2):
-    ''' img1 - image on which we draw the epilines for the points in img2
-    lines - corresponding epilines '''
     r, c = img1.shape
     img1 = cv.cvtColor(img1, cv.COLOR_GRAY2BGR)
     img2 = cv.cvtColor(img2, cv.COLOR_GRAY2BGR)
@@ -71,9 +69,7 @@ def drawlines(img1, img2, lines, pts1, pts2):
 
 
 def triangulate_dlt(uv1, uv2, P1, P2):
-    """
-    Triangulation with direct linear transform (DLT)
-    """
+    """Triangulation with direct linear transform (DLT)."""
     n_points = uv1.shape[1]
     p3d = np.zeros((3, n_points))
     for i in range(0, n_points):
