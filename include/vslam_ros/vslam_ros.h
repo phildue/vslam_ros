@@ -13,10 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_ROS2_H__
 #define VSLAM_ROS2_H__
-#include "vslam/vslam.h"
 #include "converters.h"
 #include "nodes/RgbdAlignmentNode.h"
+#include "vslam/vslam.h"
 #endif
