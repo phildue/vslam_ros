@@ -56,7 +56,7 @@ ENV MAKEFLAGS="-j 2"
 USER ros
 WORKDIR /home/ros/ws
 ADD --chown=ros:ros . /home/ros/ws/src/vslam_ros
-
+RUN chown ros:ros -R .
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
 --cmake-args '-DCMAKE_BUILD_TYPE=Release' '-DVSLAM_TEST_VISUALIZE=Off' '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic
 
