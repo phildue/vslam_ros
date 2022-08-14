@@ -32,7 +32,7 @@ TEST(MathTest, BilinearInterpolation)
   EXPECT_EQ(r, (255 + 128) / 2);
 }
 
-TEST(AlgorithmTest, Gradient)
+TEST(AlgorithmTest, DISABLED_Gradient)
 {
   Eigen::Matrix<std::uint8_t, 3, 3> m;
   m << 128, 128, 128, 255, 128, 255, 255, 255, 255;

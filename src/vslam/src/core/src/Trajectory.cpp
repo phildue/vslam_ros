@@ -50,7 +50,7 @@ PoseWithCovariance::ConstShPtr Trajectory::interpolateAt(Timestamp t) const
 {
   Timestamp t0 = 0U, t1 = 0U;
   for (const auto & t_pose : _poses) {
-    if (t_pose.first < t) {
+    if (t_pose.first <= t) {
       t0 = t_pose.first;
     }
     if (t_pose.first > t) {
