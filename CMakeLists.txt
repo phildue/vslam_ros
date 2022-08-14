@@ -28,7 +28,7 @@ find_package(tf2_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
 find_package(tf2_geometry_msgs REQUIRED)
-
+set(VSLAM_BUILD_TESTS ${BUILD_TESTING})
 add_subdirectory(src/vslam)
 add_library(${PROJECT_NAME} STATIC
     src/ros/converter.cpp 
@@ -104,18 +104,9 @@ install(
 )
 
 
-#TODO we should also install the conan lib files
-    
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-#ament_package(CONFIG_EXTRAS "${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake")
 ament_package()

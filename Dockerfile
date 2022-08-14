@@ -16,9 +16,10 @@ RUN apt update && apt install -y --no-install-recommends libgtk2.0-dev libva-dev
     libcgal-dev \
     git-lfs \
     clang-format \
-    clang-tidy
+    clang-tidy-6.0 \
+    ros-galactic-ament-cmake-clang-format \
+    ros-galactic-ament-cmake-clang-tidy
 RUN pip3 install opencv-python GitPython sophuspy
-ENV MAKEFLAGS="-j 2"
 
 # Matplotlib
 WORKDIR /opt
