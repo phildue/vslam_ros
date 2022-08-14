@@ -13,52 +13,49 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_KALMAN_FILTER_SE3_H__
 #define VSLAM_KALMAN_FILTER_SE3_H__
 
 #include "core/core.h"
-namespace pd::vslam::kalman {
-
-  class EKFConstantVelocitySE3 {
+namespace pd::vslam::kalman
+{
+class EKFConstantVelocitySE3
+{
 public:
-    typedef std::shared_ptr < EKFConstantVelocitySE3 > ShPtr;
-    typedef std::unique_ptr < EKFConstantVelocitySE3 > UnPtr;
-    typedef std::shared_ptr < const EKFConstantVelocitySE3 > ConstPtr;
+  typedef std::shared_ptr<EKFConstantVelocitySE3> ShPtr;
+  typedef std::unique_ptr<EKFConstantVelocitySE3> UnPtr;
+  typedef std::shared_ptr<const EKFConstantVelocitySE3> ConstPtr;
 
-    struct State
-    {
-      typedef std::shared_ptr < State > ShPtr;
-      typedef std::unique_ptr < State > UnPtr;
-      typedef std::shared_ptr < const State > ConstPtr;
+  struct State
+  {
+    typedef std::shared_ptr<State> ShPtr;
+    typedef std::unique_ptr<State> UnPtr;
+    typedef std::shared_ptr<const State> ConstPtr;
 
-      Vec6d pose;
-      Vec6d velocity;
-      Matd < 6, 6 > covPose;
-      Matd < 6, 6 > covVel;
-    };
+    Vec6d pose;
+    Vec6d velocity;
+    Matd<6, 6> covPose;
+    Matd<6, 6> covVel;
+  };
 
-    EKFConstantVelocitySE3(
-      const Matd < 12, 12 > &covarianceProcess,
-      Timestamp t0 = std::numeric_limits < uint64_t > ::max());
+  EKFConstantVelocitySE3(
+    const Matd<12, 12> & covarianceProcess, Timestamp t0 = std::numeric_limits<uint64_t>::max());
 
-    State::UnPtr predict(Timestamp t) const;
+  State::UnPtr predict(Timestamp t) const;
 
-    void update(const Vec6d & motion, const Matd < 6, 6 > & covMotion, Timestamp t);
+  void update(const Vec6d & motion, const Matd<6, 6> & covMotion, Timestamp t);
 
 private:
-    void predict(
-      Timestamp t, Vec6d & pose, Vec6d & vel, Matd < 12, 12 > & P, Matd < 12,
-      12 > & Jfx) const;
+  void predict(Timestamp t, Vec6d & pose, Vec6d & vel, Matd<12, 12> & P, Matd<12, 12> & Jfx) const;
 
-    Matd < 12, 12 > computeJacobianProcess(const SE3d & pose) const;
-    Matd < 6, 12 > computeJacobianMeasurement(Timestamp t) const;
+  Matd<12, 12> computeJacobianProcess(const SE3d & pose) const;
+  Matd<6, 12> computeJacobianMeasurement(Timestamp t) const;
 
-    Timestamp _t;
-    Vec6d _pose;
-    Vec6d _velocity;
-    Matd < 12, 12 > _covState;
-    Matd < 12, 12 > _covProcess;
-  };
-}
-#endif //VSLAM_KALMAN_H__
+  Timestamp _t;
+  Vec6d _pose;
+  Vec6d _velocity;
+  Matd<12, 12> _covState;
+  Matd<12, 12> _covProcess;
+};
+}  // namespace pd::vslam::kalman
+#endif  //VSLAM_KALMAN_H__

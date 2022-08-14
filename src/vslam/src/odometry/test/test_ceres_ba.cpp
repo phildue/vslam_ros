@@ -13,18 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+#include <core/core.h>
+#include <gtest/gtest.h>
+#include <utils/utils.h>
+
 #include <sophus/ceres_manifold.hpp>
 
-#include <core/core.h>
-#include <utils/utils.h>
 #include "odometry/odometry.h"
 using namespace testing;
 using namespace pd;
@@ -34,9 +34,11 @@ class ReprojectionErrorManifold
 {
 public:
   ReprojectionErrorManifold(double observedX, double observedY)
-  : _observedX{observedX}, _observedY{observedY} {}
+  : _observedX{observedX}, _observedY{observedY}
+  {
+  }
 
-  template<typename T>
+  template <typename T>
   bool operator()(
     const T * const poseData, const T * const intrinsics, const T * const pointData,
     T * residuals) const
@@ -66,13 +68,10 @@ public:
 
     return true;
   }
-  static ceres::CostFunction * Create(
-    double observed_x,
-    double observed_y
-  )
+  static ceres::CostFunction * Create(double observed_x, double observed_y)
   {
-    return new ceres::AutoDiffCostFunction<ReprojectionErrorManifold, 2,
-             Sophus::SE3d::num_parameters, 3, 3>(
+    return new ceres::AutoDiffCostFunction<
+      ReprojectionErrorManifold, 2, Sophus::SE3d::num_parameters, 3, 3>(
       new ReprojectionErrorManifold(observed_x, observed_y));
   }
 
@@ -89,10 +88,9 @@ public:
   {
   }
 
-  template<typename T>
+  template <typename T>
   bool operator()(
-    const T * const pose, const T * const intrinsics, const T * const pWcs,
-    T * residuals) const
+    const T * const pose, const T * const intrinsics, const T * const pWcs, T * residuals) const
   {
     T pCcs[3];
     ceres::AngleAxisRotatePoint(pose, pWcs, pCcs);
@@ -123,10 +121,7 @@ public:
     return true;
   }
 
-  static ceres::CostFunction * Create(
-    double observed_x,
-    double observed_y
-  )
+  static ceres::CostFunction * Create(double observed_x, double observed_y)
   {
     return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3, 3>(
       new ReprojectionError(observed_x, observed_y));
@@ -148,22 +143,19 @@ public:
     delete[] parameters_;
   }
 
-  int num_observations() const {return num_observations_;}
-  int num_cameras() const {return num_cameras_;}
-  const double * observations() const {return observations_;}
-  double * mutable_cameras() {return parameters_;}
-  double * mutable_points() {return parameters_ + 9 * num_cameras_;}
-  double * mutable_poses(int i) {return _poses[i].data();}
-  double * mutable_pose_for_observation(int i) {return _poses[camera_index_[i]].data();}
+  int num_observations() const { return num_observations_; }
+  int num_cameras() const { return num_cameras_; }
+  const double * observations() const { return observations_; }
+  double * mutable_cameras() { return parameters_; }
+  double * mutable_points() { return parameters_ + 9 * num_cameras_; }
+  double * mutable_poses(int i) { return _poses[i].data(); }
+  double * mutable_pose_for_observation(int i) { return _poses[camera_index_[i]].data(); }
 
   double * mutable_camera_for_observation(int i)
   {
     return mutable_cameras() + camera_index_[i] * 9;
   }
-  double * mutable_point_for_observation(int i)
-  {
-    return mutable_points() + point_index_[i] * 3;
-  }
+  double * mutable_point_for_observation(int i) { return mutable_points() + point_index_[i] * 3; }
 
   bool LoadFile(const char * filename)
   {
@@ -202,7 +194,7 @@ public:
   }
 
 private:
-  template<typename T>
+  template <typename T>
   void FscanfOrDie(FILE * fptr, const char * format, T * value)
   {
     int num_scanned = fscanf(fptr, format, value);
@@ -230,13 +222,12 @@ private:
 struct SnavelyReprojectionError
 {
   SnavelyReprojectionError(double observed_x, double observed_y)
-  : observed_x(observed_x), observed_y(observed_y) {}
+  : observed_x(observed_x), observed_y(observed_y)
+  {
+  }
 
-  template<typename T>
-  bool operator()(
-    const T * const camera,
-    const T * const point,
-    T * residuals) const
+  template <typename T>
+  bool operator()(const T * const camera, const T * const point, T * residuals) const
   {
     // camera[0,1,2] are the angle-axis rotation.
     T p[3];
@@ -273,9 +264,7 @@ struct SnavelyReprojectionError
 
   // Factory to hide the construction of the CostFunction object from
   // the client code.
-  static ceres::CostFunction * Create(
-    const double observed_x,
-    const double observed_y)
+  static ceres::CostFunction * Create(const double observed_x, const double observed_y)
   {
     return new ceres::AutoDiffCostFunction<SnavelyReprojectionError, 2, 9, 3>(
       new SnavelyReprojectionError(observed_x, observed_y));
@@ -292,31 +281,27 @@ public:
   {
     _K.setIdentity();
     if (!_ba_data.LoadFile(TEST_RESOURCE "/ba.txt")) {
-      std::cerr << "ERROR: unable to open file " << TEST_RESOURCE "/ba.txt" << "\n";
+      std::cerr << "ERROR: unable to open file " << TEST_RESOURCE "/ba.txt"
+                << "\n";
     }
   }
 
 protected:
   BALProblem _ba_data;
   Eigen::Matrix3d _K;
-
-
 };
 
 //Example from ceres repo
 TEST_F(TestBundleAdjustment, CeresExample)
 {
-
   const double * observations = _ba_data.observations();
 
   ceres::Problem problem;
   for (int i = 0; i < _ba_data.num_observations(); ++i) {
-    ceres::CostFunction * cost_function = SnavelyReprojectionError::Create(
-      observations[2 * i + 0], observations[2 * i + 1]);
+    ceres::CostFunction * cost_function =
+      SnavelyReprojectionError::Create(observations[2 * i + 0], observations[2 * i + 1]);
     problem.AddResidualBlock(
-      cost_function,
-      nullptr /* squared loss */,
-      _ba_data.mutable_camera_for_observation(i),
+      cost_function, nullptr /* squared loss */, _ba_data.mutable_camera_for_observation(i),
       _ba_data.mutable_point_for_observation(i));
   }
 
@@ -336,14 +321,11 @@ TEST_F(TestBundleAdjustment, BA)
   const double * observations = _ba_data.observations();
 
   for (int i = 0; i < _ba_data.num_observations(); ++i) {
-    ceres::CostFunction * cost_function = ReprojectionError::Create(
-      observations[2 * i + 0], observations[2 * i + 1]);
+    ceres::CostFunction * cost_function =
+      ReprojectionError::Create(observations[2 * i + 0], observations[2 * i + 1]);
     problem.AddResidualBlock(
-      cost_function,
-      nullptr /* squared loss */,
-      _ba_data.mutable_camera_for_observation(i),
-      _ba_data.mutable_camera_for_observation(i) + 6,
-      _ba_data.mutable_point_for_observation(i));
+      cost_function, nullptr /* squared loss */, _ba_data.mutable_camera_for_observation(i),
+      _ba_data.mutable_camera_for_observation(i) + 6, _ba_data.mutable_point_for_observation(i));
   }
 
   ceres::Solver::Options options;
@@ -353,7 +335,6 @@ TEST_F(TestBundleAdjustment, BA)
   ceres::Solver::Summary summary;
   ceres::Solve(options, &problem, &summary);
   std::cout << summary.FullReport() << "\n";
-
 }
 
 TEST_F(TestBundleAdjustment, BAManifold)
@@ -368,15 +349,11 @@ TEST_F(TestBundleAdjustment, BAManifold)
   const double * observations = _ba_data.observations();
 
   for (int i = 0; i < _ba_data.num_observations(); ++i) {
-
-    ceres::CostFunction * cost_function = ReprojectionError::Create(
-      observations[2 * i + 0], observations[2 * i + 1]);
+    ceres::CostFunction * cost_function =
+      ReprojectionError::Create(observations[2 * i + 0], observations[2 * i + 1]);
     problem.AddResidualBlock(
-      cost_function,
-      nullptr /* squared loss */,
-      _ba_data.mutable_camera_for_observation(i),
-      _ba_data.mutable_camera_for_observation(i) + 6,
-      _ba_data.mutable_point_for_observation(i));
+      cost_function, nullptr /* squared loss */, _ba_data.mutable_camera_for_observation(i),
+      _ba_data.mutable_camera_for_observation(i) + 6, _ba_data.mutable_point_for_observation(i));
   }
 
   ceres::Solver::Options options;

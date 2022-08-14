@@ -13,15 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
 #include <gtest/gtest.h>
+
+#include "core/core.h"
 #include "kalman/kalman.h"
 #include "utils/utils.h"
-#include "core/core.h"
 using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
@@ -43,7 +43,6 @@ public:
   {
     _Q(2, 2) = 1.5;
     _Q(3, 3) = 1.5;
-
   }
   Matd<4, 4> A(std::uint64_t dt) const override
   {
@@ -63,14 +62,12 @@ public:
 
 void plot(const std::vector<Eigen::Vector2d> & traj, std::string name)
 {
-
   std::vector<double> x(traj.size()), y(traj.size());
   for (size_t i = 0; i < traj.size(); i++) {
     x[i] = traj[i].x();
     y[i] = traj[i].y();
   }
   vis::plt::named_plot(name.c_str(), x, y);
-
 }
 
 TEST(KalmanFilterTest, Motion2DTestSanity)
@@ -130,5 +127,4 @@ TEST(KalmanFilterTest, Motion2DTestSanity)
     vis::plt::legend();
     vis::plt::show();
   }
-
 }

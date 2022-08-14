@@ -13,13 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
 #include <gtest/gtest.h>
 #include <utils/utils.h>
+
 #include "Loss.h"
 using namespace testing;
 using namespace pd;
@@ -27,7 +27,6 @@ using namespace pd::vslam;
 using namespace pd::vslam::least_squares;
 TEST(LossTest, TukeyLoss)
 {
-
   std::vector<double> l, l_, r, w;
   auto tk = std::make_shared<TukeyLoss>();
   for (int i = -100; i < 100; i++) {
@@ -36,7 +35,6 @@ TEST(LossTest, TukeyLoss)
     l.push_back(tk->compute(ri));
     l_.push_back(tk->computeDerivative(ri));
     w.push_back(tk->computeWeight(ri) * ri * ri);
-
   }
 
 #ifdef TEST_VISUALIZE

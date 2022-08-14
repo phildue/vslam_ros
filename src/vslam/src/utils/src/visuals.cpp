@@ -13,22 +13,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 07.08.21.
 //
 #include <Eigen/Dense>
+#include <experimental/filesystem>
+#include <filesystem>
 #include <opencv2/imgproc.hpp>
 #include <opencv4/opencv2/core/eigen.hpp>
 #include <opencv4/opencv2/highgui.hpp>
-#include <filesystem>
-#include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #include "visuals.h"
 namespace pd::vslam::vis
 {
-
-
 cv::Mat drawAsImage(const Eigen::MatrixXd & mat)
 {
   return drawMat((algorithm::normalize(mat) * 255).cast<uint8_t>());
@@ -113,13 +110,8 @@ void PlotLevenbergMarquardt::plot() const
   plt::named_plot("$||\\Delta x||_2$", stepsizev);
   plt::xlabel("Iteration");
   plt::legend();
-
-
 }
-std::string PlotLevenbergMarquardt::csv() const
-{
-  return "";
-}
+std::string PlotLevenbergMarquardt::csv() const { return ""; }
 
 void PlotGaussNewton::plot() const
 {
@@ -150,12 +142,7 @@ void PlotGaussNewton::plot() const
   plt::named_plot("$||\\Delta x||_2$", stepsizev);
   plt::xlabel("Iteration");
   plt::legend();
-
-
 }
-std::string PlotGaussNewton::csv() const
-{
-  return "";
-}
+std::string PlotGaussNewton::csv() const { return ""; }
 
-}
+}  // namespace pd::vslam::vis

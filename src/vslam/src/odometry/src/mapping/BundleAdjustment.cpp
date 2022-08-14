@@ -13,22 +13,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "BundleAdjustment.h"
+
 #include <sophus/ceres_manifold.hpp>
+
 #include "utils/utils.h"
 #define LOG_BA(level) CLOG(level, "mapping")
 
 namespace pd::vslam::mapping
 {
-
 class ReprojectionErrorManifold
 {
 public:
   ReprojectionErrorManifold(const Eigen::Vector2d & observation, const Eigen::Matrix3d & K)
-  : _obs{observation}, _K{K} {}
+  : _obs{observation}, _K{K}
+  {
+  }
 
-  template<typename T>
+  template <typename T>
   bool operator()(const T * const poseData, const T * const pointData, T * residuals) const
   {
     Eigen::Map<Sophus::SE3<T> const> const pose(poseData);
@@ -48,12 +50,10 @@ public:
     return true;
   }
   static ceres::CostFunction * Create(
-    const Eigen::Vector2d & observation,
-    const Eigen::Matrix3d & K
-  )
+    const Eigen::Vector2d & observation, const Eigen::Matrix3d & K)
   {
-    return new ceres::AutoDiffCostFunction<ReprojectionErrorManifold, 2,
-             Sophus::SE3d::num_parameters, 3>(
+    return new ceres::AutoDiffCostFunction<
+      ReprojectionErrorManifold, 2, Sophus::SE3d::num_parameters, 3>(
       new ReprojectionErrorManifold(observation, K));
   }
 
@@ -61,44 +61,36 @@ private:
   const Eigen::Vector2d _obs;
   const Eigen::Matrix3d _K;
 };
-BundleAdjustment::BundleAdjustment()
-{
-  Log::get("mapping", ODOMETRY_CFG_DIR "/log/mapping.conf");
-
-}
+BundleAdjustment::BundleAdjustment() { Log::get("mapping", ODOMETRY_CFG_DIR "/log/mapping.conf"); }
 
 void BundleAdjustment::setFrame(std::uint64_t frameId, const SE3d & pose, const Mat3d & K)
 {
   _poses[frameId] = pose;
   _Ks[frameId] = K;
   _problem.AddParameterBlock(
-    _poses[frameId].data(), SE3d::num_parameters,
-    new Sophus::Manifold<Sophus::SE3>());
-
+    _poses[frameId].data(), SE3d::num_parameters, new Sophus::Manifold<Sophus::SE3>());
 }
 void BundleAdjustment::setPoint(std::uint64_t pointId, const Vec3d & position)
 {
   _points[pointId] = position;
-
 }
 void BundleAdjustment::setObservation(
-  std::uint64_t pointId, std::uint64_t frameId,
-  const Vec2d & observation)
+  std::uint64_t pointId, std::uint64_t frameId, const Vec2d & observation)
 {
   auto itF = _Ks.find(frameId);
-  if (itF == _Ks.end()) {throw pd::Exception("No corresponding frame found.");}
+  if (itF == _Ks.end()) {
+    throw pd::Exception("No corresponding frame found.");
+  }
   auto itP = _points.find(pointId);
-  if (itP == _points.end()) {throw pd::Exception("No corresponding point found.");}
+  if (itP == _points.end()) {
+    throw pd::Exception("No corresponding point found.");
+  }
 
   auto & K = itF->second;
   auto & pose = _poses.find(frameId)->second;
   auto & point = itP->second;
   _problem.AddResidualBlock(
-    ReprojectionErrorManifold::Create(
-      observation,
-      K),
-    nullptr /* squared loss */,
-    pose.data(),
+    ReprojectionErrorManifold::Create(observation, K), nullptr /* squared loss */, pose.data(),
     point.data());
 }
 
@@ -119,17 +111,20 @@ void BundleAdjustment::optimize()
 SE3d BundleAdjustment::getPose(std::uint64_t frameId) const
 {
   auto it = _poses.find(frameId);
-  if (it != _poses.end() ) {return it->second;} else {
+  if (it != _poses.end()) {
+    return it->second;
+  } else {
     throw pd::Exception("Did not find corresponding pose.");
   }
 }
 Vec3d BundleAdjustment::getPoint(std::uint64_t pointId) const
 {
   auto it = _points.find(pointId);
-  if (it != _points.end() ) {return it->second;} else {
+  if (it != _points.end()) {
+    return it->second;
+  } else {
     throw pd::Exception("Did not find corresponding point.");
   }
-
 }
 
 double BundleAdjustment::computeError() const
@@ -140,4 +135,4 @@ double BundleAdjustment::computeError() const
   return error;
 }
 
-}
+}  // namespace pd::vslam::mapping

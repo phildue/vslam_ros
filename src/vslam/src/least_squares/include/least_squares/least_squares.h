@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_LEAST_SQUARES_H__
 #define VSLAM_LEAST_SQUARES_H__
 
-#include "Solver.h"
 #include "GaussNewton.h"
 #include "Loss.h"
-#include "Scaler.h"
 #include "Prior.h"
+#include "Scaler.h"
+#include "Solver.h"
 #endif

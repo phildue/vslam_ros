@@ -13,19 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "IterativeClosestPoint.h"
 
 #include <utils/utils.h>
-#include "IterativeClosestPoint.h"
 #define LOG_ODOM(level) CLOG(level, "odometry")
 namespace pd::vslam
 {
-
-
 PoseWithCovariance::UnPtr IterativeClosestPoint::align(
-  FrameRgbd::ConstShPtr from,
-  FrameRgbd::ConstShPtr to) const
+  FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const
 {
-
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFrom(new pcl::PointCloud<pcl::PointXYZ>);
 
   for (size_t v = 0; v < from->height(_level); v++) {
@@ -53,9 +49,7 @@ PoseWithCovariance::UnPtr IterativeClosestPoint::align(
   icp.setInputTarget(cloudTo);
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloudAligned(new pcl::PointCloud<pcl::PointXYZ>);
   const auto guess =
-    algorithm::computeRelativeTransform(
-    from->pose().pose(),
-    to->pose().pose()).inverse().matrix();
+    algorithm::computeRelativeTransform(from->pose().pose(), to->pose().pose()).inverse().matrix();
   icp.align(*cloudAligned, guess.cast<float>());
 
   /*
@@ -105,15 +99,12 @@ PoseWithCovariance::UnPtr IterativeClosestPoint::align(
   if (icp.hasConverged()) {
     LOG_ODOM(INFO) << "ICP has converged, score is: " << icp.getFitnessScore();
     return std::make_unique<PoseWithCovariance>(
-      SE3d(
-        icp.getFinalTransformation().cast<double>()).inverse() * from->pose().pose(), MatXd::Identity(
-        6,
-        6));
+      SE3d(icp.getFinalTransformation().cast<double>()).inverse() * from->pose().pose(),
+      MatXd::Identity(6, 6));
   } else {
     LOG_ODOM(ERROR) << "ICP has not converged";
     return std::make_unique<PoseWithCovariance>(to->pose());
   }
 }
 
-
-}
+}  // namespace pd::vslam

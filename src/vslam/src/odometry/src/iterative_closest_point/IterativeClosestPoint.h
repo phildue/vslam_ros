@@ -13,44 +13,40 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_ICP_H__
 #define VSLAM_ICP_H__
 
-#include "core/core.h"
-#include "AlignmentSE3.h"
+#include <pcl/console/time.h>  // TicToc
 #include <pcl/io/ply_io.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
 #include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/console/time.h>   // TicToc
 
+#include "AlignmentSE3.h"
+#include "core/core.h"
+#include "utils/utils.h"
 namespace pd::vslam
 {
-  class IterativeClosestPoint: public AlignmentSE3
-  {
+class IterativeClosestPoint : public AlignmentSE3
+{
 public:
-    typedef std::shared_ptr < IterativeClosestPoint > ShPtr;
-    typedef std::unique_ptr < IterativeClosestPoint > UnPtr;
-    typedef std::shared_ptr < const IterativeClosestPoint > ConstShPtr;
-    typedef std::unique_ptr < const IterativeClosestPoint > ConstUnPtr;
+  typedef std::shared_ptr<IterativeClosestPoint> ShPtr;
+  typedef std::unique_ptr<IterativeClosestPoint> UnPtr;
+  typedef std::shared_ptr<const IterativeClosestPoint> ConstShPtr;
+  typedef std::unique_ptr<const IterativeClosestPoint> ConstUnPtr;
 
-    IterativeClosestPoint(size_t level, int maxIterations)
-      : _level(level),
-      _maxIterations(maxIterations)
-    {
-      Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
+  IterativeClosestPoint(size_t level, int maxIterations)
+  : _level(level), _maxIterations(maxIterations)
+  {
+    Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
+  }
 
-    }
-
-    PoseWithCovariance::UnPtr align(
-      FrameRgbd::ConstShPtr from,
-      FrameRgbd::ConstShPtr to) const override;
+  PoseWithCovariance::UnPtr align(
+    FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const override;
 
 protected:
-    size_t _level;
-    int _maxIterations;
-
-  };
-}
-#endif// VSLAM_ICP_H__
+  size_t _level;
+  int _maxIterations;
+};
+}  // namespace pd::vslam
+#endif  // VSLAM_ICP_H__

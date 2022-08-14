@@ -13,52 +13,49 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_UTILS_H__
 #define VSLAM_UTILS_H__
 
-#include <string>
-#include <filesystem>
-#include <map>
+#include <core/core.h>
 
 #include <Eigen/Dense>
+#include <filesystem>
+#include <map>
+#include <string>
 
-#include <core/core.h>
+#include "Exceptions.h"
 #include "Log.h"
 #include "visuals.h"
-#include "Exceptions.h"
 
-namespace pd::vslam::utils {
-  void throw_if_nan(const Eigen::MatrixXd & mat, const std::string & msg);
-  Image loadImage(
-    const std::filesystem::path & path, int height = -1, int width = -1,
-    bool grayscale = true);
-  Eigen::MatrixXd loadDepth(const std::filesystem::path & path, int height = -1, int width = -1);
+namespace pd::vslam::utils
+{
+void throw_if_nan(const Eigen::MatrixXd & mat, const std::string & msg);
+Image loadImage(
+  const std::filesystem::path & path, int height = -1, int width = -1, bool grayscale = true);
+Eigen::MatrixXd loadDepth(const std::filesystem::path & path, int height = -1, int width = -1);
 
-  /**
+/**
    * @brief Load trajectory from file (TUM RGBD Format)
    *
    * @param path filepath
    * @return std::map<Timestamp,SE3d>
    */
-  std::map < Timestamp, SE3d > loadTrajectory(const std::filesystem::path & path);
+std::map<Timestamp, SE3d> loadTrajectory(const std::filesystem::path & path);
 
-  /**
+/**
    * @brief Write trajectory to txt file (TUM RGBD Format)
    *
    * @param traj
    * @param path
    * @param writeCovariance
    */
-  void writeTrajectory(
-    const Trajectory & traj, const std::filesystem::path & path,
-    bool writeCovariance = false);
+void writeTrajectory(
+  const Trajectory & traj, const std::filesystem::path & path, bool writeCovariance = false);
 
-  void saveImage(const Image & img, const std::filesystem::path & path);
-  void saveDepth(const Eigen::MatrixXd & img, const std::filesystem::path & path);
+void saveImage(const Image & img, const std::filesystem::path & path);
+void saveDepth(const Eigen::MatrixXd & img, const std::filesystem::path & path);
 
-
-  /**
+/**
    * @brief Load eigen matrix from csv
    *
    * Usage:
@@ -69,24 +66,25 @@ namespace pd::vslam::utils {
    * @param path to csv
    * @return Matrix
    */
-  template < typename M >
-  M  loadMatCsv(const std::filesystem::path & path, char delim = ',')
-  {
-    std::ifstream indata;
-    indata.open(path);
-    std::string line;
-    std::vector < double > values;
-    uint rows = 0;
-    while (std::getline(indata, line)) {
-      std::stringstream lineStream(line);
-      std::string cell;
-      while (std::getline(lineStream, cell, delim)) {
-        values.push_back(std::stod(cell));
-      }
-      ++rows;
+template <typename M>
+M loadMatCsv(const std::filesystem::path & path, char delim = ',')
+{
+  std::ifstream indata;
+  indata.open(path);
+  std::string line;
+  std::vector<double> values;
+  uint rows = 0;
+  while (std::getline(indata, line)) {
+    std::stringstream lineStream(line);
+    std::string cell;
+    while (std::getline(lineStream, cell, delim)) {
+      values.push_back(std::stod(cell));
     }
-    return Eigen::Map < const Eigen::Matrix < typename M::Scalar, M::RowsAtCompileTime,
-           M::ColsAtCompileTime, Eigen::RowMajor >> (values.data(), rows, values.size() / rows);
+    ++rows;
   }
+  return Eigen::Map<const Eigen::Matrix<
+    typename M::Scalar, M::RowsAtCompileTime, M::ColsAtCompileTime, Eigen::RowMajor>>(
+    values.data(), rows, values.size() / rows);
 }
+}  // namespace pd::vslam::utils
 #endif

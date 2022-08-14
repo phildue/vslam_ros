@@ -13,15 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <core/core.h>
+#include <gtest/gtest.h>
 #include <utils/utils.h>
+
 #include <opencv2/highgui.hpp>
+
 #include "odometry/odometry.h"
 using namespace testing;
 using namespace pd;
@@ -31,7 +32,6 @@ TEST(TrajectoryTest, Create)
 {
   auto poseGraph =
     std::make_shared<Trajectory>(utils::loadTrajectory(TEST_RESOURCE "/trajectory.txt"));
-
 }
 TEST(TrajectoryTest, Interpolate)
 {
@@ -44,5 +44,4 @@ TEST(TrajectoryTest, Interpolate)
   auto pose1 = poseGraph->poseAt(1);
   EXPECT_NEAR(pose1->pose().translation().x(), 1.0, 1e-7);
   std::cout << pose1->pose().log().transpose() << std::endl;
-
 }

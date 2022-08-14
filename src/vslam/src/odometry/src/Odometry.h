@@ -13,82 +13,80 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_ODOMETRY
 #define VSLAM_ODOMETRY
 
 #include <core/core.h>
-#include "mapping/Map.h"
-#include "direct_image_alignment/SE3Alignment.h"
+
 #include "direct_image_alignment/RgbdAlignmentOpenCv.h"
-#include "iterative_closest_point/IterativeClosestPointOcv.h"
+#include "direct_image_alignment/SE3Alignment.h"
 #include "iterative_closest_point/IterativeClosestPoint.h"
+#include "iterative_closest_point/IterativeClosestPointOcv.h"
+#include "mapping/Map.h"
 
-namespace pd::vslam {
-  class Odometry {
+namespace pd::vslam
+{
+class Odometry
+{
 public:
-    typedef std::shared_ptr < Odometry > ShPtr;
-    typedef std::unique_ptr < Odometry > UnPtr;
-    typedef std::shared_ptr < const Odometry > ConstShPtr;
-    typedef std::unique_ptr < const Odometry > ConstUnPtr;
+  typedef std::shared_ptr<Odometry> ShPtr;
+  typedef std::unique_ptr<Odometry> UnPtr;
+  typedef std::shared_ptr<const Odometry> ConstShPtr;
+  typedef std::unique_ptr<const Odometry> ConstUnPtr;
 
-    virtual void update(FrameRgbd::ConstShPtr frame) = 0;
+  virtual void update(FrameRgbd::ConstShPtr frame) = 0;
 
-    virtual PoseWithCovariance::ConstShPtr pose() const = 0;
-    virtual PoseWithCovariance::ConstShPtr speed() const = 0;
+  virtual PoseWithCovariance::ConstShPtr pose() const = 0;
+  virtual PoseWithCovariance::ConstShPtr speed() const = 0;
 
-    static ShPtr make();
+  static ShPtr make();
+};
 
-  };
-
-
-  class OdometryRgbd: public Odometry {
+class OdometryRgbd : public Odometry
+{
 public:
-    typedef std::shared_ptr < OdometryRgbd > ShPtr;
-    typedef std::unique_ptr < OdometryRgbd > UnPtr;
-    typedef std::shared_ptr < const OdometryRgbd > ConstShPtr;
-    typedef std::unique_ptr < const OdometryRgbd > ConstUnPtr;
+  typedef std::shared_ptr<OdometryRgbd> ShPtr;
+  typedef std::unique_ptr<OdometryRgbd> UnPtr;
+  typedef std::shared_ptr<const OdometryRgbd> ConstShPtr;
+  typedef std::unique_ptr<const OdometryRgbd> ConstUnPtr;
 
-    OdometryRgbd(
-      double minGradient,
-      least_squares::Solver::ShPtr solver,
-      least_squares::Loss::ShPtr loss,
-      Map::ConstShPtr map);
+  OdometryRgbd(
+    double minGradient, least_squares::Solver::ShPtr solver, least_squares::Loss::ShPtr loss,
+    Map::ConstShPtr map);
 
-    void update(FrameRgbd::ConstShPtr frame) override;
+  void update(FrameRgbd::ConstShPtr frame) override;
 
-    PoseWithCovariance::ConstShPtr pose() const override {return _pose;}
-    PoseWithCovariance::ConstShPtr speed() const override {return _speed;}
+  PoseWithCovariance::ConstShPtr pose() const override { return _pose; }
+  PoseWithCovariance::ConstShPtr speed() const override { return _speed; }
 
 protected:
-    const SE3Alignment::ConstShPtr _aligner;
-    const Map::ConstShPtr _map;
-    const bool _includeKeyFrame, _trackKeyFrame;
-    PoseWithCovariance::ConstShPtr _speed;
-    PoseWithCovariance::ConstShPtr _pose;
-
-  };
-  class OdometryIcp: public Odometry {
+  const SE3Alignment::ConstShPtr _aligner;
+  const Map::ConstShPtr _map;
+  const bool _includeKeyFrame, _trackKeyFrame;
+  PoseWithCovariance::ConstShPtr _speed;
+  PoseWithCovariance::ConstShPtr _pose;
+};
+class OdometryIcp : public Odometry
+{
 public:
-    typedef std::shared_ptr < OdometryIcp > ShPtr;
-    typedef std::unique_ptr < OdometryIcp > UnPtr;
-    typedef std::shared_ptr < const OdometryIcp > ConstShPtr;
-    typedef std::unique_ptr < const OdometryIcp > ConstUnPtr;
+  typedef std::shared_ptr<OdometryIcp> ShPtr;
+  typedef std::unique_ptr<OdometryIcp> UnPtr;
+  typedef std::shared_ptr<const OdometryIcp> ConstShPtr;
+  typedef std::unique_ptr<const OdometryIcp> ConstUnPtr;
 
-    OdometryIcp(int level, int maxIterations, Map::ConstShPtr map);
+  OdometryIcp(int level, int maxIterations, Map::ConstShPtr map);
 
-    void update(FrameRgbd::ConstShPtr frame) override;
+  void update(FrameRgbd::ConstShPtr frame) override;
 
-    PoseWithCovariance::ConstShPtr pose() const override {return _pose;}
-    PoseWithCovariance::ConstShPtr speed() const override {return _speed;}
+  PoseWithCovariance::ConstShPtr pose() const override { return _pose; }
+  PoseWithCovariance::ConstShPtr speed() const override { return _speed; }
 
 protected:
-    const IterativeClosestPoint::ConstShPtr _aligner;
-    PoseWithCovariance::ConstShPtr _speed;
-    PoseWithCovariance::ConstShPtr _pose;
-    const Map::ConstShPtr _map;
+  const IterativeClosestPoint::ConstShPtr _aligner;
+  PoseWithCovariance::ConstShPtr _speed;
+  PoseWithCovariance::ConstShPtr _pose;
+  const Map::ConstShPtr _map;
+};
 
-  };
-
-}
-#endif// VSLAM_ODOMETRY
+}  // namespace pd::vslam
+#endif  // VSLAM_ODOMETRY

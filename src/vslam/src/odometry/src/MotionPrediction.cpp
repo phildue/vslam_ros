@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "MotionPrediction.h"
+
 #include "utils/utils.h"
 #define LOG_MOTION_PREDICTION(level) CLOG(level, "motion_prediction")
 namespace pd::vslam
 {
-
 MotionPrediction::ShPtr MotionPrediction::make(const std::string & model)
 {
   if (model == "NoMotion") {
@@ -30,17 +29,18 @@ MotionPrediction::ShPtr MotionPrediction::make(const std::string & model)
   } else if (model == "Kalman") {
     return std::make_shared<MotionPredictionKalman>();
   } else {
-    LOG_MOTION_PREDICTION(WARNING) <<
-      "Unknown motion model! Falling back to constant motion model.";
+    LOG_MOTION_PREDICTION(WARNING)
+      << "Unknown motion model! Falling back to constant motion model.";
     return std::make_shared<MotionPredictionConstant>();
   }
 }
 
-
 void MotionPredictionConstant::update(PoseWithCovariance::ConstShPtr pose, Timestamp timestamp)
 {
-  if (timestamp < _lastT) {throw pd::Exception("New timestamp is older than last one!");}
-  const double dT = ((double)timestamp - (double) _lastT) / 1e9;
+  if (timestamp < _lastT) {
+    throw pd::Exception("New timestamp is older than last one!");
+  }
+  const double dT = ((double)timestamp - (double)_lastT) / 1e9;
 
   _speed = algorithm::computeRelativeTransform(_lastPose->pose(), pose->pose()).log() / dT;
   _lastPose = pose;
@@ -48,22 +48,20 @@ void MotionPredictionConstant::update(PoseWithCovariance::ConstShPtr pose, Times
 }
 PoseWithCovariance::UnPtr MotionPredictionConstant::predict(Timestamp timestamp) const
 {
-  const double dT = ((double)timestamp - (double) _lastT) / 1e9;
+  const double dT = ((double)timestamp - (double)_lastT) / 1e9;
   const SE3d predictedRelativePose = SE3d::exp(_speed * dT);
   return std::make_unique<PoseWithCovariance>(
     predictedRelativePose * _lastPose->pose(), MatXd::Identity(6, 6));
 }
 
-MotionPredictionKalman::MotionPredictionKalman()
-: MotionPrediction()
-  //  , _kalman(std::make_unique<kalman::EKFConstantVelocitySE3>(Matd<12,12>::Identity()))
-{}
+MotionPredictionKalman::MotionPredictionKalman() : MotionPrediction()
+//  , _kalman(std::make_unique<kalman::EKFConstantVelocitySE3>(Matd<12,12>::Identity()))
+{
+}
 PoseWithCovariance::UnPtr MotionPredictionKalman::predict(Timestamp timestamp) const
 {
   return std::make_unique<PoseWithCovariance>();
 }
-void MotionPredictionKalman::update(PoseWithCovariance::ConstShPtr pose, Timestamp timestamp)
-{}
+void MotionPredictionKalman::update(PoseWithCovariance::ConstShPtr pose, Timestamp timestamp) {}
 
-
-}
+}  // namespace pd::vslam

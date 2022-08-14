@@ -13,20 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 02.07.21.
 //
-#include "Exceptions.h"
 #include "algorithm.h"
-#include "macros.h"
+
+#include "Exceptions.h"
 #include "Kernel2d.h"
+#include "macros.h"
 namespace pd::vslam
 {
 namespace algorithm
 {
-
-
 double rmse(const Eigen::MatrixXi & patch1, const Eigen::MatrixXi & patch2)
 {
   if (patch1.rows() != patch2.rows() || patch1.cols() != patch2.cols()) {
@@ -44,7 +42,6 @@ double rmse(const Eigen::MatrixXi & patch1, const Eigen::MatrixXi & patch2)
 
 double sad(const Eigen::MatrixXi & patch1, const Eigen::MatrixXi & patch2)
 {
-
   if (patch1.rows() != patch2.rows() || patch1.cols() != patch2.cols()) {
     throw pd::Exception("sad:: Patches have unequal dimensions!");
   }
@@ -56,15 +53,9 @@ double sad(const Eigen::MatrixXi & patch1, const Eigen::MatrixXi & patch2)
     }
   }
   return sum;
-
-
 }
 
-
-Image resize(const Image & mat, double scale)
-{
-  return resize<std::uint8_t>(mat, scale);
-}
+Image resize(const Image & mat, double scale) { return resize<std::uint8_t>(mat, scale); }
 
 Eigen::MatrixXd resize(const Eigen::MatrixXd & mat, double scale)
 {
@@ -73,7 +64,6 @@ Eigen::MatrixXd resize(const Eigen::MatrixXd & mat, double scale)
 
 Image gradient(const Image & image)
 {
-
   const auto ix = gradX(image);
   const auto iy = gradY(image);
   const auto grad = ix.array().pow(2) + iy.array().pow(2);
@@ -87,7 +77,6 @@ Eigen::MatrixXi gradX(const Image & image)
 
 Eigen::MatrixXi gradY(const Image & image)
 {
-
   return conv2d(image.cast<double>(), Kernel2d<double>::scharrY()).cast<int>();
 }
 
@@ -107,7 +96,6 @@ Eigen::MatrixXd normalize(const Eigen::MatrixXd & mat, double min, double max)
   return matImage;
 }
 
-
 double median(const Eigen::VectorXd & d, bool isSorted)
 {
   //TODO do this without copy?
@@ -122,7 +110,7 @@ double median(const Eigen::VectorXd & d, bool isSorted)
 double median(std::vector<double> & v, bool isSorted)
 {
   if (!isSorted) {
-    std::sort(v.begin(), v.end() );
+    std::sort(v.begin(), v.end());
   }
   const int n = v.size();
   if (n % 2 == 0) {
@@ -132,13 +120,9 @@ double median(std::vector<double> & v, bool isSorted)
   }
 }
 
-
 Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> conv2d(
-  const Eigen::Matrix<double, -1,
-  -1> & mat, const Eigen::Matrix<double,
-  -1, -1> & kernel)
+  const Eigen::Matrix<double, -1, -1> & mat, const Eigen::Matrix<double, -1, -1> & kernel)
 {
-
   typedef int Idx;
   //TODO is this the most efficient way? add padding
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(mat.rows(), mat.cols());
@@ -165,7 +149,7 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> conv2d(
   return res;
 }
 
-}
+}  // namespace algorithm
 namespace transforms
 {
 Eigen::MatrixXd createdTransformMatrix2D(double x, double y, double angle)
@@ -173,21 +157,12 @@ Eigen::MatrixXd createdTransformMatrix2D(double x, double y, double angle)
   Eigen::Rotation2Dd rot(angle);
   Eigen::Matrix2d r = rot.toRotationMatrix();
   Eigen::Matrix3d m;
-  m << r(0, 0), r(0, 1), x,
-    r(1, 0), r(1, 1), y,
-    0, 0, 1;
+  m << r(0, 0), r(0, 1), x, r(1, 0), r(1, 1), y, 0, 0, 1;
   return m;
 }
 
-double deg2rad(double deg)
-{
-  return deg / 180 * M_PI;
-}
-double rad2deg(double rad)
-{
-  return rad / M_PI * 180.0;
-
-}
+double deg2rad(double deg) { return deg / 180 * M_PI; }
+double rad2deg(double rad) { return rad / M_PI * 180.0; }
 
 Eigen::Quaterniond euler2quaternion(double rx, double ry, double rz)
 {
@@ -200,11 +175,10 @@ Eigen::Quaterniond euler2quaternion(double rx, double ry, double rz)
   return q;
 }
 
-}
+}  // namespace transforms
 
 namespace random
 {
-
 static std::default_random_engine eng(0);
 
 double U(double min, double max)
@@ -212,21 +186,17 @@ double U(double min, double max)
   std::uniform_real_distribution<double> distr(min, max);
   return distr(eng);
 }
-int sign()
-{
-  return U(-1, 1) > 0 ? 1 : -1;
-}
+int sign() { return U(-1, 1) > 0 ? 1 : -1; }
 Eigen::VectorXd N(const Eigen::MatrixXd & cov)
 {
   std::normal_distribution<> dist;
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(cov);
   auto transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
 
-  return transform * Eigen::VectorXd{cov.cols()}.unaryExpr([&](auto UNUSED(x)) {return dist(eng);});
-
+  return transform *
+         Eigen::VectorXd{cov.cols()}.unaryExpr([&](auto UNUSED(x)) { return dist(eng); });
 }
 
+}  // namespace random
 
-}
-
-}
+}  // namespace pd::vslam

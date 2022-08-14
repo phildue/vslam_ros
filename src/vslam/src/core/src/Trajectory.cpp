@@ -13,13 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "Trajectory.h"
 namespace pd::vslam
 {
 Trajectory::Trajectory() {}
 Trajectory::Trajectory(const std::map<Timestamp, PoseWithCovariance::ConstShPtr> & poses)
-: _poses(poses) {}
+: _poses(poses)
+{
+}
 Trajectory::Trajectory(const std::map<Timestamp, SE3d> & poses)
 {
   for (const auto & p : poses) {
@@ -31,17 +32,14 @@ PoseWithCovariance::ConstShPtr Trajectory::poseAt(Timestamp t, bool interpolate)
 {
   auto it = _poses.find(t);
   if (it == _poses.end()) {
-    return interpolate ? interpolateAt(t) : throw std::runtime_error(
-                   "No pose at: " + std::to_string(
-                     t));
+    return interpolate ? interpolateAt(t)
+                       : throw std::runtime_error("No pose at: " + std::to_string(t));
   } else {
     return it->second;
   }
-
 }
 PoseWithCovariance::ConstShPtr Trajectory::motionBetween(
-  Timestamp t0, Timestamp t1,
-  bool interpolate) const
+  Timestamp t0, Timestamp t1, bool interpolate) const
 {
   auto p0 = poseAt(t0, interpolate);
   return std::make_shared<PoseWithCovariance>(
@@ -70,10 +68,6 @@ PoseWithCovariance::ConstShPtr Trajectory::interpolateAt(Timestamp t) const
   auto dPose = SE3d::exp(((double)t - (double)t0) * speed);
   return std::make_shared<PoseWithCovariance>(dPose * p0->pose(), p0->cov());
 }
-void Trajectory::append(Timestamp t, PoseWithCovariance::ConstShPtr pose)
-{
-  _poses[t] = pose;
-}
+void Trajectory::append(Timestamp t, PoseWithCovariance::ConstShPtr pose) { _poses[t] = pose; }
 
-
-} // namespace pd::vslam
+}  // namespace pd::vslam

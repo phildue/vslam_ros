@@ -13,17 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "Map.h"
 namespace pd::vslam
 {
-
-Map::Map()
-: _frames(),
-  _keyFrames(),
-  _maxFrames(7),
-  _maxKeyFrames(7)
-{}
+Map::Map() : _frames(), _keyFrames(), _maxFrames(7), _maxKeyFrames(7) {}
 void Map::insert(FrameRgbd::ShPtr frame, bool isKeyFrame)
 {
   if (_frames.size() >= _maxFrames) {
@@ -31,14 +24,11 @@ void Map::insert(FrameRgbd::ShPtr frame, bool isKeyFrame)
   }
   _frames.push_front(frame);
 
-
   if (isKeyFrame) {
-
     if (_keyFrames.size() >= _maxKeyFrames) {
       _keyFrames.pop_back();
     }
     _keyFrames.push_front(frame);
-
   }
 }
 std::vector<Point3D::ShPtr> Map::points()
@@ -95,10 +85,7 @@ std::vector<FrameRgbd::ConstShPtr> Map::keyFrames() const
   }
   return fs;
 }
-void Map::insert(Point3D::ShPtr point)
-{
-  _points[point->id()] = point;
-}
+void Map::insert(Point3D::ShPtr point) { _points[point->id()] = point; }
 
 void Map::insert(const std::vector<Point3D::ShPtr> & points)
 {
@@ -107,5 +94,4 @@ void Map::insert(const std::vector<Point3D::ShPtr> & points)
   }
 }
 
-
-}
+}  // namespace pd::vslam

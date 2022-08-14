@@ -13,32 +13,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "FeatureTracking.h"
-#include <set>
-#include <algorithm>
-#include <opencv2/opencv.hpp>
-#include <opencv2/objdetect.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/utility.hpp>
-#include <opencv2/core/ocl.hpp>
+
 #include <Eigen/Dense>
+#include <algorithm>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv4/opencv2/core/eigen.hpp>
+#include <set>
 namespace pd::vslam
 {
-
 std::vector<Point3D::ShPtr> FeatureTracking::track(
-  FrameRgbd::ShPtr frameCur,
-  const std::vector<FrameRgbd::ShPtr> & framesRef)
+  FrameRgbd::ShPtr frameCur, const std::vector<FrameRgbd::ShPtr> & framesRef)
 {
   extractFeatures(frameCur);
   return match(frameCur, selectCandidates(frameCur, framesRef));
 }
-
 
 void FeatureTracking::extractFeatures(FrameRgbd::ShPtr frame) const
 {
@@ -59,17 +56,13 @@ void FeatureTracking::extractFeatures(FrameRgbd::ShPtr frame) const
   features.reserve(kpts.size());
   for (size_t i = 0U; i < kpts.size(); ++i) {
     const auto & kp = kpts[i];
-    frame->addFeature(
-      std::make_shared<Feature2D>(
-        Vec2d(kp.pt.x, kp.pt.y), frame, kp.octave,
-        kp.response, descriptors.row(i)));
+    frame->addFeature(std::make_shared<Feature2D>(
+      Vec2d(kp.pt.x, kp.pt.y), frame, kp.octave, kp.response, descriptors.row(i)));
   }
 }
 
 std::vector<Point3D::ShPtr> FeatureTracking::match(
-  FrameRgbd::ShPtr frameCur,
-  const std::vector<Feature2D::ShPtr> & featuresRef)
-const
+  FrameRgbd::ShPtr frameCur, const std::vector<Feature2D::ShPtr> & featuresRef) const
 {
   auto featuresCur = frameCur->features();
   const auto dim = featuresCur[0]->descriptor().rows();
@@ -102,11 +95,8 @@ const
     } else {
       std::vector<Feature2D::ShPtr> features = {fCur, fRef};
       //TODO get 3d point
-      fCur->point() =
-        std::make_shared<Point3D>(
-        frameCur->p3d(
-          fCur->position().y(),
-          fCur->position().x()), features);
+      fCur->point() = std::make_shared<Point3D>(
+        frameCur->p3d(fCur->position().y(), fCur->position().x()), features);
       fRef->point() = fCur->point();
     }
     points.push_back(fCur->point());
@@ -114,9 +104,7 @@ const
   return points;
 }
 std::vector<Feature2D::ShPtr> FeatureTracking::selectCandidates(
-  FrameRgbd::ConstShPtr frameCur,
-  const std::vector<FrameRgbd::ShPtr> & framesRef)
-const
+  FrameRgbd::ConstShPtr frameCur, const std::vector<FrameRgbd::ShPtr> & framesRef) const
 {
   std::set<std::uint64_t> pointIds;
 
@@ -128,25 +116,18 @@ const
     for (auto ft : f->features()) {
       if (!ft->point()) {
         candidates.push_back(ft);
-      } else if (std::find(
-          pointIds.begin(), pointIds.end(),
-          ft->point()->id()) == pointIds.end())
-      {
+      } else if (std::find(pointIds.begin(), pointIds.end(), ft->point()->id()) == pointIds.end()) {
         Vec2d pIcs = frameCur->world2image(ft->point()->position());
-        if (border < pIcs.x() && pIcs.x() < f->width() - border && \
-          border < pIcs.y() && pIcs.y() < f->height() - border)
-        {
+        if (
+          border < pIcs.x() && pIcs.x() < f->width() - border && border < pIcs.y() &&
+          pIcs.y() < f->height() - border) {
           candidates.push_back(ft);
           pointIds.insert(ft->point()->id());
         }
-
       }
     }
-
-
   }
   return candidates;
 }
 
-
-}
+}  // namespace pd::vslam

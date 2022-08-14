@@ -13,10 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
+#include <core/core.h>
 #include <gtest/gtest.h>
 #include <utils/utils.h>
-#include <core/core.h>
+
 #include "lukas_kanade/lukas_kanade.h"
 
 using namespace testing;
@@ -27,13 +27,10 @@ using namespace pd::vslam::lukas_kanade;
 
 //OpenCV implementation
 void calcRgbdEquationCoeffs(
-  double * C, double dIdx, double dIdy, const Vec3d & p3d, double fx,
-  double fy)
+  double * C, double dIdx, double dIdy, const Vec3d & p3d, double fx, double fy)
 {
-  double invz = 1. / p3d.z(),
-    v0 = dIdx * fx * invz,
-    v1 = dIdy * fy * invz,
-    v2 = -(v0 * p3d.x() + v1 * p3d.y()) * invz;
+  double invz = 1. / p3d.z(), v0 = dIdx * fx * invz, v1 = dIdy * fy * invz,
+         v2 = -(v0 * p3d.x() + v1 * p3d.y()) * invz;
 
   C[3] = -p3d.z() * v1 + p3d.y() * v2;
   C[4] = p3d.z() * v0 - p3d.x() * v2;
@@ -60,7 +57,6 @@ Eigen::Vector6d ourJ(double dIdx, double dIdy, const Vec3d & p, double fx, doubl
   jac(0, 4) = 1.0 - x * jac(0, 2);
   jac(0, 5) = -y * z_inv;
 
-
   jac(1, 0) = 0.0;
   jac(1, 1) = z_inv;
   jac(1, 2) = -y * z_inv_2;
@@ -78,26 +74,23 @@ TEST(WarpSE3Test, Jacobian)
   DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
   Image img = utils::loadImage(TEST_RESOURCE "/rgb.png");
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
-  auto frame =
-    std::make_shared<FrameRgbd>(
-    img, depth, cam, 1, 0,
-    PoseWithCovariance(pose, Eigen::MatrixXd::Identity(6, 6)));
+  auto frame = std::make_shared<FrameRgbd>(
+    img, depth, cam, 1, 0, PoseWithCovariance(pose, Eigen::MatrixXd::Identity(6, 6)));
   auto w = std::make_shared<WarpSE3>(pose, frame->pcl(), frame->width(), cam, cam);
   const int u = 240;
   const int v = 300;
   std::vector<double> A_buf(6);
   double * A_ptr = &A_buf[0];
   calcRgbdEquationCoeffs(
-    A_ptr, frame->dIx()(v, u), frame->dIy()(v, u), frame->p3d(v, u),
-    cam->fx(), cam->fy());
+    A_ptr, frame->dIx()(v, u), frame->dIy()(v, u), frame->p3d(v, u), cam->fx(), cam->fy());
   Eigen::Map<Eigen::Vector6d> jacobianOpencv(A_buf.data(), A_buf.size());
   Eigen::Vector6d jacobian =
     w->J(u, v).row(0) * (double)frame->dIx()(v, u) + w->J(u, v).row(1) * (double)frame->dIy()(v, u);
 
   std::cout << "OpenCV: " << jacobianOpencv.transpose() << std::endl;
   std::cout << "Ours: " << jacobian.transpose() << std::endl;
-  std::cout << "Ours: " << ourJ(
-    frame->dIx()(v, u), frame->dIy()(v, u), frame->p3d(v, u),
-    cam->fx(), cam->fy()).transpose() << std::endl;
-
+  std::cout << "Ours: "
+            << ourJ(frame->dIx()(v, u), frame->dIy()(v, u), frame->p3d(v, u), cam->fx(), cam->fy())
+                 .transpose()
+            << std::endl;
 }

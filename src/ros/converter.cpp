@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "vslam_ros/converters.h"
 namespace vslam_ros
 {
@@ -45,16 +44,8 @@ geometry_msgs::msg::Pose convert(const Sophus::SE3d & se3)
 Sophus::SE3d convert(const geometry_msgs::msg::Pose & ros)
 {
   return Sophus::SE3d(
-    Eigen::Quaterniond(
-      ros.orientation.w,
-      ros.orientation.x,
-      ros.orientation.y,
-      ros.orientation.z),
-    Eigen::Vector3d(
-      ros.position.x,
-      ros.position.y,
-      ros.position.z
-  ));
+    Eigen::Quaterniond(ros.orientation.w, ros.orientation.x, ros.orientation.y, ros.orientation.z),
+    Eigen::Vector3d(ros.position.x, ros.position.y, ros.position.z));
 }
 void convert(const Sophus::SE3d & se3, geometry_msgs::msg::Twist & twist)
 {
@@ -65,21 +56,15 @@ void convert(const Sophus::SE3d & se3, geometry_msgs::msg::Twist & twist)
   twist.linear.x = se3.log().head(3).x();
   twist.linear.y = se3.log().head(3).y();
   twist.linear.z = se3.log().head(3).z();
-
 }
 Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped & tf)
 {
   return Sophus::SE3d(
     Eigen::Quaterniond(
-      tf.transform.rotation.w,
-      tf.transform.rotation.x,
-      tf.transform.rotation.y,
+      tf.transform.rotation.w, tf.transform.rotation.x, tf.transform.rotation.y,
       tf.transform.rotation.z),
     Eigen::Vector3d(
-      tf.transform.translation.x,
-      tf.transform.translation.y,
-      tf.transform.translation.z
-  ));
+      tf.transform.translation.x, tf.transform.translation.y, tf.transform.translation.z));
 }
 void convert(const Sophus::SE3d & sophus, geometry_msgs::msg::TransformStamped & tf)
 {
@@ -101,19 +86,16 @@ void convert(const pd::vslam::PoseWithCovariance & p, geometry_msgs::msg::PoseWi
     for (int j = 0; j < 6; j++) {
       pRos.covariance[i * 6 + j] = p.cov()(i, j);
     }
-
   }
 }
 void convert(
-  const pd::vslam::PoseWithCovariance & p,
-  geometry_msgs::msg::TwistWithCovariance & pRos)
+  const pd::vslam::PoseWithCovariance & p, geometry_msgs::msg::TwistWithCovariance & pRos)
 {
   convert(p.pose(), pRos.twist);
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 6; j++) {
       pRos.covariance[i * 6 + j] = p.cov()(i, j);
     }
-
   }
 }
-}
+}  // namespace vslam_ros

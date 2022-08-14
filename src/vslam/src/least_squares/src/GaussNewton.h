@@ -13,36 +13,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_GAUSS_NEWTON_H__
 #define VSLAM_GAUSS_NEWTON_H__
-#include <memory>
+#include <core/core.h>
 
 #include <Eigen/Dense>
-#include <core/core.h>
+#include <memory>
+
 #include "Solver.h"
 
-namespace pd::vslam::least_squares {
-
-  class GaussNewton: public Solver {
-
+namespace pd::vslam::least_squares
+{
+class GaussNewton : public Solver
+{
 public:
-    typedef std::shared_ptr < GaussNewton > ShPtr;
-    typedef std::unique_ptr < GaussNewton > UnPtr;
-    typedef std::shared_ptr < const GaussNewton > ConstShPtr;
-    typedef std::unique_ptr < const GaussNewton > ConstUnPtr;
+  typedef std::shared_ptr<GaussNewton> ShPtr;
+  typedef std::unique_ptr<GaussNewton> UnPtr;
+  typedef std::shared_ptr<const GaussNewton> ConstShPtr;
+  typedef std::unique_ptr<const GaussNewton> ConstUnPtr;
 
-    GaussNewton(double minStepSize, size_t maxIterations);
+  GaussNewton(double minStepSize, size_t maxIterations);
 
-    typename Solver::Results::ConstUnPtr solve(std::shared_ptr < Problem > problem) override;
+  typename Solver::Results::ConstUnPtr solve(std::shared_ptr<Problem> problem) override;
 
 private:
-    const double _minStepSize;
-    const double _minGradient;
-    const double _minReduction;
-    const size_t _maxIterations;
+  const double _minStepSize;
+  const double _minGradient;
+  const double _minReduction;
+  const size_t _maxIterations;
+};
 
-  };
-
-}
+}  // namespace pd::vslam::least_squares
 #endif

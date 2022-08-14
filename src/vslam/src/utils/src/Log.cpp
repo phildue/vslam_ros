@@ -13,21 +13,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 07.08.21.
 //
 #include <eigen3/Eigen/Dense>
+#include <experimental/filesystem>
+#include <filesystem>
+#include <opencv2/imgproc.hpp>
 #include <opencv4/opencv2/core/eigen.hpp>
 #include <opencv4/opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <filesystem>
-#include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #include "Log.h"
 
 INITIALIZE_EASYLOGGINGPP
-
 
 namespace pd::vslam
 {
@@ -38,8 +36,7 @@ Level Log::_blockLevel = Level::Unknown;
 Level Log::_showLevel = Level::Unknown;
 
 std::shared_ptr<Log> Log::get(
-  const std::string & name, const std::string & confFilePath,
-  Level level)
+  const std::string & name, const std::string & confFilePath, Level level)
 {
   auto it = _logs.find(name);
   if (it != _logs.end()) {
@@ -55,7 +52,6 @@ std::shared_ptr<Log> Log::get(
     _logs[name] = log;
     return log[level];
   }
-
 }
 
 std::shared_ptr<LogImage> Log::getImageLog(const std::string & name, Level level)
@@ -64,12 +60,7 @@ std::shared_ptr<LogImage> Log::getImageLog(const std::string & name, Level level
   if (it != _logsImage.end()) {
     return it->second[level];
   } else {
-    const std::vector<Level> levels = {
-      Level::Debug,
-      Level::Info,
-      Level::Warning,
-      Level::Error
-    };
+    const std::vector<Level> levels = {Level::Debug, Level::Info, Level::Warning, Level::Error};
     std::map<Level, std::shared_ptr<LogImage>> log;
     for (const auto & l : levels) {
       log[l] = std::make_shared<LogImage>(name, l >= _blockLevel, l >= _showLevel);
@@ -85,12 +76,7 @@ std::shared_ptr<LogPlot> Log::getPlotLog(const std::string & name, Level level)
   if (it != _logsPlot.end()) {
     return it->second[level];
   } else {
-    const std::vector<Level> levels = {
-      Level::Debug,
-      Level::Info,
-      Level::Warning,
-      Level::Error
-    };
+    const std::vector<Level> levels = {Level::Debug, Level::Info, Level::Warning, Level::Error};
     std::map<Level, std::shared_ptr<LogPlot>> log;
     for (const auto & l : levels) {
       log[l] = std::make_shared<LogPlot>(name, l >= _blockLevel, l >= _showLevel);
@@ -100,38 +86,23 @@ std::shared_ptr<LogPlot> Log::getPlotLog(const std::string & name, Level level)
   }
 }
 
-
-Log::Log(const std::string & name, const std::string & configFilePath)
-: _name(name)
+Log::Log(const std::string & name, const std::string & configFilePath) : _name(name)
 {
   el::Configurations config(configFilePath);
   // Actually reconfigure all loggers instead
   el::Loggers::reconfigureLogger(name, config);
-
 }
 
 LogPlot::LogPlot(const std::string & name, bool block, bool show, bool save)
-: _block(block),
-  _show(show),
-  _save(save),
-  _name(name)
+: _block(block), _show(show), _save(save), _name(name)
 {
-
 }
-void operator<<(LogPlot::ShPtr log, vis::Plot::ConstShPtr plot)
-{
-  log->append(plot);
-}
+void operator<<(LogPlot::ShPtr log, vis::Plot::ConstShPtr plot) { log->append(plot); }
 
 LogImage::LogImage(const std::string & name, bool block, bool show, bool save)
-: _block(block),
-  _show(show),
-  _save(save),
-  _name(name),
-  _folder(LOG_DIR "/" + name),
-  _ctr(0U)
-{}
-
+: _block(block), _show(show), _save(save), _name(name), _folder(LOG_DIR "/" + name), _ctr(0U)
+{
+}
 
 void LogImage::logMat(const cv::Mat & mat)
 {
@@ -146,11 +117,7 @@ void LogImage::logMat(const cv::Mat & mat)
   if (_save) {
     cv::imwrite(_folder + "/" + _name + std::to_string(_ctr++) + ".jpg", mat);
   }
-
 }
 
-void operator<<(LogImage::ShPtr log, vis::Drawable::ConstShPtr drawable)
-{
-  log->append(drawable);
-}
-}
+void operator<<(LogImage::ShPtr log, vis::Drawable::ConstShPtr drawable) { log->append(drawable); }
+}  // namespace pd::vslam

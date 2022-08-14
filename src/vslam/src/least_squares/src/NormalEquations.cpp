@@ -13,17 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "NormalEquations.h"
 namespace pd::vslam::least_squares
 {
-
 NormalEquations::NormalEquations(size_t nParameters)
 : _A(Eigen::MatrixXd::Zero(nParameters, nParameters)),
   _b(Eigen::VectorXd::Zero(nParameters)),
   _chi2(0),
   _nConstraints(0)
-{}
+{
+}
 NormalEquations::NormalEquations(const std::vector<NormalEquations> & normalEquations)
 {
   _A = normalEquations[0].A();
@@ -36,7 +35,6 @@ NormalEquations::NormalEquations(const std::vector<NormalEquations> & normalEqua
     _chi2 += normalEquations[i].chi2();
     _nConstraints += normalEquations[i].nConstraints();
   }
-
 }
 NormalEquations::NormalEquations(const std::vector<NormalEquations::ConstShPtr> & normalEquations)
 {
@@ -53,8 +51,7 @@ NormalEquations::NormalEquations(const std::vector<NormalEquations::ConstShPtr> 
 }
 
 NormalEquations::NormalEquations(
-  const Eigen::MatrixXd & J, const Eigen::VectorXd & r,
-  const Eigen::VectorXd & w)
+  const Eigen::MatrixXd & J, const Eigen::VectorXd & r, const Eigen::VectorXd & w)
 {
   auto Jtw = J.transpose() * w.asDiagonal();
   _A = Jtw * J;
@@ -81,10 +78,10 @@ void NormalEquations::combine(const NormalEquations & that)
 std::string NormalEquations::toString() const
 {
   std::stringstream ss;
-  ss << "A=\n" << _A << "\nb=\n" << _b.transpose() << "\nnConstraints=" << _nConstraints <<
-    " chi2=" << _chi2;
+  ss << "A=\n"
+     << _A << "\nb=\n"
+     << _b.transpose() << "\nnConstraints=" << _nConstraints << " chi2=" << _chi2;
   return ss.str();
 }
 
-
-}
+}  // namespace pd::vslam::least_squares

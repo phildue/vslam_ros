@@ -26,15 +26,19 @@
 #include <sophus/se3.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-namespace vslam_ros{
-pd::vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo& msg);
-geometry_msgs::msg::Pose convert(const Sophus::SE3d& se3);
-void convert(const Sophus::SE3d& se3, geometry_msgs::msg::Twist& twist);
-Sophus::SE3d convert(const geometry_msgs::msg::Pose& ros);
+namespace vslam_ros {
+  pd::vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo & msg);
+  geometry_msgs::msg::Pose convert(const Sophus::SE3d & se3);
+  void convert(const Sophus::SE3d & se3, geometry_msgs::msg::Twist & twist);
+  Sophus::SE3d convert(const geometry_msgs::msg::Pose & ros);
 
-Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped& tf);
-void convert(const Sophus::SE3d& sophus, geometry_msgs::msg::TransformStamped& tf);
-void convert(const pd::vslam::PoseWithCovariance& p, geometry_msgs::msg::PoseWithCovariance& pRos);
-void convert(const pd::vslam::PoseWithCovariance& p, geometry_msgs::msg::TwistWithCovariance& pRos);
+  Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped & tf);
+  void convert(const Sophus::SE3d & sophus, geometry_msgs::msg::TransformStamped & tf);
+  void convert(
+    const pd::vslam::PoseWithCovariance & p,
+    geometry_msgs::msg::PoseWithCovariance & pRos);
+  void convert(
+    const pd::vslam::PoseWithCovariance & p,
+    geometry_msgs::msg::TwistWithCovariance & pRos);
 }
 #endif

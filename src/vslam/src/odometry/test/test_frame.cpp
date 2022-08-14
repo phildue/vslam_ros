@@ -13,16 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <core/core.h>
-#include <utils/utils.h>
-#include <opencv2/highgui.hpp>
+#include <gtest/gtest.h>
 #include <lukas_kanade/lukas_kanade.h>
+#include <utils/utils.h>
+
+#include <opencv2/highgui.hpp>
 using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
@@ -61,12 +61,10 @@ TEST(FrameTest, CreatePyramid)
     pcl = f->pcl(i, false);
     for (const auto & p : pcl) {
       const Eigen::Vector2i uv = f->camera2image(p, i).cast<int>();
-      if (0 <= uv.x() && uv.x() < depthReproj.cols() &&
-        0 <= uv.y() && uv.y() < depthReproj.cols())
-      {
+      if (
+        0 <= uv.x() && uv.x() < depthReproj.cols() && 0 <= uv.y() && uv.y() < depthReproj.cols()) {
         depthReproj(uv.y(), uv.x()) = p.z();
       }
-
     }
 
     EXPECT_NEAR((depthReproj - f->depth(i)).norm(), 0.0, 1e-6);
@@ -79,7 +77,6 @@ TEST(FrameTest, CreatePyramid)
       cv::imshow("Depth", vis::drawAsImage(f->depth(i)));
       cv::waitKey(0);
     }
-
   }
 }
 
@@ -94,8 +91,8 @@ TEST(WarpTest, Warp)
 
   for (size_t i = 0; i < f0->nLevels(); i++) {
     auto w = std::make_shared<WarpSE3>(
-      f0->pose().pose(), f0->pcl(i, false), f0->width(i),
-      f0->camera(i), f1->camera(i), f1->pose().pose());
+      f0->pose().pose(), f0->pcl(i, false), f0->width(i), f0->camera(i), f1->camera(i),
+      f1->pose().pose());
 
     if (VISUALIZE) {
       auto & img = f0->intensity(i);
@@ -105,15 +102,14 @@ TEST(WarpTest, Warp)
       for (int v = 0; v < steepestDescent.rows(); v++) {
         for (int u = 0; u < steepestDescent.cols(); u++) {
           const Eigen::Matrix<double, 2, 6> Jw = w->J(u, v);
-          const Eigen::Matrix<double, 1,
-            6> Jwi = Jw.row(0) * f0->dIx(i)(v, u) + Jw.row(1) * f0->dIx(i)(v, u);
+          const Eigen::Matrix<double, 1, 6> Jwi =
+            Jw.row(0) * f0->dIx(i)(v, u) + Jw.row(1) * f0->dIx(i)(v, u);
           //std::cout << "J = " << Jwi << std::endl;
           for (int j = 0; j < 6; j++) {
             Js[j](v, u) = Jwi(j);
           }
 
           steepestDescent(v, u) = std::isfinite(Jwi.norm()) ? Jwi.norm() : 0.0;
-
         }
       }
       for (int j = 0; j < 6; j++) {
@@ -124,6 +120,5 @@ TEST(WarpTest, Warp)
       cv::imshow("J", vis::drawAsImage(steepestDescent));
       cv::waitKey(0);
     }
-
   }
 }

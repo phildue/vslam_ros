@@ -13,14 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "EKFConstantVelocitySE3.h"
 
 #include <memory>
 
 namespace pd::vslam::kalman
 {
-
 EKFConstantVelocitySE3::State::UnPtr EKFConstantVelocitySE3::predict(Timestamp t) const
 {
   auto state = std::make_unique<State>();
@@ -56,14 +54,13 @@ void EKFConstantVelocitySE3::update(const Vec6d & motion, const Matd<6, 6> & cov
 }
 
 void EKFConstantVelocitySE3::predict(
-  Timestamp t, Vec6d & pose, Vec6d & vel, Matd<12, 12> & P,
-  Matd<12, 12> & Jfx) const
+  Timestamp t, Vec6d & pose, Vec6d & vel, Matd<12, 12> & P, Matd<12, 12> & Jfx) const
 {
   Timestamp dt = t - _t;
   pose = (SE3d::exp(_pose) * SE3d::exp(_velocity * dt)).log();
   vel = _velocity;
   Jfx = computeJacobianProcess(SE3d::exp(pose));
-  P = Jfx * ( P * Jfx.transpose() ) + _covProcess;
+  P = Jfx * (P * Jfx.transpose()) + _covProcess;
 }
 
 Matd<12, 12> EKFConstantVelocitySE3::computeJacobianProcess(const SE3d & pose) const
@@ -71,9 +68,7 @@ Matd<12, 12> EKFConstantVelocitySE3::computeJacobianProcess(const SE3d & pose) c
   MatXd J_f_x = MatXd::Zero(12, 12);
   Vec3d t = pose.translation();
   Eigen::Matrix3d t_hat;
-  t_hat << 0, -t(2), t(1),
-    t(2), 0, -t(0),
-    -t(1), t(0), 0;
+  t_hat << 0, -t(2), t(1), t(2), 0, -t(0), -t(1), t(0), 0;
   auto R = pose.rotationMatrix();
   MatXd adj = MatXd::Zero(6, 6);
   adj.block(0, 0, 3, 3) = R;
@@ -90,4 +85,4 @@ Matd<6, 12> EKFConstantVelocitySE3::computeJacobianMeasurement(Timestamp dt) con
   return mat;
 }
 
-}
+}  // namespace pd::vslam::kalman

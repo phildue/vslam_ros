@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
 #include <gtest/gtest.h>
+
 #include "core/core.h"
 using namespace testing;
 using namespace pd;
@@ -31,10 +31,7 @@ public:
   const int _nPoints = 8;
   const double precision = 1e-7;
 
-  CameraTest()
-  {
-    setup3D();
-  }
+  CameraTest() { setup3D(); }
 
   void setup3D()
   {
@@ -48,7 +45,6 @@ public:
     _points3D.row(5) = Eigen::Vector3d(0.5, -0.5, 10.5);
     _points3D.row(6) = Eigen::Vector3d(0.5, -0.5, 10.5);
     _points3D.row(7) = Eigen::Vector3d(-0.5, 0.5, 10.5);
-
   }
 };
 TEST_F(CameraTest, Constructor)
@@ -59,7 +55,6 @@ TEST_F(CameraTest, Constructor)
   auto camera = std::make_shared<Camera>(f, cx, cy);
   EXPECT_EQ(camera->focalLength(), f);
   EXPECT_EQ(camera->principalPoint(), Eigen::Vector2d(cx, cy));
-
 }
 TEST_F(CameraTest, ForwardBackwardProjection)
 {
@@ -72,36 +67,27 @@ TEST_F(CameraTest, ForwardBackwardProjection)
     const auto & p3d = _points3D.row(i);
     auto pImage = camera->camera2image(p3d);
 
-    EXPECT_NEAR(
-      pImage.x(), (f * p3d.x() + cx * p3d.z()) / p3d.z(),
-      precision) << "Projection failed for point: [" << i << "] -> " << p3d;
-    EXPECT_NEAR(
-      pImage.y(), (f * p3d.y() + cy * p3d.z()) / p3d.z(),
-      precision) << "Projection failed for point: [" << i << "] -> " << p3d;
+    EXPECT_NEAR(pImage.x(), (f * p3d.x() + cx * p3d.z()) / p3d.z(), precision)
+      << "Projection failed for point: [" << i << "] -> " << p3d;
+    EXPECT_NEAR(pImage.y(), (f * p3d.y() + cy * p3d.z()) / p3d.z(), precision)
+      << "Projection failed for point: [" << i << "] -> " << p3d;
 
     Eigen::Vector3d pRay = camera->image2ray(pImage);
 
-    EXPECT_NEAR(
-      pRay.x(), (pImage.x() - cx) / f,
-      precision) << "Projection failed for point: [" << i << "] -> " << p3d;
-    EXPECT_NEAR(
-      pRay.y(), (pImage.y() - cy) / f,
-      precision) << "Projection failed for point: [" << i << "] -> " << p3d;
+    EXPECT_NEAR(pRay.x(), (pImage.x() - cx) / f, precision)
+      << "Projection failed for point: [" << i << "] -> " << p3d;
+    EXPECT_NEAR(pRay.y(), (pImage.y() - cy) / f, precision)
+      << "Projection failed for point: [" << i << "] -> " << p3d;
 
     Eigen::Vector3d p3dBack = camera->image2camera(pImage, p3d.z());
 
-    EXPECT_NEAR(
-      p3d.x(), p3dBack.x(),
-      precision) << "Back-projection failed for point: [" << i << "] -> " << pImage << " | " << p3d;
-    EXPECT_NEAR(
-      p3d.y(), p3dBack.y(),
-      precision) << "Back-projection failed for point: [" << i << "] -> " << pImage << " | " << p3d;
-    EXPECT_NEAR(
-      p3d.z(), p3dBack.z(),
-      precision) << "Back-projection failed for point: [" << i << "] -> " << pImage << " | " << p3d;
-
+    EXPECT_NEAR(p3d.x(), p3dBack.x(), precision)
+      << "Back-projection failed for point: [" << i << "] -> " << pImage << " | " << p3d;
+    EXPECT_NEAR(p3d.y(), p3dBack.y(), precision)
+      << "Back-projection failed for point: [" << i << "] -> " << pImage << " | " << p3d;
+    EXPECT_NEAR(p3d.z(), p3dBack.z(), precision)
+      << "Back-projection failed for point: [" << i << "] -> " << pImage << " | " << p3d;
   }
-
 }
 
 TEST_F(CameraTest, ProjectingInvalid)
@@ -137,12 +123,9 @@ TEST_F(CameraTest, Reprojection)
     auto pImage = camera0->camera2image(p3d);
     auto pImage1 = camera1->camera2image(poseCam1.inverse() * camera0->image2camera(pImage));
 
-    EXPECT_NEAR(
-      pImage1.x(), pImage.x() - poseCam1.translation().x(),
-      precision) << "Projection failed for point: [" << i << "] -> " << p3d;
-
+    EXPECT_NEAR(pImage1.x(), pImage.x() - poseCam1.translation().x(), precision)
+      << "Projection failed for point: [" << i << "] -> " << p3d;
   }
-
 }
 /*TODO MOVE TO WARP
 TEST_F(CameraTest,JacobianXYZ2UV)

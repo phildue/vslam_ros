@@ -13,15 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "Loss.h"
+
 #include "core/core.h"
 #include "utils/utils.h"
 
 namespace pd::vslam::least_squares
 {
-
-
 double TukeyLoss::compute(double r) const
 {
   // If the residuals falls within the 95% the loss is quadratic
@@ -52,7 +50,6 @@ double TukeyLoss::computeDerivative(double r) const
 
 double TukeyLoss::computeWeight(double r) const
 {
-
   // If the residuals falls within the 95% the loss is quadratic
   if (std::abs(r) < TukeyLoss::C) {
     const double r_c = r / TukeyLoss::C;
@@ -92,20 +89,14 @@ double HuberLoss::compute(double r) const
   }
 }
 
-double LossTDistribution::computeWeight(double r) const
-{
-
-  return (_v + 1.0) / (_v + r * r);
-}
+double LossTDistribution::computeWeight(double r) const { return (_v + 1.0) / (_v + r * r); }
 double LossTDistribution::computeDerivative(double UNUSED(r)) const
 {
-  return 0.0;               //TODO
+  return 0.0;  //TODO
 }
 double LossTDistribution::compute(double UNUSED(r)) const
 {
-  return 0.0;               //TODO
-
+  return 0.0;  //TODO
 }
 
-
-}
+}  // namespace pd::vslam::least_squares

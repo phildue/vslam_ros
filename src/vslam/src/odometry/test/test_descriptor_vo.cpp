@@ -1,4 +1,5 @@
 // Copyright 2022 Philipp.Duernay
+
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,15 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <core/core.h>
+#include <gtest/gtest.h>
 #include <utils/utils.h>
+
 #include <opencv2/highgui.hpp>
+
 #include "odometry/odometry.h"
 using namespace testing;
 using namespace pd;
@@ -37,19 +39,16 @@ TEST(DescriptorVo, Track)
   auto f1 = std::make_shared<FrameRgbd>(img, depth, cam, 3, 0);
   auto f2 = std::make_shared<FrameRgbd>(img, depth, cam, 3, 0);
   std::vector<FrameRgbd::ShPtr> frames;
+
   frames.push_back(f0);
   auto tracking = std::make_shared<FeatureTracking>();
   tracking->extractFeatures(f0);
   tracking->extractFeatures(f1);
   tracking->extractFeatures(f2);
 
+  tracking->match(f1, f0->features());
+  auto points = tracking->match(f2, f1->features());
 
-  tracking->match(f1, f0.features());
-  auto points = tracking->match(f2, f1.features());
-
-  auto opt = std::make_shared< MapOptimization > ();
-  opt->optimize({f0,f1,f2},points)
-
-
-
+  auto opt = std::make_shared<mapping::MapOptimization>();
+  opt->optimize({f0, f1, f2}, points);
 }

@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_LUKAS_KANADE_PACKAGE_H__
 #define VSLAM_LUKAS_KANADE_PACKAGE_H__
 
-#include "InverseCompositional.h"
 #include "ForwardAdditive.h"
-#include "Warp.h"
+#include "InverseCompositional.h"
 #include "InverseCompositionalStacked.h"
+#include "Warp.h"
 
-#endif //VSLAM_LUKAS_KANADE_PACKAGE_H__
+#endif  //VSLAM_LUKAS_KANADE_PACKAGE_H__

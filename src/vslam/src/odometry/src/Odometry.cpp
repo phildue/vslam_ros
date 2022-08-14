@@ -13,17 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "Odometry.h"
 
 #include "utils/utils.h"
-#include "Odometry.h"
 #define LOG_ODOM(level) CLOG(level, "odometry")
 namespace pd::vslam
 {
-
 OdometryRgbd::OdometryRgbd(
-  double minGradient,
-  least_squares::Solver::ShPtr solver,
-  least_squares::Loss::ShPtr loss,
+  double minGradient, least_squares::Solver::ShPtr solver, least_squares::Loss::ShPtr loss,
   Map::ConstShPtr map)
 : _aligner(std::make_shared<SE3Alignment>(minGradient, solver, loss, true)),
   _map(map),
@@ -31,7 +28,6 @@ OdometryRgbd::OdometryRgbd(
   _trackKeyFrame(false)
 {
   Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
-
 }
 void OdometryRgbd::update(FrameRgbd::ConstShPtr frame)
 {
@@ -47,18 +43,17 @@ void OdometryRgbd::update(FrameRgbd::ConstShPtr frame)
         _pose = _aligner->align(_map->lastFrame(), frame);
       }
       auto dT = frame->t() - _map->lastFrame()->t();
-      _speed =
-        std::make_shared<PoseWithCovariance>(
+      _speed = std::make_shared<PoseWithCovariance>(
         SE3d::exp(
-          algorithm::computeRelativeTransform(
-            _map->
-            lastFrame()->pose().pose(), _pose->pose()).log() / ((double)dT / 1e9)), _pose->cov());
+          algorithm::computeRelativeTransform(_map->lastFrame()->pose().pose(), _pose->pose())
+            .log() /
+          ((double)dT / 1e9)),
+        _pose->cov());
 
     } catch (const std::runtime_error & e) {
       LOG_ODOM(ERROR) << e.what();
       _pose = std::make_shared<PoseWithCovariance>(frame->pose());
       _speed = std::make_shared<PoseWithCovariance>();
-
     }
   } else {
     _pose = std::make_shared<PoseWithCovariance>(frame->pose());
@@ -68,9 +63,9 @@ void OdometryRgbd::update(FrameRgbd::ConstShPtr frame)
 }
 
 OdometryIcp::OdometryIcp(int level, int maxIterations, Map::ConstShPtr map)
-: _aligner(std::make_shared<IterativeClosestPoint>(level, maxIterations)),
-  _map(map)
-{}
+: _aligner(std::make_shared<IterativeClosestPoint>(level, maxIterations)), _map(map)
+{
+}
 void OdometryIcp::update(FrameRgbd::ConstShPtr frame)
 {
   if (_map->lastFrame()) {
@@ -79,9 +74,8 @@ void OdometryIcp::update(FrameRgbd::ConstShPtr frame)
     auto dT = frame->t() - _map->lastFrame()->t();
     _speed = std::make_shared<PoseWithCovariance>(
       SE3d::exp(
-        algorithm::computeRelativeTransform(
-          _map->lastFrame()->pose().pose(),
-          _pose->pose()).log() / ((double)dT / 1e9)),
+        algorithm::computeRelativeTransform(_map->lastFrame()->pose().pose(), _pose->pose()).log() /
+        ((double)dT / 1e9)),
       _pose->cov());
 
   } else {
@@ -91,5 +85,4 @@ void OdometryIcp::update(FrameRgbd::ConstShPtr frame)
   }
 }
 
-
-}
+}  // namespace pd::vslam

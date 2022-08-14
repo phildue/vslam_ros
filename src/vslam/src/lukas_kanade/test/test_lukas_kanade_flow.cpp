@@ -13,23 +13,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
 #include <gtest/gtest.h>
-#include "utils/utils.h"
+
 #include "core/core.h"
 #include "least_squares/least_squares.h"
 #include "lukas_kanade/lukas_kanade.h"
+#include "utils/utils.h"
 
 using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
 using namespace pd::vslam::least_squares;
 using namespace pd::vslam::lukas_kanade;
-
 
 class LukasKanadeOpticalFlowTest : public Test
 {
@@ -44,13 +43,11 @@ public:
     A = Eigen::Matrix3d::Identity();
     img1 = img0;
     algorithm::warpAffine(img0, A, img1);
-
   }
 };
 
 TEST_F(LukasKanadeOpticalFlowTest, LukasKanadeOpticalFlow)
 {
-
   for (int i = 0; i < _nRuns; i++) {
     Eigen::Vector2d x;
     x << random::U(5, 6) * random::sign(), random::U(5, 6) * random::sign();
@@ -71,9 +68,10 @@ TEST_F(LukasKanadeOpticalFlowTest, LukasKanadeOpticalFlow)
 
     gn->solve(lk);
 
-    if (w->x().norm() > 1.0) {_nFailed++;}
+    if (w->x().norm() > 1.0) {
+      _nFailed++;
+    }
   }
 
   EXPECT_LE((double)_nFailed / (double)_nRuns, 0.05) << "Majority of test cases should pass.";
-
 }

@@ -13,17 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "Warp.h"
 
 #include <memory>
+
 #include "core/core.h"
-#include "Warp.h"
 namespace pd::vslam::lukas_kanade
 {
-
 WarpAffine::WarpAffine(const Eigen::VectorXd & x, double cx, double cy)
-: Warp(6, x),
-  _cx(cx),
-  _cy(cy)
+: Warp(6, x), _cx(cx), _cy(cy)
 {
   _w = toMat(_x);
 }
@@ -31,7 +29,6 @@ void WarpAffine::updateAdditive(const Eigen::VectorXd & dx)
 {
   _x.noalias() += dx;
   _w = toMat(x());
-
 }
 void WarpAffine::updateCompositional(const Eigen::VectorXd & dx)
 {
@@ -43,7 +40,6 @@ void WarpAffine::updateCompositional(const Eigen::VectorXd & dx)
   _x(5) = _x(5) + dx(5) + _x(1) * dx(4) + _x(3) * dx(5);
 
   _w = toMat(_x);
-
 }
 Eigen::Vector2d WarpAffine::apply(int u, int v) const
 {
@@ -55,8 +51,7 @@ Eigen::Vector2d WarpAffine::apply(int u, int v) const
 Eigen::MatrixXd WarpAffine::J(int u, int v) const
 {
   Eigen::Matrix<double, 2, 6> J;
-  J << u - _cx, 0, v - _cy, 0, 1, 0,
-    0, u - _cx, 0, v - _cy, 0, 1;
+  J << u - _cx, 0, v - _cy, 0, 1, 0, 0, u - _cx, 0, v - _cy, 0, 1;
   return J;
 }
 void WarpAffine::setX(const Eigen::VectorXd & x)
@@ -67,22 +62,15 @@ void WarpAffine::setX(const Eigen::VectorXd & x)
 Eigen::Matrix3d WarpAffine::toMat(const Eigen::VectorXd & x) const
 {
   Eigen::Matrix3d w;
-  w << 1 + x(0), x(2), x(4),
-    x(1), 1 + x(3), x(5),
-    0, 0, 1;
+  w << 1 + x(0), x(2), x(4), x(1), 1 + x(3), x(5), 0, 0, 1;
   return w;
 }
 
-WarpOpticalFlow::WarpOpticalFlow(const Eigen::VectorXd & x)
-: Warp(2, x)
-{
-  _w = toMat(_x);
-}
+WarpOpticalFlow::WarpOpticalFlow(const Eigen::VectorXd & x) : Warp(2, x) { _w = toMat(_x); }
 void WarpOpticalFlow::updateAdditive(const Eigen::VectorXd & dx)
 {
   _x.noalias() += dx;
   _w = toMat(_x);
-
 }
 void WarpOpticalFlow::updateCompositional(const Eigen::VectorXd & dx)
 {
@@ -90,7 +78,6 @@ void WarpOpticalFlow::updateCompositional(const Eigen::VectorXd & dx)
   _w = _w * toMat(dx);
   _x(0) = _w(0, 2);
   _x(1) = _w(1, 2);
-
 }
 Eigen::Vector2d WarpOpticalFlow::apply(int u, int v) const
 {
@@ -111,12 +98,9 @@ void WarpOpticalFlow::setX(const Eigen::VectorXd & x)
 Eigen::Matrix3d WarpOpticalFlow::toMat(const Eigen::VectorXd & x) const
 {
   Eigen::Matrix3d w;
-  w << 1, 0, x(0),
-    0, 1, x(1),
-    0, 0, 1;
+  w << 1, 0, x(0), 0, 1, x(1), 0, 0, 1;
   return w;
 }
-
 
 WarpSE3::WarpSE3(
   const SE3d & poseCur, const Eigen::MatrixXd & depth, Camera::ConstShPtr camCur,
@@ -134,11 +118,12 @@ WarpSE3::WarpSE3(
   for (int v = 0; v < depth.rows(); v++) {
     for (int u = 0; u < depth.cols(); u++) {
       /* Exclude pixels that are close to not having depth since we do bilinear interpolation later*/
-      if (std::isfinite(depth(v, u)) && depth(v, u) > 0 &&
-        std::isfinite(depth(v + 1, u + 1)) && depth(v + 1, u + 1) > 0 &&
-        std::isfinite(depth(v + 1, u - 1)) && depth(v + 1, u - 1) > 0 &&
+      if (
+        std::isfinite(depth(v, u)) && depth(v, u) > 0 && std::isfinite(depth(v + 1, u + 1)) &&
+        depth(v + 1, u + 1) > 0 && std::isfinite(depth(v + 1, u - 1)) && depth(v + 1, u - 1) > 0 &&
         std::isfinite(depth(v - 1, u + 1)) && depth(v - 1, u + 1) > 0 &&
-        std::isfinite(depth(v - 1, u - 1)) && depth(v - 1, u - 1) > 0)//TODO move to actual interpolation?
+        std::isfinite(depth(v - 1, u - 1)) &&
+        depth(v - 1, u - 1) > 0)  //TODO move to actual interpolation?
       {
         _pcl[v * _width + u] = _camRef->image2camera({u, v}, depth(v, u));
       } else {
@@ -148,8 +133,8 @@ WarpSE3::WarpSE3(
   }
 }
 WarpSE3::WarpSE3(
-  const SE3d & poseCur, const std::vector<Vec3d> & pcl, size_t width,
-  Camera::ConstShPtr camCur, Camera::ConstShPtr camRef, const SE3d & poseRef)
+  const SE3d & poseCur, const std::vector<Vec3d> & pcl, size_t width, Camera::ConstShPtr camCur,
+  Camera::ConstShPtr camRef, const SE3d & poseRef)
 : Warp(6),
   _se3(poseCur * poseRef.inverse()),
   _poseRef(poseRef),
@@ -157,7 +142,9 @@ WarpSE3::WarpSE3(
   _camCur(camCur),
   _camRef(camRef),
   _pcl(pcl)
-{_x = _se3.log();}
+{
+  _x = _se3.log();
+}
 void WarpSE3::updateAdditive(const Eigen::VectorXd & dx)
 {
   _se3 = _se3 * Sophus::SE3d::exp(dx);
@@ -167,13 +154,14 @@ void WarpSE3::updateCompositional(const Eigen::VectorXd & dx)
 {
   _se3 = _se3 * Sophus::SE3d::exp(dx);
   _x = _se3.log();
-
 }
 Eigen::Vector2d WarpSE3::apply(int u, int v) const
 {
   auto & p = _pcl[v * _width + u];
-  return p.z() > 0.0 ? _camCur->camera2image(_se3 * p) : Eigen::Vector2d(
-    std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
+  return p.z() > 0.0
+           ? _camCur->camera2image(_se3 * p)
+           : Eigen::Vector2d(
+               std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
 }
 Eigen::MatrixXd WarpSE3::J(int u, int v) const
 {
@@ -185,7 +173,9 @@ Eigen::MatrixXd WarpSE3::J(int u, int v) const
   Eigen::Matrix<double, 2, 6> jac;
   jac.setConstant(std::numeric_limits<double>::quiet_NaN());
   const Eigen::Vector3d & p = _pcl[v * _width + u];
-  if (p.z() <= 0.0) {return jac;}
+  if (p.z() <= 0.0) {
+    return jac;
+  }
 
   const double & x = p.x();
   const double & y = p.y();
@@ -199,7 +189,6 @@ Eigen::MatrixXd WarpSE3::J(int u, int v) const
   jac(0, 4) = 1.0 - x * jac(0, 2);
   jac(0, 5) = -y * z_inv;
 
-
   jac(1, 0) = 0.0;
   jac(1, 1) = z_inv;
   jac(1, 2) = -y * z_inv_2;
@@ -209,7 +198,6 @@ Eigen::MatrixXd WarpSE3::J(int u, int v) const
   jac.row(0) *= _camRef->fx();
   jac.row(1) *= _camRef->fy();
   return jac;
-
 }
 
 Image WarpSE3::apply(const Image & img) const
@@ -218,9 +206,7 @@ Image WarpSE3::apply(const Image & img) const
   for (int i = 0; i < warped.rows(); i++) {
     for (int j = 0; j < warped.cols(); j++) {
       Eigen::Vector2d uvI = apply(j, i);
-      if (1 < uvI.x() && uvI.x() < img.cols() - 1 &&
-        1 < uvI.y() && uvI.y() < img.rows() - 1)
-      {
+      if (1 < uvI.x() && uvI.x() < img.cols() - 1 && 1 < uvI.y() && uvI.y() < img.rows() - 1) {
         warped(i, j) = algorithm::bilinearInterpolation(img, uvI.x(), uvI.y());
       }
     }
@@ -234,9 +220,9 @@ DepthMap WarpSE3::apply(const DepthMap & img) const
   for (int i = 0; i < warped.rows(); i++) {
     for (int j = 0; j < warped.cols(); j++) {
       Eigen::Vector2d uvI = apply(j, i);
-      if (1 < uvI.x() && uvI.x() < img.cols() - 1 &&
-        1 < uvI.y() && uvI.y() < img.rows() - 1)
-      {           //TODO check for invalid
+      if (
+        1 < uvI.x() && uvI.x() < img.cols() - 1 && 1 < uvI.y() &&
+        uvI.y() < img.rows() - 1) {  //TODO check for invalid
         warped(i, j) = algorithm::bilinearInterpolation(img, uvI.x(), uvI.y());
       }
     }
@@ -244,17 +230,12 @@ DepthMap WarpSE3::apply(const DepthMap & img) const
   return warped;
 }
 
-
 void WarpSE3::setX(const Eigen::VectorXd & x)
 {
   _x = x;
   _se3 = Sophus::SE3d::exp(x);
 }
 
-SE3d WarpSE3::poseCur() const
-{
-  return _se3 * _poseRef;
-}
+SE3d WarpSE3::poseCur() const { return _se3 * _poseRef; }
 
-
-}
+}  // namespace pd::vslam::lukas_kanade

@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 30.06.21.
 //
@@ -21,8 +20,6 @@
 #include "Camera.h"
 namespace pd::vslam
 {
-
-
 Eigen::Vector2d Camera::camera2image(const Eigen::Vector3d & pWorld) const
 {
   if (pWorld.z() <= 0) {
@@ -41,14 +38,11 @@ Eigen::Vector3d Camera::image2ray(const Eigen::Vector2d & pImage) const
   return _Kinv * Eigen::Vector3d({pImage.x(), pImage.y(), 1});
 }
 
-Camera::Camera(double f, double cx, double cy)
-: Camera(f, f, cx, cy) {}
+Camera::Camera(double f, double cx, double cy) : Camera(f, f, cx, cy) {}
 
 Camera::Camera(double fx, double fy, double cx, double cy)
 {
-  _K << fx, 0, cx,
-    0, fy, cy,
-    0, 0, 1;
+  _K << fx, 0, cx, 0, fy, cy, 0, 0, 1;
   _Kinv = _K.inverse();
 }
 void Camera::resize(double s)
@@ -59,9 +53,7 @@ void Camera::resize(double s)
 Camera::ShPtr Camera::resize(Camera::ConstShPtr cam, double s)
 {
   return std::make_shared<Camera>(
-    cam->fx() * s, cam->fy() * s,
-    cam->principalPoint().x() * s, cam->principalPoint().y() * s);
+    cam->fx() * s, cam->fy() * s, cam->principalPoint().x() * s, cam->principalPoint().y() * s);
 }
 
-
-}
+}  // namespace pd::vslam

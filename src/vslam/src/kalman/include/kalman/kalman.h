@@ -13,9 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_KALMAN_H__
 #define VSLAM_KALMAN_H__
-#include "KalmanFilter.h"
 #include "EKFConstantVelocitySE3.h"
+#include "KalmanFilter.h"
 #endif

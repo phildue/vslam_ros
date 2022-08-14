@@ -13,18 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+#include <core/core.h>
+#include <gtest/gtest.h>
+#include <utils/utils.h>
+
 #include <sophus/ceres_manifold.hpp>
 
-#include <core/core.h>
-#include <utils/utils.h>
 #include "odometry/odometry.h"
 using namespace testing;
 using namespace pd;
@@ -34,9 +34,11 @@ class ReprojectionErrorManifold
 {
 public:
   ReprojectionErrorManifold(double observedX, double observedY, const Eigen::Matrix3d & K)
-  : _observedX{observedX}, _observedY{observedY}, _K{K} {}
+  : _observedX{observedX}, _observedY{observedY}, _K{K}
+  {
+  }
 
-  template<typename T>
+  template <typename T>
   bool operator()(const T * const poseData, const T * const pointData, T * residuals) const
   {
     Eigen::Map<Sophus::SE3<T> const> const pose(poseData);
@@ -55,14 +57,10 @@ public:
     }
     return true;
   }
-  static ceres::CostFunction * Create(
-    double observed_x,
-    double observed_y,
-    const Eigen::MatrixXd K
-  )
+  static ceres::CostFunction * Create(double observed_x, double observed_y, const Eigen::MatrixXd K)
   {
-    return new ceres::AutoDiffCostFunction<ReprojectionErrorManifold, 2,
-             Sophus::SE3d::num_parameters, 3>(
+    return new ceres::AutoDiffCostFunction<
+      ReprojectionErrorManifold, 2, Sophus::SE3d::num_parameters, 3>(
       new ReprojectionErrorManifold(observed_x, observed_y, K));
   }
 
@@ -79,7 +77,7 @@ public:
   {
   }
 
-  template<typename T>
+  template <typename T>
   bool operator()(const T * const pose, const T * const pWcs, T * residuals) const
   {
     T pCcs[3];
@@ -100,15 +98,10 @@ public:
       residuals[1] = T(0.0);
     }
 
-
     return true;
   }
 
-  static ceres::CostFunction * Create(
-    double observed_x,
-    double observed_y,
-    const Eigen::MatrixXd K
-  )
+  static ceres::CostFunction * Create(double observed_x, double observed_y, const Eigen::MatrixXd K)
   {
     return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3>(
       new ReprojectionError(observed_x, observed_y, K));
@@ -118,7 +111,6 @@ private:
   double _observedX, _observedY;
   const Eigen::Matrix3d _K;
 };
-
 
 class TestBundleAdjustment : public Test
 {
@@ -141,16 +133,14 @@ public:
       _pcl[i].x() += random::U(-1, 1);
       _pcl[i].y() += random::U(-1, 1);
       _pcl[i].z() += random::U(-1, 1);
-
     }
     _observations.resize(_poses.size());
-    _observations[0] = utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(
-      TEST_RESOURCE "/observations1.csv");
-    _observations[1] = utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(
-      TEST_RESOURCE "/observations2.csv");
+    _observations[0] =
+      utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(TEST_RESOURCE "/observations1.csv");
+    _observations[1] =
+      utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(TEST_RESOURCE "/observations2.csv");
 
     _cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
-
   }
   double computeReprojectionError() const
   {
@@ -174,8 +164,6 @@ protected:
   std::vector<Vec3d> _pcl;
   std::vector<Eigen::Matrix<double, 100, 2>> _observations;
   Camera::ConstShPtr _cam;
-
-
 };
 
 TEST_F(TestBundleAdjustment, DISABLED_BA)
@@ -186,12 +174,8 @@ TEST_F(TestBundleAdjustment, DISABLED_BA)
     for (int idxP = 0; idxP < _observations[idxF].rows(); ++idxP) {
       problem.AddResidualBlock(
         ReprojectionError::Create(
-          _observations[idxF].row(idxP).x(),
-          _observations[idxF].row(idxP).y(),
-          _cam->K()),
-        nullptr /* squared loss */,
-        _posesv[idxF].data(),
-        _pcl[idxP].data());
+          _observations[idxF].row(idxP).x(), _observations[idxF].row(idxP).y(), _cam->K()),
+        nullptr /* squared loss */, _posesv[idxF].data(), _pcl[idxP].data());
     }
   }
   ceres::Solver::Options options;
@@ -205,7 +189,6 @@ TEST_F(TestBundleAdjustment, DISABLED_BA)
   double errorAfter = computeReprojectionError();
   EXPECT_LT(errorAfter, errorPrev) << "Error should decrease by optimization";
   std::cout << "Before: " << errorPrev << " -->  " << errorAfter << std::endl;
-
 }
 
 TEST_F(TestBundleAdjustment, BAManifold)
@@ -214,20 +197,15 @@ TEST_F(TestBundleAdjustment, BAManifold)
 
   for (size_t i = 0; i < _poses.size(); ++i) {
     problem.AddParameterBlock(
-      _poses[i].data(), SE3d::num_parameters,
-      new Sophus::Manifold<Sophus::SE3>());
+      _poses[i].data(), SE3d::num_parameters, new Sophus::Manifold<Sophus::SE3>());
   }
 
   for (size_t idxF = 0; idxF < _poses.size(); ++idxF) {
     for (int idxP = 0; idxP < _observations[idxF].rows(); ++idxP) {
       problem.AddResidualBlock(
         ReprojectionErrorManifold::Create(
-          _observations[idxF].row(idxP).x(),
-          _observations[idxF].row(idxP).y(),
-          _cam->K()),
-        nullptr /* squared loss */,
-        _poses[idxF].data(),
-        _pcl[idxP].data());
+          _observations[idxF].row(idxP).x(), _observations[idxF].row(idxP).y(), _cam->K()),
+        nullptr /* squared loss */, _poses[idxF].data(), _pcl[idxP].data());
     }
   }
   ceres::Solver::Options options;
@@ -264,6 +242,4 @@ TEST_F(TestBundleAdjustment, BAClass)
   double errorAfter = ba.computeError();
   EXPECT_LT(errorAfter, errorPrev) << "Error should decrease by optimization";
   std::cout << "Before: " << errorPrev << " -->  " << errorAfter << std::endl;
-
-
 }

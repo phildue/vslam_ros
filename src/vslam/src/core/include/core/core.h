@@ -13,19 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_CORE_H__
 #define VSLAM_CORE_H__
-#include "algorithm.h"
 #include "Camera.h"
-#include "types.h"
 #include "Exceptions.h"
-#include "macros.h"
-#include "PoseWithCovariance.h"
+#include "Feature2D.h"
 #include "Frame.h"
 #include "Kernel2d.h"
-#include "image_transform.h"
-#include "Trajectory.h"
 #include "Point3D.h"
-#include "Feature2D.h"
-#endif// VSLAM_CORE_H__
+#include "PoseWithCovariance.h"
+#include "Trajectory.h"
+#include "algorithm.h"
+#include "image_transform.h"
+#include "macros.h"
+#include "types.h"
+#endif  // VSLAM_CORE_H__

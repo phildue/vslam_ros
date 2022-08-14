@@ -13,15 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <core/core.h>
+#include <gtest/gtest.h>
 #include <utils/utils.h>
+
 #include <opencv2/highgui.hpp>
+
 #include "odometry/odometry.h"
 using namespace testing;
 using namespace pd;
@@ -46,6 +47,4 @@ TEST(TrackingTest, Track)
 
   auto points = tracking->match(f1, featuresCandidate);
   EXPECT_EQ(points.size(), featuresCandidate.size());
-
-
 }

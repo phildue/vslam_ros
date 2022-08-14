@@ -13,19 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_ALIGNER_H__
 #define VSLAM_ALIGNER_H__
 
 #include <core/core.h>
-namespace pd::vslam {
-  class AlignmentSE3 {
+namespace pd::vslam
+{
+class AlignmentSE3
+{
 public:
-    virtual PoseWithCovariance::UnPtr align(
-      FrameRgbd::ConstShPtr from,
-      FrameRgbd::ConstShPtr to) const = 0;
-  };
-}
+  virtual PoseWithCovariance::UnPtr align(
+    FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const = 0;
+};
+}  // namespace pd::vslam
 
-
-#endif //VSLAM_ALIGNER_H__
+#endif  //VSLAM_ALIGNER_H__

@@ -13,21 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "MapOptimization.h"
+
 #include "utils/utils.h"
 #define LOG_BA(level) CLOG(level, "mapping")
 
 namespace pd::vslam::mapping
 {
-MapOptimization::MapOptimization()
-{
-  Log::get("mapping", ODOMETRY_CFG_DIR "/log/mapping.conf");
-
-}
+MapOptimization::MapOptimization() { Log::get("mapping", ODOMETRY_CFG_DIR "/log/mapping.conf"); }
 void MapOptimization::optimize(
-  const std::vector<FrameRgbd::ShPtr> & frames,
-  const std::vector<Point3D::ShPtr> & points) const
+  const std::vector<FrameRgbd::ShPtr> & frames, const std::vector<Point3D::ShPtr> & points) const
 {
   BundleAdjustment::UnPtr ba = std::make_unique<BundleAdjustment>();
   for (const auto & p : points) {
@@ -47,4 +42,4 @@ void MapOptimization::optimize(
     f->set(PoseWithCovariance(ba->getPose(f->id()), MatXd::Identity(6, 6)));
   }
 }
-}
+}  // namespace pd::vslam::mapping

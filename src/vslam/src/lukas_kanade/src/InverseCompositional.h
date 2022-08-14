@@ -13,15 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_LUKAS_KANADE_INVERSE_COMPOSITIONAL_H__
 #define VSLAM_LUKAS_KANADE_INVERSE_COMPOSITIONAL_H__
 #include <memory>
+
+#include "Warp.h"
 #include "core/core.h"
 #include "least_squares/least_squares.h"
-#include "Warp.h"
-namespace pd::vslam::lukas_kanade {
-
+namespace pd::vslam::lukas_kanade
+{
 /*
 Compute parameters p of the warp W by incrementally warping the image I to the template T.
 For inverse compositional we switch the role of I and T:
@@ -45,52 +45,48 @@ After solving (1) we obtain the parameter update that would warp the template to
 Hence, we update p by applying the *inverse compositional*: W_new = W(-h,W(p)).
 */
 
-  class InverseCompositional: public least_squares::Problem {
+class InverseCompositional : public least_squares::Problem
+{
 public:
-    InverseCompositional(
-      const Image & templ, const MatXd & dX, const MatXd & dY, const Image & image,
-      std::shared_ptr < Warp > w0,
-      least_squares::Loss::ShPtr = std::make_shared < least_squares::QuadraticLoss > (),
-      double minGradient = 0,
-      std::shared_ptr < const least_squares::Prior > prior = nullptr);
+  InverseCompositional(
+    const Image & templ, const MatXd & dX, const MatXd & dY, const Image & image,
+    std::shared_ptr<Warp> w0,
+    least_squares::Loss::ShPtr = std::make_shared<least_squares::QuadraticLoss>(),
+    double minGradient = 0, std::shared_ptr<const least_squares::Prior> prior = nullptr);
 
-    InverseCompositional(
-      const Image & templ, const MatXd & dX, const MatXd & dY, const Image & image,
-      std::shared_ptr < Warp > w0,
-      const std::vector < Eigen::Vector2i > &interestPoints,
-      least_squares::Loss::ShPtr = std::make_shared < least_squares::QuadraticLoss > (),
-      std::shared_ptr < const least_squares::Prior > prior = nullptr);
+  InverseCompositional(
+    const Image & templ, const MatXd & dX, const MatXd & dY, const Image & image,
+    std::shared_ptr<Warp> w0, const std::vector<Eigen::Vector2i> & interestPoints,
+    least_squares::Loss::ShPtr = std::make_shared<least_squares::QuadraticLoss>(),
+    std::shared_ptr<const least_squares::Prior> prior = nullptr);
 
-    InverseCompositional(
-      const Image & templ, const Image & image, std::shared_ptr < Warp > w0,
-      least_squares::Loss::ShPtr = std::make_shared < least_squares::QuadraticLoss > (),
-      double minGradient = 0, std::shared_ptr < const least_squares::Prior > prior = nullptr);
-    std::shared_ptr < const Warp > warp() {
-      return _w;
-    }
+  InverseCompositional(
+    const Image & templ, const Image & image, std::shared_ptr<Warp> w0,
+    least_squares::Loss::ShPtr = std::make_shared<least_squares::QuadraticLoss>(),
+    double minGradient = 0, std::shared_ptr<const least_squares::Prior> prior = nullptr);
+  std::shared_ptr<const Warp> warp() { return _w; }
 
-    void updateX(const Eigen::VectorXd & dx) override;
-    void setX(const Eigen::VectorXd & x) override {_w->setX(x);}
+  void updateX(const Eigen::VectorXd & dx) override;
+  void setX(const Eigen::VectorXd & x) override { _w->setX(x); }
 
-    Eigen::VectorXd x() const override {return _w->x();}
+  Eigen::VectorXd x() const override { return _w->x(); }
 
-    least_squares::NormalEquations::ConstShPtr computeNormalEquations() override;
+  least_squares::NormalEquations::ConstShPtr computeNormalEquations() override;
 
 protected:
-    const Image _T;
-    const Image _I;
-    const std::shared_ptr < Warp > _w;
-    const std::shared_ptr < least_squares::Loss > _loss;
-    const std::shared_ptr < const least_squares::Prior > _prior;
-    Eigen::MatrixXd _J;
-    struct IndexedKeyPoint
-    {
-      size_t idx;
-      Eigen::Vector2i pos;
-    };
-    std::vector < IndexedKeyPoint > _interestPoints;
-
+  const Image _T;
+  const Image _I;
+  const std::shared_ptr<Warp> _w;
+  const std::shared_ptr<least_squares::Loss> _loss;
+  const std::shared_ptr<const least_squares::Prior> _prior;
+  Eigen::MatrixXd _J;
+  struct IndexedKeyPoint
+  {
+    size_t idx;
+    Eigen::Vector2i pos;
   };
+  std::vector<IndexedKeyPoint> _interestPoints;
+};
 
-}
+}  // namespace pd::vslam::lukas_kanade
 #endif

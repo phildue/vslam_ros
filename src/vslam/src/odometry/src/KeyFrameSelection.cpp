@@ -13,13 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "KeyFrameSelection.h"
 namespace pd::vslam
 {
-
 KeyFrameSelection::ShPtr KeyFrameSelection::make()
 {
   return std::make_shared<KeyFrameSelectionIdx>();
 }
-}
+}  // namespace pd::vslam

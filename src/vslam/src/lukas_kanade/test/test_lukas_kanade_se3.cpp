@@ -13,15 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
-#include <utils/utils.h>
 #include <core/core.h>
+#include <gtest/gtest.h>
 #include <solver/solver.h>
+#include <utils/utils.h>
+
 #include "lukas_kanade/LukasKanade.h"
 
 using namespace testing;
@@ -49,12 +49,10 @@ public:
     //depth = Eigen::MatrixXd::Ones(img0.rows(),img0.cols())*110;
     _camera = std::make_shared<Camera>(381 / 4, _img0.cols() / 2, _img0.rows() / 2);
     _img1 = _img0;
-    _x << random::U(0.1, 0.11) * random::sign(), random::U(0.1, 0.11) * random::sign(), random::U(
-      0.01, 0.011) * random::sign(),
-      random::U(0.001, 0.0011) * random::sign(), random::U(0.001, 0.0011) * random::sign(),
-      random::U(0.001, 0.0011) * random::sign();
+    _x << random::U(0.1, 0.11) * random::sign(), random::U(0.1, 0.11) * random::sign(),
+      random::U(0.01, 0.011) * random::sign(), random::U(0.001, 0.0011) * random::sign(),
+      random::U(0.001, 0.0011) * random::sign(), random::U(0.001, 0.0011) * random::sign();
     _pose = Sophus::SE3d::exp(_x);
-
   }
 };
 
@@ -67,12 +65,8 @@ TEST_P(LukasKanadeSE3Test, LukasKanadeSE3)
   Log::getImageLog("T")->append(mat1);
 
   auto w = std::make_shared<WarpSE3>(_x, _depth, _camera);
-  auto gn = std::make_shared<GaussNewton<LukasKanade>>(
-    0.1,
-    1e-3,
-    100);
+  auto gn = std::make_shared<GaussNewton<LukasKanade>>(0.1, 1e-3, 100);
   auto lk = std::make_shared<LukasKanade>(_img1, _img0, w);
-
 
   ASSERT_GT(w->x().norm(), 0.1);
 

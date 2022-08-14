@@ -13,21 +13,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
-#include <opencv2/highgui.hpp>
 #include <core/core.h>
+#include <gtest/gtest.h>
 #include <utils/utils.h>
+
+#include <opencv2/highgui.hpp>
+
 #include "odometry/odometry.h"
 
 using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
-
 
 #ifdef TEST_VISUALIZE
 #define VISUALIZE true
@@ -48,8 +48,7 @@ public:
 
     /* Max Relative Poses within 0.03 seconds estimated from rgbd_dataset_freiburg1_desk2:
     tx ty tz rx ry rz*/
-    _noise =
-    {
+    _noise = {
       {-0.0145, 0.046, 0.0267, -0.2531, -0.0278, 0.0078},
       {-0.0145, 0.0453, 0.027, -0.2425, -0.027, 0.009},
       {-0.0045, 0.0285, 0.0169, -0.1262, -0.0149, 0.0259},
@@ -76,18 +75,13 @@ TEST_F(TestIcp, TestOnSyntheticDataTranslation)
 {
   for (size_t i = 1; i < _noise.size(); i++) {
     size_t ri = _noise.size() - i;
-    SE3d refPose(transforms::euler2quaternion(
-        0, 0,
-        0), {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
+    SE3d refPose(
+      transforms::euler2quaternion(0, 0, 0), {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
     //SE3d initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
-    auto fRef =
-      std::make_shared<FrameRgbd>(
-      _img, _depth, _cam, 3, 0,
-      PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
-    auto fCur =
-      std::make_shared<FrameRgbd>(
-      _img, _depth, _cam, 3, 1,
-      PoseWithCovariance(SE3d(), MatXd::Identity(6, 6)));
+    auto fRef = std::make_shared<FrameRgbd>(
+      _img, _depth, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<FrameRgbd>(
+      _img, _depth, _cam, 3, 1, PoseWithCovariance(SE3d(), MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().log();
     auto angleAxis = result.tail(3);
@@ -97,28 +91,19 @@ TEST_F(TestIcp, TestOnSyntheticDataTranslation)
     EXPECT_NEAR(result.z(), refPose.log().z(), eps) << "Failed in: " << ri;
     EXPECT_NEAR(angleAxis.norm(), refPose.log().tail(3).norm(), eps) << "Failed in: " << ri;
   }
-
-
 }
 TEST_F(TestIcp, TestOnSyntheticDataTranslationAbsolute)
 {
-
   SE3d refPose(transforms::euler2quaternion(0, 0, 0), {3.0, 4.0, 1.0});
   for (size_t i = 1; i < _noise.size(); i++) {
     size_t ri = _noise.size() - i;
-    SE3d initialPose(transforms::euler2quaternion(
-        0, 0,
-        0),
-      {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
+    SE3d initialPose(
+      transforms::euler2quaternion(0, 0, 0), {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
     //SE3d initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
-    auto fRef =
-      std::make_shared<FrameRgbd>(
-      _img, _depth, _cam, 3, 0,
-      PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
-    auto fCur =
-      std::make_shared<FrameRgbd>(
-      _img, _depth, _cam, 3, 1,
-      PoseWithCovariance(initialPose * refPose, MatXd::Identity(6, 6)));
+    auto fRef = std::make_shared<FrameRgbd>(
+      _img, _depth, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<FrameRgbd>(
+      _img, _depth, _cam, 3, 1, PoseWithCovariance(initialPose * refPose, MatXd::Identity(6, 6)));
     auto result = _aligner->align(fRef, fCur)->pose().log();
     auto angleAxis = result.tail(3);
     const double eps = 0.01;
@@ -127,59 +112,43 @@ TEST_F(TestIcp, TestOnSyntheticDataTranslationAbsolute)
     EXPECT_NEAR(result.z(), refPose.log().z(), eps) << "Failed in: " << ri;
     EXPECT_NEAR(angleAxis.norm(), refPose.log().tail(3).norm(), eps) << "Failed in: " << ri;
   }
-
-
 }
 TEST_F(TestIcp, TestOnSyntheticDataRotation)
 {
-
   for (size_t i = 1; i < _noise.size(); i++) {
     size_t ri = _noise.size() - i;
-    SE3d initialPose(transforms::euler2quaternion(
-        _noise[ri][3], _noise[ri][4],
-        _noise[ri][5]), {0, 0, 0});
+    SE3d initialPose(
+      transforms::euler2quaternion(_noise[ri][3], _noise[ri][4], _noise[ri][5]), {0, 0, 0});
     //SE3d initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
     auto fRef = std::make_shared<FrameRgbd>(_img, _depth, _cam, 3);
-    auto fCur =
-      std::make_shared<FrameRgbd>(
-      _img, _depth, _cam, 3, 1,
-      PoseWithCovariance(initialPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<FrameRgbd>(
+      _img, _depth, _cam, 3, 1, PoseWithCovariance(initialPose, MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().log();
     auto angleAxis = result.tail(3);
     const double eps = 0.01;
-    EXPECT_NEAR(
-      result.x(), 0.0,
-      eps) << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
-    EXPECT_NEAR(
-      result.y(), 0.0,
-      eps) << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
-    EXPECT_NEAR(
-      result.z(), 0.0,
-      eps) << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
-    EXPECT_NEAR(
-      angleAxis.norm(), 0.0,
-      eps) << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
+    EXPECT_NEAR(result.x(), 0.0, eps)
+      << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
+    EXPECT_NEAR(result.y(), 0.0, eps)
+      << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
+    EXPECT_NEAR(result.z(), 0.0, eps)
+      << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
+    EXPECT_NEAR(angleAxis.norm(), 0.0, eps)
+      << "Failed in: " << ri << "/" << _noise.size() << ": " << initialPose.log().transpose();
   }
-
-
 }
 
 TEST_F(TestIcp, TestOnSyntheticData)
 {
-
   for (size_t i = 1; i < _noise.size(); i++) {
     size_t ri = _noise.size() - i;
-    SE3d initialPose(transforms::euler2quaternion(
-        _noise[ri][3], _noise[ri][4],
-        _noise[ri][5]),
+    SE3d initialPose(
+      transforms::euler2quaternion(_noise[ri][3], _noise[ri][4], _noise[ri][5]),
       {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
     //SE3d initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
     auto fRef = std::make_shared<FrameRgbd>(_img, _depth, _cam, 3);
-    auto fCur =
-      std::make_shared<FrameRgbd>(
-      _img, _depth, _cam, 3, 1,
-      PoseWithCovariance(initialPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<FrameRgbd>(
+      _img, _depth, _cam, 3, 1, PoseWithCovariance(initialPose, MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().log();
     auto angleAxis = result.tail(3);
@@ -189,6 +158,4 @@ TEST_F(TestIcp, TestOnSyntheticData)
     EXPECT_NEAR(result.z(), 0.0, eps) << "Failed in: " << ri;
     EXPECT_NEAR(angleAxis.norm(), 0.0, eps) << "Failed in: " << ri;
   }
-
-
 }

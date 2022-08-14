@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_H__
 #define VSLAM_H__
 #include "core/core.h"
-#include "lukas_kanade/lukas_kanade.h"
-#include "least_squares/least_squares.h"
 #include "kalman/kalman.h"
+#include "least_squares/least_squares.h"
+#include "lukas_kanade/lukas_kanade.h"
 #include "odometry/odometry.h"
 
 #endif

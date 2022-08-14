@@ -13,16 +13,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
-#include <opencv2/highgui.hpp>
 #include <core/core.h>
-#include <utils/utils.h>
+#include <gtest/gtest.h>
 #include <lukas_kanade/lukas_kanade.h>
+#include <utils/utils.h>
+
+#include <opencv2/highgui.hpp>
+
 #include "odometry/odometry.h"
 
 using namespace testing;
@@ -36,15 +37,14 @@ using namespace pd::vslam::least_squares;
 #endif
 
 void readAssocTextfile(
-  std::string filename,
-  std::vector<std::string> & inputRGBPaths,
-  std::vector<std::string> & inputDepthPaths,
-  std::vector<Timestamp> & timestamps
-)
+  std::string filename, std::vector<std::string> & inputRGBPaths,
+  std::vector<std::string> & inputDepthPaths, std::vector<Timestamp> & timestamps)
 {
   std::string line;
   std::ifstream in_stream(filename.c_str());
-  if (!in_stream.is_open()) {std::runtime_error("Could not open file at: " + filename);}
+  if (!in_stream.is_open()) {
+    std::runtime_error("Could not open file at: " + filename);
+  }
 
   while (!in_stream.eof()) {
     std::getline(in_stream, line);
@@ -53,9 +53,13 @@ void readAssocTextfile(
     int c = 0;
     while (ss >> buf) {
       c++;
-      if (c == 1) {timestamps.push_back((Timestamp)(std::stod(ss.str()) * 1e9));} else if (c == 2) {
+      if (c == 1) {
+        timestamps.push_back((Timestamp)(std::stod(ss.str()) * 1e9));
+      } else if (c == 2) {
         inputDepthPaths.push_back(buf);
-      } else if (c == 4) {inputRGBPaths.push_back(buf);}
+      } else if (c == 4) {
+        inputRGBPaths.push_back(buf);
+      }
     }
   }
   in_stream.close();
@@ -66,9 +70,7 @@ class TestSE3Alignment : public Test
 public:
   TestSE3Alignment()
   {
-
     if (VISUALIZE) {
-
       LOG_IMG("ImageWarped")->_show = true;
       LOG_IMG("Depth")->_show = true;
       LOG_IMG("Residual")->_show = true;
@@ -99,8 +101,8 @@ public:
     // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
     return std::make_shared<FrameRgbd>(
       utils::loadImage(_datasetPath + "/" + _imgFilenames.at(fNo)),
-      utils::loadDepth(_datasetPath + "/" + _depthFilenames.at(fNo)) / 5000.0,
-      _cam, 3, _timestamps.at(fNo));
+      utils::loadDepth(_datasetPath + "/" + _depthFilenames.at(fNo)) / 5000.0, _cam, 3,
+      _timestamps.at(fNo));
   }
 
 protected:
@@ -118,13 +120,12 @@ TEST_F(TestSE3Alignment, DISABLED_Comparison)
   const double maxError = 0.01;
   const int nFrames = 50;
   std::vector<int> fIds(nFrames, 0);
-  std::transform(
-    fIds.begin(), fIds.end(), fIds.begin(), [&](auto UNUSED(p)) {
-      return random::U(0, _timestamps.size());
-    });
+  std::transform(fIds.begin(), fIds.end(), fIds.begin(), [&](auto UNUSED(p)) {
+    return random::U(0, _timestamps.size());
+  });
   Eigen::Vector6d error = Eigen::Vector6d::Zero();
   for (int i = 0; i < nFrames; i++) {
-    const int fId = i;    //fIds[i];
+    const int fId = i;  //fIds[i];
     auto fRef = loadFrame(fId);
     auto fRef1 = loadFrame(fId + 1);
     auto fCur = loadFrame(fId + 2);
@@ -141,9 +142,8 @@ TEST_F(TestSE3Alignment, DISABLED_Comparison)
     error += (fCur->pose().pose().inverse() * poseGt).log();
     std::cout << fId << ": " << error.transpose() / (double)(i + 1) << std::endl;
   }
-  std::cout << "AVG RMSE: " << (error / (double)nFrames).norm() <<
-    "\nAVG RMSE Translation: " << (error.head(3) / (double)nFrames).norm() <<
-    "\nAVG RMSE Rotation: " << (error.tail(3) / (double)nFrames).norm() <<
-    std::endl;
+  std::cout << "AVG RMSE: " << (error / (double)nFrames).norm()
+            << "\nAVG RMSE Translation: " << (error.head(3) / (double)nFrames).norm()
+            << "\nAVG RMSE Rotation: " << (error.tail(3) / (double)nFrames).norm() << std::endl;
   EXPECT_LT((error / (double)nFrames).norm(), maxError);
 }

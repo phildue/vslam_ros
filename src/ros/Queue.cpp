@@ -13,17 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "vslam_ros/Queue.h"
 
 #include "rclcpp/rclcpp.hpp"
 namespace vslam_ros
 {
-
-int Queue::size() const
-{
-  return std::min<int>(_images.size(), _depths.size());
-}
+int Queue::size() const { return std::min<int>(_images.size(), _depths.size()); }
 void Queue::pushImage(sensor_msgs::msg::Image::ConstSharedPtr img)
 {
   std::lock_guard<std::mutex> g(_mutex);
@@ -41,8 +36,6 @@ void Queue::pushDepth(sensor_msgs::msg::Image::ConstSharedPtr depth)
     popClosestDepth();
   }
   _depths[rclcpp::Time(depth->header.stamp.sec, depth->header.stamp.nanosec).nanoseconds()] = depth;
-
-
 }
 sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestImg(std::uint64_t t)
 {
@@ -68,14 +61,12 @@ sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestImg(std::uint64_t t)
     }
     if (closestMsg == nullptr) {
       throw std::runtime_error(
-              "Did not find image which is close enough to: " + std::to_string(
-                t) + " closest: " + std::to_string(minDiff));
-
+        "Did not find image which is close enough to: " + std::to_string(t) +
+        " closest: " + std::to_string(minDiff));
     }
     _images.erase(closestT);
     return closestMsg;
   }
-
 }
 sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestDepth(std::uint64_t t)
 {
@@ -97,14 +88,12 @@ sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestDepth(std::uint64_t t)
         minDiff = diff;
         closestMsg = t_msg.second;
         closestT = t_msg.first;
-
       }
     }
     if (minDiff > _maxDiff) {
       throw std::runtime_error(
-              "Did not find depth which is close enough to: " + std::to_string(
-                t) + " closest: " + std::to_string(minDiff));
-
+        "Did not find depth which is close enough to: " + std::to_string(t) +
+        " closest: " + std::to_string(minDiff));
     }
     _depths.erase(closestT);
 
@@ -112,5 +101,4 @@ sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestDepth(std::uint64_t t)
   }
 }
 
-
-}
+}  // namespace vslam_ros

@@ -13,43 +13,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "RgbdAlignmentOpenCv.h"
 
 #include <Eigen/Dense>
-#include <opencv4/opencv2/opencv.hpp>
-#include <opencv4/opencv2/imgproc.hpp>
-#include <opencv4/opencv2/core/eigen.hpp>
-
 #include <opencv2/rgbd.hpp>
-#include "utils/utils.h"
+#include <opencv4/opencv2/core/eigen.hpp>
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/opencv.hpp>
 
-#include "RgbdAlignmentOpenCv.h"
+#include "utils/utils.h"
 
 #define LOG_ODOM(level) CLOG(level, "odometry")
 namespace pd::vslam
 {
-
-
 RgbdAlignmentOpenCv::RgbdAlignmentOpenCv()
 {
   Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
 }
 
-
 PoseWithCovariance::UnPtr RgbdAlignmentOpenCv::align(
-  FrameRgbd::ConstShPtr from,
-  FrameRgbd::ConstShPtr to) const
+  FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const
 {
   cv::Mat camMat, srcImage, srcDepth, dstImage, dstDepth, guess;
   cv::eigen2cv(from->camera()->K(), camMat);
   auto relativePose = algorithm::computeRelativeTransform(from->pose().pose(), to->pose().pose());
   cv::eigen2cv(relativePose.matrix(), guess);
 
-  LOG_ODOM(INFO) << "Aligning from: \n\t" << from->pose().pose().log().transpose() <<
-    "\nto:\t" << to->pose().pose().log().transpose() <<
-    "\nguess:\t" << relativePose.log().transpose();
+  LOG_ODOM(INFO) << "Aligning from: \n\t" << from->pose().pose().log().transpose() << "\nto:\t"
+                 << to->pose().pose().log().transpose() << "\nguess:\t"
+                 << relativePose.log().transpose();
 
-  cv::rgbd::RgbdOdometry estimator(camMat,
-    cv::rgbd::Odometry::DEFAULT_MIN_DEPTH(), cv::rgbd::Odometry::DEFAULT_MAX_DEPTH(),
+  cv::rgbd::RgbdOdometry estimator(
+    camMat, cv::rgbd::Odometry::DEFAULT_MIN_DEPTH(), cv::rgbd::Odometry::DEFAULT_MAX_DEPTH(),
     cv::rgbd::Odometry::DEFAULT_MAX_DEPTH_DIFF(), std::vector<int>({100, 100, 100}));
 
   cv::eigen2cv(from->intensity(), srcImage);
@@ -71,12 +66,11 @@ PoseWithCovariance::UnPtr RgbdAlignmentOpenCv::align(
   if (success) {
     SE3d se3(Rt);
     LOG_ODOM(DEBUG) << "Successfully aligned: Rt=\n\t" << se3.log().transpose();
-    return std::make_unique<PoseWithCovariance>(se3 * from->pose().pose(), MatXd::Identity(6, 6) );
+    return std::make_unique<PoseWithCovariance>(se3 * from->pose().pose(), MatXd::Identity(6, 6));
   } else {
     LOG_ODOM(DEBUG) << "Alignment failed.";
-    return std::make_unique<PoseWithCovariance>(from->pose() );
+    return std::make_unique<PoseWithCovariance>(from->pose());
   }
 }
 
-
-}
+}  // namespace pd::vslam

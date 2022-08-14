@@ -13,25 +13,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 08.08.21.
 //
 
+#include "utils/utils.h"
+
+#include <Eigen/Dense>
+#include <filesystem>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-
-#include <Eigen/Dense>
 #include <opencv4/opencv2/core/eigen.hpp>
-#include "utils/utils.h"
+
 #include "Exceptions.h"
-#include <filesystem>
 namespace fs = std::filesystem;
 namespace pd::vslam
 {
-
-
 void utils::throw_if_nan(const Eigen::MatrixXd & mat, const std::string & msg)
 {
   auto result = mat.norm();
@@ -74,42 +72,48 @@ Eigen::MatrixXd utils::loadDepth(const fs::path & path, int height, int width)
   Eigen::MatrixXd img;
   cv::cv2eigen(mat, img);
   return img.array().isNaN().select(0, img);
-
 }
 std::map<Timestamp, SE3d> utils::loadTrajectory(const fs::path & path)
 {
   std::ifstream gtFile;
   gtFile.open(path.string());
 
-  if (!gtFile.is_open()) {std::runtime_error("Could not open file at: " + path.string());}
+  if (!gtFile.is_open()) {
+    std::runtime_error("Could not open file at: " + path.string());
+  }
 
   std::map<Timestamp, SE3d> poses;
   std::string line;
   while (getline(gtFile, line)) {
-
     std::vector<std::string> elements;
     std::string s;
     std::istringstream lines(line);
-    while (getline(lines, s, ' ')) {elements.push_back(s);}
+    while (getline(lines, s, ' ')) {
+      elements.push_back(s);
+    }
 
-    if (elements[0] == "#") {continue;}            //Skip comments
+    if (elements[0] == "#") {
+      continue;
+    }  //Skip comments
 
     Eigen::Vector3d trans;
     trans << std::stod(elements[1]), std::stod(elements[2]), std::stod(elements[3]);
-    Eigen::Quaterniond q(std::stod(elements[7]), std::stod(elements[4]), std::stod(
-        elements[5]), std::stod(elements[6]));
+    Eigen::Quaterniond q(
+      std::stod(elements[7]), std::stod(elements[4]), std::stod(elements[5]),
+      std::stod(elements[6]));
     std::vector<std::string> tElements;
     std::string st;
     std::istringstream tLine(elements[0]);
-    while (getline(tLine, st, '.')) {tElements.push_back(st);}
+    while (getline(tLine, st, '.')) {
+      tElements.push_back(st);
+    }
 
     auto sec = std::stoull(tElements[0]);
     auto nanosec = std::stoull(tElements[1]) * 100000;
-    poses.insert({sec *1e9 + nanosec, SE3d(q, trans)});
+    poses.insert({sec * 1e9 + nanosec, SE3d(q, trans)});
   }
   return poses;
 }
-
 
 void utils::saveImage(const Image & img, const fs::path & path)
 {
@@ -133,15 +137,17 @@ void utils::writeTrajectory(const Trajectory & traj, const fs::path & path, bool
   algoFile << "# Algorithm Trajectory\n";
   algoFile << "# file: " << path << "\n";
   algoFile << "# timestamp tx ty tz qx qy qz qw\n";
-  if (!algoFile.is_open()) {std::runtime_error("Could not open file at: " + path.string());}
+  if (!algoFile.is_open()) {
+    std::runtime_error("Could not open file at: " + path.string());
+  }
 
   for (const auto & pose : traj.poses()) {
     Timestamp sec = (Timestamp)((double)pose.first / 1e9);
     const auto t = pose.second->pose().translation();
     const auto q = pose.second->pose().unit_quaternion();
-    algoFile << sec << "." << (Timestamp)((double)pose.first - (double)sec * 1e9) << " " <<
-      t.x() << " " << t.y() << " " << t.z() << " " <<
-      q.x() << " " << q.y() << " " << q.z() << " " << q.w();
+    algoFile << sec << "." << (Timestamp)((double)pose.first - (double)sec * 1e9) << " " << t.x()
+             << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y() << " " << q.z() << " "
+             << q.w();
     if (writeCovariance) {
       for (int i = 0; i < 6; i++) {
         for (int j = 0; j < 6; j++) {
@@ -152,8 +158,6 @@ void utils::writeTrajectory(const Trajectory & traj, const fs::path & path, bool
 
     algoFile << "\n";
   }
-
 }
 
-
-}
+}  // namespace pd::vslam

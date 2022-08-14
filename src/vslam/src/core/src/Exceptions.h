@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 06.07.21.
 //
@@ -21,15 +20,14 @@
 #ifndef DIRECT_IMAGE_ALIGNMENT_EXCEPTIONS_H
 #define DIRECT_IMAGE_ALIGNMENT_EXCEPTIONS_H
 
-#include <string>
 #include <stdexcept>
-namespace pd {
-
-  class Exception: public std::runtime_error
-  {
+#include <string>
+namespace pd
+{
+class Exception : public std::runtime_error
+{
 public:
-    Exception(const std::string & msg) : std::runtime_error(msg) {
-    }
-  };
-}
-#endif //DIRECT_IMAGE_ALIGNMENT_EXCEPTIONS_H
+  Exception(const std::string & msg) : std::runtime_error(msg) {}
+};
+}  // namespace pd
+#endif  //DIRECT_IMAGE_ALIGNMENT_EXCEPTIONS_H

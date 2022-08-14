@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include "PoseWithCovariance.h"
 namespace pd::vslam
 {
@@ -35,4 +34,4 @@ PoseWithCovariance operator*(const SE3d & p1, const PoseWithCovariance::ConstShP
 {
   return p1 * (*p0);
 }
-}
+}  // namespace pd::vslam

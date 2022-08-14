@@ -13,13 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 //
 // Created by phil on 10.10.20.
 //
 
-#include <gtest/gtest.h>
 #include <core/core.h>
+#include <gtest/gtest.h>
+
 #include "visuals.h"
 using namespace testing;
 using namespace pd;
@@ -32,7 +32,6 @@ using namespace pd::vslam;
 #endif
 TEST(LogTest, Plot)
 {
-
   vis::plt::plot({1, 3, 2, 4});
   vis::plt::figure();
   vis::plt::hist<double>({1.0, 3.0, 2.0, 4.0});

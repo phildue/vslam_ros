@@ -13,29 +13,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef VSLAM_RGBD_ALIGNMENT_OPENCV
 #define VSLAM_RGBD_ALIGNMENT_OPENCV
 
+#include "AlignmentSE3.h"
 #include "core/core.h"
 #include "lukas_kanade/lukas_kanade.h"
-#include "AlignmentSE3.h"
 
 namespace pd::vslam
 {
-  class RgbdAlignmentOpenCv: public AlignmentSE3
-  {
+class RgbdAlignmentOpenCv : public AlignmentSE3
+{
 public:
-    typedef std::shared_ptr < RgbdAlignmentOpenCv > ShPtr;
-    typedef std::unique_ptr < RgbdAlignmentOpenCv > UnPtr;
-    typedef std::shared_ptr < const RgbdAlignmentOpenCv > ConstShPtr;
-    typedef std::unique_ptr < const RgbdAlignmentOpenCv > ConstUnPtr;
+  typedef std::shared_ptr<RgbdAlignmentOpenCv> ShPtr;
+  typedef std::unique_ptr<RgbdAlignmentOpenCv> UnPtr;
+  typedef std::shared_ptr<const RgbdAlignmentOpenCv> ConstShPtr;
+  typedef std::unique_ptr<const RgbdAlignmentOpenCv> ConstUnPtr;
 
-    RgbdAlignmentOpenCv();
+  RgbdAlignmentOpenCv();
 
-    PoseWithCovariance::UnPtr align(FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const;
+  PoseWithCovariance::UnPtr align(FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const;
 
 protected:
-  };
-}
-#endif// VSLAM_SE3_ALIGNMENT
+};
+}  // namespace pd::vslam
+#endif  // VSLAM_SE3_ALIGNMENT
