@@ -7,9 +7,9 @@ endif()
 find_package(Eigen3 REQUIRED)
 # Try for OpenCV 4.X, but settle for whatever is installed
 find_package(OpenCV 4 QUIET)
-if (NOT OpenCV_FOUND)
+if(NOT OpenCV_FOUND)
   find_package(OpenCV REQUIRED)
-endif ()
+endif()
 message(STATUS "Found OpenCV version ${OpenCV_VERSION}")
 find_package(cv_bridge REQUIRED)
 
@@ -30,51 +30,47 @@ find_package(std_srvs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 set(VSLAM_BUILD_TESTS ${BUILD_TESTING})
 add_subdirectory(src/vslam)
+
 add_library(${PROJECT_NAME} STATIC
-    src/ros/converter.cpp 
-    src/ros/Queue.cpp
-)
+    src/ros/converter.cpp
+    src/ros/Queue.cpp)
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(${PROJECT_NAME} pd::vslam)
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ros/>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME}/>
-    )
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}/>)
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-    $<INSTALL_INTERFACE:include/>
-    )
+    $<INSTALL_INTERFACE:include/>)
 
 add_library(rgbdAlignmentComponent SHARED
-src/ros/nodes/RgbdAlignmentNode.cpp
-)
+  src/ros/nodes/RgbdAlignmentNode.cpp)
 target_link_libraries(rgbdAlignmentComponent ${PROJECT_NAME})
 set_property(TARGET rgbdAlignmentComponent PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 rclcpp_components_register_node(
     rgbdAlignmentComponent
     PLUGIN "vslam_ros::RgbdAlignmentNode"
-    EXECUTABLE rgbdAlignment
-)
+    EXECUTABLE rgbdAlignment)
 ament_target_dependencies(${PROJECT_NAME}
-                                         OpenCV
-                                         Eigen3
-                                         rclcpp
-                                         rclcpp_components
-                                         std_msgs 
-                                         sensor_msgs 
-                                         nav_msgs 
-                                         stereo_msgs
-                                         cv_bridge
-                                         message_filters
-                                         geometry_msgs
-                                         tf2
-                                         tf2_ros
-                                         tf2_geometry_msgs
-                                         tf2_msgs
-                                         std_srvs
-                                         )
+  OpenCV
+  Eigen3
+  rclcpp
+  rclcpp_components
+  std_msgs
+  sensor_msgs
+  nav_msgs
+  stereo_msgs
+  cv_bridge
+  message_filters
+  geometry_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_msgs
+  std_srv)
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 ament_export_dependencies(vslam)
@@ -82,26 +78,21 @@ ament_export_dependencies(vslam)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ros/
     DESTINATION include/${PROJECT_NAME}
     FILES_MATCHING # install only matched files
-    PATTERN "*.h*" # select header files
-    )
+    PATTERN "*.h*") # select header files
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
-    DESTINATION include/
-    ) 
+    DESTINATION include/)
 install(DIRECTORY
     launch
-    DESTINATION share/${PROJECT_NAME}/
-  )
+    DESTINATION share/${PROJECT_NAME}/)
 install(DIRECTORY
   config
-  DESTINATION share/${PROJECT_NAME}/
-)
+  DESTINATION share/${PROJECT_NAME}/)
 install(
   TARGETS ${PROJECT_NAME} rgbdAlignmentComponent rgbdAlignment
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
-  INCLUDES DESTINATION include
-)
+  INCLUDES DESTINATION include)
 
 
 if(BUILD_TESTING)
