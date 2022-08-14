@@ -85,7 +85,7 @@ TEST(WarpSE3Test, Jacobian)
     A_ptr, frame->dIx()(v, u), frame->dIy()(v, u), frame->p3d(v, u), cam->fx(), cam->fy());
   Eigen::Map<Eigen::Vector6d> jacobianOpencv(A_buf.data(), A_buf.size());
   Eigen::Vector6d jacobian =
-    w->J(u, v).row(0) * (double)frame->dIx()(v, u) + w->J(u, v).row(1) * (double)frame->dIy()(v, u);
+    w->J(u, v).row(0) * frame->dIx()(v, u) + w->J(u, v).row(1) * frame->dIy()(v, u);
 
   std::cout << "OpenCV: " << jacobianOpencv.transpose() << std::endl;
   std::cout << "Ours: " << jacobian.transpose() << std::endl;

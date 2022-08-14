@@ -23,7 +23,7 @@ using namespace pd::vslam;
 struct normal_random_variable
 {
   //Thanks to: https://stackoverflow.com/questions/6142576/sample-from-multivariate-normal-gaussian-distribution-in-c
-  normal_random_variable(Eigen::MatrixXd const & covar)
+  explicit normal_random_variable(Eigen::MatrixXd const & covar)
   : normal_random_variable(Eigen::VectorXd::Zero(covar.rows()), covar)
   {
   }

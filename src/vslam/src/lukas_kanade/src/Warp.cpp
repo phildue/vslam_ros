@@ -74,7 +74,7 @@ void WarpOpticalFlow::updateAdditive(const Eigen::VectorXd & dx)
 }
 void WarpOpticalFlow::updateCompositional(const Eigen::VectorXd & dx)
 {
-  //TODO
+  // TODO(unknown):
   _w = _w * toMat(dx);
   _x(0) = _w(0, 2);
   _x(1) = _w(1, 2);
@@ -114,7 +114,7 @@ WarpSE3::WarpSE3(
   _pcl(depth.rows() * depth.cols())
 {
   _x = _se3.log();
-  //TODO move pcl to frame so its only computed once
+  // TODO(unknown): move pcl to frame so its only computed once
   for (int v = 0; v < depth.rows(); v++) {
     for (int u = 0; u < depth.cols(); u++) {
       /* Exclude pixels that are close to not having depth since we do bilinear interpolation later*/
@@ -123,7 +123,7 @@ WarpSE3::WarpSE3(
         depth(v + 1, u + 1) > 0 && std::isfinite(depth(v + 1, u - 1)) && depth(v + 1, u - 1) > 0 &&
         std::isfinite(depth(v - 1, u + 1)) && depth(v - 1, u + 1) > 0 &&
         std::isfinite(depth(v - 1, u - 1)) &&
-        depth(v - 1, u - 1) > 0)  //TODO move to actual interpolation?
+        depth(v - 1, u - 1) > 0)  // TODO(unknown): move to actual interpolation?
       {
         _pcl[v * _width + u] = _camRef->image2camera({u, v}, depth(v, u));
       } else {
@@ -222,7 +222,7 @@ DepthMap WarpSE3::apply(const DepthMap & img) const
       Eigen::Vector2d uvI = apply(j, i);
       if (
         1 < uvI.x() && uvI.x() < img.cols() - 1 && 1 < uvI.y() &&
-        uvI.y() < img.rows() - 1) {  //TODO check for invalid
+        uvI.y() < img.rows() - 1) {  // TODO(unknown): check for invalid
         warped(i, j) = algorithm::bilinearInterpolation(img, uvI.x(), uvI.y());
       }
     }

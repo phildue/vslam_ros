@@ -30,7 +30,7 @@ TEST(LossTest, TukeyLoss)
   std::vector<double> l, l_, r, w;
   auto tk = std::make_shared<TukeyLoss>();
   for (int i = -100; i < 100; i++) {
-    const double ri = (double)i / 10.0;
+    const double ri = static_cast<double>(i) / 10.0;
     r.push_back(ri);
     l.push_back(tk->compute(ri));
     l_.push_back(tk->computeDerivative(ri));

@@ -92,11 +92,11 @@ double HuberLoss::compute(double r) const
 double LossTDistribution::computeWeight(double r) const { return (_v + 1.0) / (_v + r * r); }
 double LossTDistribution::computeDerivative(double UNUSED(r)) const
 {
-  return 0.0;  //TODO
+  return 0.0;  // TODO(unknown):
 }
 double LossTDistribution::compute(double UNUSED(r)) const
 {
-  return 0.0;  //TODO
+  return 0.0;  // TODO(unknown):
 }
 
 }  // namespace pd::vslam::least_squares

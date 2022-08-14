@@ -36,7 +36,7 @@ ForwardAdditive::ForwardAdditive(
   _minGradient(minGradient),
   _prior(prior)
 {
-  //TODO this could come from some external feature selector
+  // TODO(unknown): this could come from some external feature selector
   _interestPoints.reserve(_T.rows() * _T.cols());
   for (int32_t v = 0; v < _T.rows(); v++) {
     for (int32_t u = 0; u < _T.cols(); u++) {
@@ -122,8 +122,8 @@ least_squares::NormalEquations::ConstShPtr ForwardAdditive::computeNormalEquatio
       }
       ne->addConstraint(J.row(kp.y() * _T.cols() + kp.x()), R(kp.y(), kp.x()), W(kp.y(), kp.x()));
     });
-  ne->A().noalias() = ne->A() / (double)ne->nConstraints();
-  ne->b().noalias() = ne->b() / (double)ne->nConstraints();
+  ne->A().noalias() = ne->A() / static_cast<double>(ne->nConstraints());
+  ne->b().noalias() = ne->b() / static_cast<double>(ne->nConstraints());
 
   if (_prior) {
     _prior->apply(ne, _w->x());

@@ -43,7 +43,7 @@ void Histogram::plot() const
   const double minH = _h.minCoeff();
   const double maxH = _h.maxCoeff();
   const double range = maxH - minH;
-  const double binSize = range / (double)_nBins;
+  const double binSize = range / static_cast<double>(_nBins);
   std::vector<int> bins(_nBins, 0);
   std::vector<std::string> ticksS(_nBins);
   std::vector<int> ticks(_nBins);
@@ -53,7 +53,7 @@ void Histogram::plot() const
   }
   for (int i = 0; i < _h.rows(); i++) {
     if (std::isfinite(_h(i))) {
-      auto idx = (int)std::floor(((_h(i) - minH) / binSize));
+      auto idx = static_cast<int>(std::floor(((_h(i) - minH) / binSize)));
       if (idx < _nBins) {
         bins[idx]++;
       }

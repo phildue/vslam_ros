@@ -40,7 +40,7 @@ void MotionPredictionConstant::update(PoseWithCovariance::ConstShPtr pose, Times
   if (timestamp < _lastT) {
     throw pd::Exception("New timestamp is older than last one!");
   }
-  const double dT = ((double)timestamp - (double)_lastT) / 1e9;
+  const double dT = (static_cast<double>(timestamp) - static_cast<double>(_lastT)) / 1e9;
 
   _speed = algorithm::computeRelativeTransform(_lastPose->pose(), pose->pose()).log() / dT;
   _lastPose = pose;
@@ -48,7 +48,7 @@ void MotionPredictionConstant::update(PoseWithCovariance::ConstShPtr pose, Times
 }
 PoseWithCovariance::UnPtr MotionPredictionConstant::predict(Timestamp timestamp) const
 {
-  const double dT = ((double)timestamp - (double)_lastT) / 1e9;
+  const double dT = (static_cast<double>(timestamp) - static_cast<double>(_lastT)) / 1e9;
   const SE3d predictedRelativePose = SE3d::exp(_speed * dT);
   return std::make_unique<PoseWithCovariance>(
     predictedRelativePose * _lastPose->pose(), MatXd::Identity(6, 6));

@@ -53,7 +53,7 @@ void readAssocTextfile(
     while (ss >> buf) {
       c++;
       if (c == 1) {
-        timestamps.push_back((Timestamp)(std::stod(ss.str()) * 1e9));
+        timestamps.push_back(static_cast<Timestamp>(std::stod(ss.str()) * 1e9));
       } else if (c == 2) {
         inputDepthPaths.push_back(buf);
       } else if (c == 4) {
@@ -148,12 +148,13 @@ TEST_F(EvaluationSE3Alignment, DISABLED_Subset)
       auto result = aligner->align(fRef, fCur)->pose().log();
       fCur->set(result);
       error += (fCur->pose().pose().inverse() * poseGt).log();
-      std::cout << fId << ": " << _names[idA] << ": " << error.transpose() / (double)(i + 1)
-                << std::endl;
+      std::cout << fId << ": " << _names[idA] << ": "
+                << error.transpose() / static_cast<double>(i + 1) << std::endl;
     }
-    std::cout << "AVG RMSE: " << (error / (double)nFrames).norm()
-              << "\nAVG RMSE Translation: " << (error.head(3) / (double)nFrames).norm()
-              << "\nAVG RMSE Rotation: " << (error.tail(3) / (double)nFrames).norm() << std::endl;
+    std::cout << "AVG RMSE: " << (error / static_cast<double>(nFrames)).norm()
+              << "\nAVG RMSE Translation: " << (error.head(3) / static_cast<double>(nFrames)).norm()
+              << "\nAVG RMSE Rotation: " << (error.tail(3) / static_cast<double>(nFrames)).norm()
+              << std::endl;
     EXPECT_LT((error / (double)nFrames).norm(), maxError) << "Failed for: " << _names[idA];
   }
 }
@@ -194,6 +195,6 @@ TEST_F(EvaluationSE3Alignment, DISABLED_Sequential)
                 << "\n Error Angle: " << error.tail(3).norm() << std::endl;
     }
     utils::writeTrajectory(traj, "trajectory_" + _names[idA] + ".txt");
-    //TODO call evaluation script?
+    // TODO(unknown): call evaluation script?
   }
 }

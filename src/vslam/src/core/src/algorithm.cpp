@@ -98,7 +98,7 @@ Eigen::MatrixXd normalize(const Eigen::MatrixXd & mat, double min, double max)
 
 double median(const Eigen::VectorXd & d, bool isSorted)
 {
-  //TODO do this without copy?
+  // TODO(unknown): do this without copy?
   std::vector<double> r;
   r.reserve(d.rows());
   for (int i = 0; i < d.rows(); i++) {
@@ -124,11 +124,11 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> conv2d(
   const Eigen::Matrix<double, -1, -1> & mat, const Eigen::Matrix<double, -1, -1> & kernel)
 {
   typedef int Idx;
-  //TODO is this the most efficient way? add padding
+  // TODO(unknown): is this the most efficient way? add padding
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(mat.rows(), mat.cols());
   res.setZero();
-  const Idx kX_2 = (Idx)std::floor((double)kernel.cols() / 2.0);
-  const Idx kY_2 = (Idx)std::floor((double)kernel.rows() / 2.0);
+  const Idx kX_2 = static_cast<Idx>(std::floor(static_cast<double>(kernel.cols()) / 2.0));
+  const Idx kY_2 = static_cast<Idx>(std::floor(static_cast<double>(kernel.rows()) / 2.0));
   for (Idx i = kY_2; i < res.rows() - kY_2; i++) {
     for (Idx j = kX_2; j < res.cols() - kX_2; j++) {
       double sum = 0.0;
@@ -139,8 +139,8 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> conv2d(
           Idx idxX = j - kX_2 + kj;
           double kv = kernel(ki, kj);
           double mv = mat(idxY, idxX);
-          sum += (double)kv * (double)mv;
-          norm += std::abs((double)kv);
+          sum += kv * mv;
+          norm += std::abs(kv);
         }
       }
       res(i, j) = (sum / norm);

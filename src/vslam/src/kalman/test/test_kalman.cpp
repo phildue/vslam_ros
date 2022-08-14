@@ -100,8 +100,8 @@ TEST(KalmanFilterTest, Motion2DTestSanity)
     auto pred = kalman->predict(t);
     trajKalman[t](0) = pred.state(0);
     trajKalman[t](1) = pred.state(1);
-    velTrue += (double)dt * accTrue;
-    trajTrue[t] = trajTrue[t - 1] + (double)dt * velTrue;
+    velTrue += static_cast<double>(dt) * accTrue;
+    trajTrue[t] = trajTrue[t - 1] + static_cast<double>(dt) * velTrue;
 
     ASSERT_NEAR(trajKalman[t].x(), trajKalman[t].x(), 0.1);
     ASSERT_NEAR(trajTrue[t].y(), trajTrue[t].y(), 0.1);

@@ -142,12 +142,14 @@ void utils::writeTrajectory(const Trajectory & traj, const fs::path & path, bool
   }
 
   for (const auto & pose : traj.poses()) {
-    Timestamp sec = (Timestamp)((double)pose.first / 1e9);
+    Timestamp sec = static_cast<Timestamp>(static_cast<double>(pose.first) / 1e9);
     const auto t = pose.second->pose().translation();
     const auto q = pose.second->pose().unit_quaternion();
-    algoFile << sec << "." << (Timestamp)((double)pose.first - (double)sec * 1e9) << " " << t.x()
-             << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y() << " " << q.z() << " "
-             << q.w();
+    algoFile << sec << "."
+             << static_cast<Timestamp>(
+                  static_cast<double>(pose.first) - static_cast<double>(sec) * 1e9)
+             << " " << t.x() << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y() << " "
+             << q.z() << " " << q.w();
     if (writeCovariance) {
       for (int i = 0; i < 6; i++) {
         for (int j = 0; j < 6; j++) {

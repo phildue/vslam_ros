@@ -54,7 +54,7 @@ void readAssocTextfile(
     while (ss >> buf) {
       c++;
       if (c == 1) {
-        timestamps.push_back((Timestamp)(std::stod(ss.str()) * 1e9));
+        timestamps.push_back(static_cast<Timestamp>(std::stod(ss.str()) * 1e9));
       } else if (c == 2) {
         inputDepthPaths.push_back(buf);
       } else if (c == 4) {
@@ -157,5 +157,5 @@ TEST_F(EvaluationOdometry, DISABLED_Sequential)
 
     utils::writeTrajectory(traj, "trajectory.txt");
   }
-  //TODO call evaluation script?
+  // TODO(unknown): call evaluation script?
 }

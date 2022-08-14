@@ -60,12 +60,13 @@ PoseWithCovariance::ConstShPtr Trajectory::interpolateAt(Timestamp t) const
       break;
     }
   }
-  //TODO handle corner cases at boundaries
-  int64_t dT = (int64_t)(t1) - (int64_t)(t0);
+  // TODO(unknown): handle corner cases at boundaries
+  int64_t dT = static_cast<int64_t>(t1) - static_cast<int64_t>(t0);
   auto p0 = _poses.find(t0)->second;
   auto p1 = _poses.find(t1)->second;
-  auto speed = algorithm::computeRelativeTransform(p0->pose(), p1->pose()).log() / (double)dT;
-  auto dPose = SE3d::exp(((double)t - (double)t0) * speed);
+  auto speed =
+    algorithm::computeRelativeTransform(p0->pose(), p1->pose()).log() / static_cast<double>(dT);
+  auto dPose = SE3d::exp((static_cast<double>(t) - static_cast<double>(t0)) * speed);
   return std::make_shared<PoseWithCovariance>(dPose * p0->pose(), p0->cov());
 }
 void Trajectory::append(Timestamp t, PoseWithCovariance::ConstShPtr pose) { _poses[t] = pose; }

@@ -54,21 +54,22 @@ public:
       LOG_IMG("Template")->_show = true;
       LOG_IMG("Depth")->_show = true;
       LOG_IMG("Weights")->_show = true;
-      //LOG_PLT("MedianScaler")->_show = true;
-      //LOG_PLT("MedianScaler")->_block = true;
+      // LOG_PLT("MedianScaler")->_show = true;
+      // LOG_PLT("MedianScaler")->_block = true;
       LOG_IMG("Residual")->_block = true;
     }
     _aligner = std::make_shared<RgbdAlignmentOpenCv>();
 
-    // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
+    // tum depth format:
+    // https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
     _depth0 = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
     _img0 = utils::loadImage(TEST_RESOURCE "/rgb.png");
     _depth1 = _depth0;
     _img1 = _img0;
     _cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
 
-    /* Max Relative Poses within 0.03 seconds estimated from rgbd_dataset_freiburg1_desk2:
-    tx ty tz rx ry rz*/
+    /* Max Relative Poses within 0.03 seconds estimated from
+    rgbd_dataset_freiburg1_desk2: tx ty tz rx ry rz*/
     _noise = {
       {-0.0145, 0.046, 0.0267, -0.2531, -0.0278, 0.0078},
       {-0.0145, 0.0453, 0.027, -0.2425, -0.027, 0.009},
@@ -180,7 +181,8 @@ TEST_F(TestSE3Alignment, DISABLED_TestOnSyntheticDataTranslationAbsolute)
     size_t ri = _noise.size() - i;
     SE3d initialPose(
       transforms::euler2quaternion(0, 0, 0), {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
-    //SE3d initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
+    // SE3d
+    // initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
     auto fRef = std::make_shared<FrameRgbd>(
       _img0, _depth0, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
     auto fCur = std::make_shared<FrameRgbd>(

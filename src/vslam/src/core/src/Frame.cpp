@@ -40,7 +40,7 @@ FrameRgb::FrameRgb(
   const double s = 0.5;
 
 #ifdef USE_OPENCV
-  //TODO replace using custom implementation
+  // TODO(unknown): replace using custom implementation
   cv::Mat mat;
   cv::eigen2cv(intensity, mat);
   std::vector<cv::Mat> mats;

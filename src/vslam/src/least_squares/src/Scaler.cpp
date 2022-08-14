@@ -56,7 +56,7 @@ Scaler::Scale ScalerTDistribution::compute(const VecXd & r) const
     for (int i = 0; i < r.rows(); i++) {
       sum += r(i) * r(i) * (_v + 1) / (_v + std::pow(r(i) / sigma, 2));
     }
-    const double sigma_i = std::sqrt(sum / (double)r.rows());
+    const double sigma_i = std::sqrt(sum / static_cast<double>(r.rows()));
     stepSize = std::abs(sigma - sigma_i);
     SOLVER(DEBUG) << "Sigma_i: " << iter << " with: " << sigma_i << " stepSize: " << stepSize;
 

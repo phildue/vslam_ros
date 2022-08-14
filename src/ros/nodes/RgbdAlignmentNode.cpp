@@ -214,7 +214,7 @@ void RgbdAlignmentNode::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
     get_logger(), "Pose: %.3f, %.3f, %.3f, %.3f, %.3f, %.3f", x(0), x(1), x(2), x(3), x(4), x(5));
 
   // Send the transformation from fixed frame to origin of optical frame
-  // TODO possibly only needs to be sent once
+  // TODO(unknown): possibly only needs to be sent once
   geometry_msgs::msg::TransformStamped tfOrigin = _world2origin;
   tfOrigin.header.stamp = msgImg->header.stamp;
   tfOrigin.header.frame_id = _fixedFrameId;

@@ -88,7 +88,9 @@ PoseWithCovariance::UnPtr SE3Alignment::align(
       from->dIx(level).array().pow(2) + from->dIy(level).array().pow(2);
     forEachPixel(gradientMagnitude, [&](int u, int v, double p) {
       double s = 1.0 / std::pow(0.5, level);
-      if (p >= _minGradient2 && from->depth()((int)(v * s), (int)(u * s)) > 0.0) {
+      if (
+        p >= _minGradient2 &&
+        from->depth()(static_cast<int>(v * s), static_cast<int>(u * s)) > 0.0) {
         interestPoints.emplace_back(u, v);
       }
     });

@@ -94,7 +94,7 @@ std::vector<Point3D::ShPtr> FeatureTracking::match(
       fRef->point()->addFeature(fCur);
     } else {
       std::vector<Feature2D::ShPtr> features = {fCur, fRef};
-      //TODO get 3d point
+      // TODO(unknown): get 3d point
       fCur->point() = std::make_shared<Point3D>(
         frameCur->p3d(fCur->position().y(), fCur->position().x()), features);
       fRef->point() = fCur->point();
@@ -110,7 +110,7 @@ std::vector<Feature2D::ShPtr> FeatureTracking::selectCandidates(
 
   std::vector<Feature2D::ShPtr> candidates;
   candidates.reserve(framesRef.size() * framesRef[0]->features().size());
-  //TODO sort frames from new to old
+  // TODO(unknown): sort frames from new to old
   const double border = 5.0;
   for (auto & f : framesRef) {
     for (auto ft : f->features()) {

@@ -52,7 +52,7 @@ sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestImg(std::uint64_t t)
     sensor_msgs::msg::Image::ConstSharedPtr closestMsg = nullptr;
     std::uint64_t closestT = 0U;
     for (const auto & t_msg : _images) {
-      int diff = (int)std::abs((int)(t_msg.first - t));
+      int diff = std::abs(static_cast<int>(t_msg.first - t));
       if (diff < minDiff) {
         minDiff = diff;
         closestMsg = t_msg.second;
@@ -83,7 +83,7 @@ sensor_msgs::msg::Image::ConstSharedPtr Queue::popClosestDepth(std::uint64_t t)
     sensor_msgs::msg::Image::ConstSharedPtr closestMsg = nullptr;
     std::uint64_t closestT = 0U;
     for (const auto & t_msg : _depths) {
-      int diff = (int)std::abs((int)(t_msg.first - t));
+      int diff = std::abs(static_cast<int>(t_msg.first - t));
       if (diff < minDiff) {
         minDiff = diff;
         closestMsg = t_msg.second;

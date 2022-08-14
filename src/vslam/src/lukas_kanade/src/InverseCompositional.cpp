@@ -34,8 +34,8 @@ InverseCompositional::InverseCompositional(
   _prior(prior),
   _J(Eigen::MatrixXd::Zero(_T.rows() * _T.cols(), w0->nParameters()))
 {
-  //TODO this could come from some external feature selector
-  //TODO move dTx, dTy computation outside
+  // TODO(unknown): this could come from some external feature selector
+  // TODO(unknown): move dTx, dTy computation outside
   std::vector<Eigen::Vector2i> interestPoints;
   interestPoints.reserve(_T.rows() * _T.cols());
   for (int32_t v = 0; v < _T.rows(); v++) {
@@ -116,7 +116,8 @@ least_squares::NormalEquations::ConstShPtr InverseCompositional::computeNormalEq
                          uvI.y() < _I.rows() - 1 && std::isfinite(uvI.x());
     if (visible) {
       //IWxp(kp.pos.y(),kp.pos.x()) = algorithm::bilinearInterpolation(_I,uvI.x(),uvI.y());
-      IWxp(kp.pos.y(), kp.pos.x()) = _I((int)std::round(uvI.y()), (int)std::round(uvI.x()));
+      IWxp(kp.pos.y(), kp.pos.x()) =
+        _I(static_cast<int>(std::round(uvI.y())), static_cast<int>(std::round(uvI.x())));
       R(kp.pos.y(), kp.pos.x()) =
         (double)IWxp(kp.pos.y(), kp.pos.x()) - (double)_T(kp.pos.y(), kp.pos.x());
       W(kp.pos.y(), kp.pos.x()) = 1.0;
@@ -136,9 +137,9 @@ least_squares::NormalEquations::ConstShPtr InverseCompositional::computeNormalEq
   }
   auto ne = std::make_shared<least_squares::NormalEquations>(_J, r, w);
   if (ne->nConstraints() > 1) {
-    ne->A().noalias() = ne->A() / (double)ne->nConstraints();
-    ne->b().noalias() = ne->b() / (double)ne->nConstraints();
-    ne->chi2() = ne->chi2() / (double)ne->nConstraints();
+    ne->A().noalias() = ne->A() / static_cast<double>(ne->nConstraints());
+    ne->b().noalias() = ne->b() / static_cast<double>(ne->nConstraints());
+    ne->chi2() = ne->chi2() / static_cast<double>(ne->nConstraints());
   }
 
   if (_prior) {

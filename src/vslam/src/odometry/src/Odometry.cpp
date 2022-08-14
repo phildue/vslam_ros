@@ -47,7 +47,7 @@ void OdometryRgbd::update(FrameRgbd::ConstShPtr frame)
         SE3d::exp(
           algorithm::computeRelativeTransform(_map->lastFrame()->pose().pose(), _pose->pose())
             .log() /
-          ((double)dT / 1e9)),
+          (static_cast<double>(dT) / 1e9)),
         _pose->cov());
 
     } catch (const std::runtime_error & e) {
@@ -75,7 +75,7 @@ void OdometryIcp::update(FrameRgbd::ConstShPtr frame)
     _speed = std::make_shared<PoseWithCovariance>(
       SE3d::exp(
         algorithm::computeRelativeTransform(_map->lastFrame()->pose().pose(), _pose->pose()).log() /
-        ((double)dT / 1e9)),
+        (static_cast<double>(dT) / 1e9)),
       _pose->cov());
 
   } else {

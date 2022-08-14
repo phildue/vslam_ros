@@ -54,7 +54,7 @@ void readAssocTextfile(
     while (ss >> buf) {
       c++;
       if (c == 1) {
-        timestamps.push_back((Timestamp)(std::stod(ss.str()) * 1e9));
+        timestamps.push_back(static_cast<Timestamp>(std::stod(ss.str()) * 1e9));
       } else if (c == 2) {
         inputDepthPaths.push_back(buf);
       } else if (c == 4) {
@@ -140,10 +140,11 @@ TEST_F(TestSE3Alignment, DISABLED_Comparison)
     //auto result = _aligner->align(fRef1,fCur)->pose().log();
     fCur->set(result);
     error += (fCur->pose().pose().inverse() * poseGt).log();
-    std::cout << fId << ": " << error.transpose() / (double)(i + 1) << std::endl;
+    std::cout << fId << ": " << error.transpose() / static_cast<double>(i + 1) << std::endl;
   }
-  std::cout << "AVG RMSE: " << (error / (double)nFrames).norm()
-            << "\nAVG RMSE Translation: " << (error.head(3) / (double)nFrames).norm()
-            << "\nAVG RMSE Rotation: " << (error.tail(3) / (double)nFrames).norm() << std::endl;
+  std::cout << "AVG RMSE: " << (error / static_cast<double>(nFrames)).norm()
+            << "\nAVG RMSE Translation: " << (error.head(3) / static_cast<double>(nFrames)).norm()
+            << "\nAVG RMSE Rotation: " << (error.tail(3) / static_cast<double>(nFrames)).norm()
+            << std::endl;
   EXPECT_LT((error / (double)nFrames).norm(), maxError);
 }
