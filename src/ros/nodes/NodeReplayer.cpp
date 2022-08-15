@@ -1,6 +1,6 @@
-#include <filesystem>
-
 #include "NodeReplayer.h"
+
+#include <filesystem>
 namespace fs = std::filesystem;
 using namespace pd;
 using namespace pd::vslam;

@@ -1,9 +1,10 @@
+#include "NodeGtLoader.h"
+
 #include <vslam_ros/converters.h>
 
 #include <Eigen/Dense>
 #include <iostream>
 
-#include "NodeGtLoader.h"
 #include "vslam_ros/visibility_control.h"
 
 namespace vslam_ros

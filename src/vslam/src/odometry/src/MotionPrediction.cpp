@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "MotionPrediction.h"
+
 #include "utils/utils.h"
 #define LOG_MOTION_PREDICTION(level) CLOG(level, "motion_prediction")
 namespace pd::vslam
