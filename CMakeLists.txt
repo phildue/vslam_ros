@@ -51,9 +51,7 @@ add_library(vslam_ros_nodes SHARED
   src/ros/nodes/NodeMapping.cpp
   src/ros/nodes/NodeGtLoader.cpp
   src/ros/nodes/NodeResultWriter.cpp
-  src/ros/nodes/NodeReplayer.cpp
-  
-  )
+  src/ros/nodes/NodeReplayer.cpp)
 target_link_libraries(vslam_ros_nodes ${PROJECT_NAME})
 set_property(TARGET vslam_ros_nodes PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -107,9 +105,9 @@ install(
   INCLUDES DESTINATION include)
 
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
+# if(BUILD_TESTING)
+  # find_package(ament_lint_auto REQUIRED)
+  # ament_lint_auto_find_test_dependencies()
+# endif()
 
 ament_package()
