@@ -45,11 +45,11 @@
 
 namespace vslam_ros
 {
-class RgbdAlignmentNode : public rclcpp::Node
+class NodeRgbdAlignment : public rclcpp::Node
 {
 public:
   COMPOSITION_PUBLIC
-  RgbdAlignmentNode(const rclcpp::NodeOptions & options);
+  NodeRgbdAlignment(const rclcpp::NodeOptions & options);
 
   bool ready();
   void processFrame(

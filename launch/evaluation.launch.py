@@ -48,7 +48,7 @@ def ld_opaque(context):
         composable_node_descriptions=[
             ComposableNode(
                 package='vslam_ros',
-                plugin='vslam_ros::RgbdAlignmentNode',
+                plugin='vslam_ros::NodeRgbdAlignment',
                 name='rgbdAlignment',
                 # remappings=[('/image', '/burgerimage')],
                 parameters=[params_algo,
@@ -56,7 +56,7 @@ def ld_opaque(context):
                 extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(
                 package='vslam_ros',
-                plugin='NodeGtLoader',
+                plugin='vslam_ros::NodeGtLoader',
                 name='gtLoader',
                 remappings=[('/path', '/path/gt')],
                 parameters=[{'gtTrajectoryFile': gt_traj_file},
@@ -64,7 +64,7 @@ def ld_opaque(context):
                 extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(
                 package='vslam_ros',
-                plugin='NodeResultWriter',
+                plugin='vslam_ros::NodeResultWriter',
                 name='resultWriter',
                 # remappings=[('/image', '/burgerimage')],
                 parameters=[{'algoOutputFile': algo_traj_file},
@@ -72,7 +72,7 @@ def ld_opaque(context):
                 extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(
                 package='vslam_ros',
-                plugin='NodeReplayer',
+                plugin='vslam_ros::NodeReplayer',
                 name='replayer',
                 # remappings=[('/image', '/burgerimage')],
                 parameters=[{'bag_file': bag_file},

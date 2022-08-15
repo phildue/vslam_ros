@@ -11,11 +11,11 @@ parser.add_argument('sequence_id', help='Id of the sequence to run on)',
                     default='rgbd_dataset_freiburg1_desk2')
 parser.add_argument('--sequence_root',
                     help='Root folder for sequences',
-                    default='/media/data/dataset/')
+                    default='/mnt/dataset/tum_rgbd')
 parser.add_argument('--run_algo', help='Set to create algorithm results', action="store_true")
 args = parser.parse_args()
 
-repo_dir = '/workspaces/ws/src/vslam_ros'
+repo_dir = '/workspaces/vslam'
 output_dir = args.sequence_root + "/" + args.sequence_id + "/" + args.experiment_name
 algo_traj = output_dir + "/" + args.sequence_id+"-algo.txt"
 rpe_plot = output_dir + "/" + "rpe.png"
@@ -41,9 +41,9 @@ if args.run_algo:
                 {'name': args.experiment_name},
                 {'code_sha': sha}
                 ], f)
-    os.system("ros2 launch vslam evaluation.launch.py \
+    os.system(f"ros2 launch vslam_ros evaluation.launch.py \
         sequence_root:={args.sequence_root} sequence_id:={args.sequence_id} \
-        experiment_name:={experiment_name}")
+        experiment_name:={args.experiment_name}")
 # TODO plot
 print("---------Creating Plots-----------------")
 os.system(f"python3 /workspaces/vslam/script/plot/plot_traj.py \

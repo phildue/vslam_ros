@@ -17,15 +17,15 @@
 // Created by phil on 07.08.21.
 //
 
-#include "RgbdAlignmentNode.h"
+#include "NodeMapping.h"
 #include "vslam_ros/converters.h"
 using namespace pd::vslam;
 using namespace std::chrono_literals;
 
 namespace vslam_ros
 {
-RgbdAlignmentNode::RgbdAlignmentNode(const rclcpp::NodeOptions & options)
-: rclcpp::Node("RgbdAlignmentNode", options),
+NodeMapping::NodeMapping(const rclcpp::NodeOptions & options)
+: rclcpp::Node("NodeMapping", options),
   _includeKeyFrame(false),
   _camInfoReceived(false),
   _tfAvailable(false),
@@ -38,13 +38,13 @@ RgbdAlignmentNode::RgbdAlignmentNode(const rclcpp::NodeOptions & options)
   _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock())),
   _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>(
     "/camera/rgb/camera_info", 10,
-    std::bind(&RgbdAlignmentNode::cameraCallback, this, std::placeholders::_1))),
+    std::bind(&NodeMapping::cameraCallback, this, std::placeholders::_1))),
   _subImage(create_subscription<sensor_msgs::msg::Image>(
     "/camera/rgb/image_color", 10,
-    std::bind(&RgbdAlignmentNode::imageCallback, this, std::placeholders::_1))),
+    std::bind(&NodeMapping::imageCallback, this, std::placeholders::_1))),
   _subDepth(create_subscription<sensor_msgs::msg::Image>(
     "/camera/depth/image", 10,
-    std::bind(&RgbdAlignmentNode::depthCallback, this, std::placeholders::_1))),
+    std::bind(&NodeMapping::depthCallback, this, std::placeholders::_1))),
   _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer)),
   _cliReplayer(create_client<std_srvs::srv::SetBool>("set_ready")),
   _queue(std::make_shared<vslam_ros::Queue>(10, 0.20 * 1e9))
@@ -116,9 +116,9 @@ RgbdAlignmentNode::RgbdAlignmentNode(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "Ready.");
 }
 
-bool RgbdAlignmentNode::ready() { return _queue->size() >= 1; }
+bool NodeMapping::ready() { return _queue->size() >= 1; }
 
-void RgbdAlignmentNode::processFrame(
+void NodeMapping::processFrame(
   sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
 {
   TIMED_FUNC(timerF);
@@ -138,6 +138,13 @@ void RgbdAlignmentNode::processFrame(
 
     _map->insert(frame, _keyFrameSelection->isKeyFrame());
 
+    if (_keyFrameSelection->isKeyFrame()) {
+      auto points = _tracking->track(frame, _map->keyFrames());
+      _map->insert(points);
+
+      _mapOptimization->optimize(_map->keyFrames(), _map->points());
+    }
+
     publish(msgImg);
 
     _fNo++;
@@ -148,7 +155,7 @@ void RgbdAlignmentNode::processFrame(
   signalReplayer();
 }
 
-void RgbdAlignmentNode::lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
+void NodeMapping::lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
 {
   try {
     _world2origin = _tfBuffer->lookupTransform(
@@ -159,7 +166,7 @@ void RgbdAlignmentNode::lookupTf(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
     RCLCPP_INFO(get_logger(), "%s", ex.what());
   }
 }
-void RgbdAlignmentNode::signalReplayer()
+void NodeMapping::signalReplayer()
 {
   if (get_parameter("use_sim_time").as_bool()) {
     while (!_cliReplayer->wait_for_service(1s)) {
@@ -174,7 +181,7 @@ void RgbdAlignmentNode::signalReplayer()
   }
 }
 
-FrameRgbd::ShPtr RgbdAlignmentNode::createFrame(
+FrameRgbd::ShPtr NodeMapping::createFrame(
   sensor_msgs::msg::Image::ConstSharedPtr msgImg,
   sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
 {
@@ -194,7 +201,7 @@ FrameRgbd::ShPtr RgbdAlignmentNode::createFrame(
   return std::make_shared<FrameRgbd>(
     img, depth, _camera, get_parameter("pyramid.levels").as_double_array().size(), t);
 }
-void RgbdAlignmentNode::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
+void NodeMapping::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
 {
   if (!_tfAvailable) {
     lookupTf(msgImg);
@@ -237,7 +244,7 @@ void RgbdAlignmentNode::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
   _pubPath->publish(_path);
 }
 
-void RgbdAlignmentNode::depthCallback(sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
+void NodeMapping::depthCallback(sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
 {
   if (_camInfoReceived) {
     _queue->pushDepth(msgDepth);
@@ -255,13 +262,13 @@ void RgbdAlignmentNode::depthCallback(sensor_msgs::msg::Image::ConstSharedPtr ms
   }
 }
 
-void RgbdAlignmentNode::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
+void NodeMapping::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
 {
   if (_camInfoReceived) {
     _queue->pushImage(msgImg);
   }
 }
-void RgbdAlignmentNode::dropCallback(
+void NodeMapping::dropCallback(
   sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
 {
   RCLCPP_INFO(get_logger(), "Message dropped.");
@@ -275,7 +282,7 @@ void RgbdAlignmentNode::dropCallback(
   }
 }
 
-void RgbdAlignmentNode::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg)
+void NodeMapping::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg)
 {
   if (_camInfoReceived) {
     return;
@@ -290,4 +297,4 @@ void RgbdAlignmentNode::cameraCallback(sensor_msgs::msg::CameraInfo::ConstShared
 }  // namespace vslam_ros
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(vslam_ros::RgbdAlignmentNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(vslam_ros::NodeMapping)
