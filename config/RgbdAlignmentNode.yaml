@@ -4,13 +4,13 @@ frame:
   base_link_id: world
   frame_id: odom
 loss:
-  function: tdistribution
+  function: None
   huber:
     c: 1.43
   tdistribution:
     v: 5.0
 prediction:
-  model: Kalman
+  model: ConstantMotion
 pyramid:
   levels: [1.0,0.5,0.25]
 solver:

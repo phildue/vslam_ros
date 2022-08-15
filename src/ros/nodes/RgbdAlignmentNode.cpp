@@ -18,7 +18,6 @@
 //
 
 #include "RgbdAlignmentNode.h"
-
 #include "vslam_ros/converters.h"
 using namespace pd::vslam;
 using namespace std::chrono_literals;
@@ -138,13 +137,6 @@ void RgbdAlignmentNode::processFrame(
     _keyFrameSelection->update(frame);
 
     _map->insert(frame, _keyFrameSelection->isKeyFrame());
-
-    if (_keyFrameSelection->isKeyFrame()) {
-      auto points = _tracking->track(frame, _map->keyFrames());
-      _map->insert(points);
-
-      _mapOptimization->optimize(_map->keyFrames(), _map->points());
-    }
 
     publish(msgImg);
 
