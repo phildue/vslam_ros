@@ -68,7 +68,7 @@ Eigen::Vector6d ourJ(double dIdx, double dIdy, const Vec3d & p, double fx, doubl
   return jac.row(0) * dIdx + jac.row(1) * dIdy;
 }
 
-TEST(WarpSE3Test, DISABLE_Jacobian)
+TEST(WarpSE3Test, DISABLED_Jacobian)
 {
   SE3d pose;
   DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
