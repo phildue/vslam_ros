@@ -93,7 +93,10 @@ public:
   PoseWithCovariance::UnPtr predict(Timestamp timestamp) const override;
 
 private:
-  //kalman::EKFConstantVelocitySE3::UnPtr _kalman;
+  const kalman::EKFConstantVelocitySE3::UnPtr _kalman;
+  Vec6d _speed = Vec6d::Zero();
+  PoseWithCovariance::ConstShPtr _lastPose;
+  Timestamp _lastT;
 };
 }  // namespace pd::vslam
 #endif  // VSLAM_MOTION_PREDICTION

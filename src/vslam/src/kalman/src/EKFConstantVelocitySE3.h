@@ -39,7 +39,10 @@ public:
   };
 
   EKFConstantVelocitySE3(
-    const Matd<12, 12> & covarianceProcess, Timestamp t0 = std::numeric_limits<uint64_t>::max());
+    const Matd<12, 12> & covarianceProcess, Timestamp t0 = std::numeric_limits<uint64_t>::max())
+  : _t(t0), _covProcess(covarianceProcess)
+  {
+  }
 
   State::UnPtr predict(Timestamp t) const;
 

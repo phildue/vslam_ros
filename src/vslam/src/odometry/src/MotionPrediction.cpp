@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "MotionPrediction.h"
-
 #include "utils/utils.h"
 #define LOG_MOTION_PREDICTION(level) CLOG(level, "motion_prediction")
 namespace pd::vslam
@@ -54,14 +53,30 @@ PoseWithCovariance::UnPtr MotionPredictionConstant::predict(Timestamp timestamp)
     predictedRelativePose * _lastPose->pose(), MatXd::Identity(6, 6));
 }
 
-MotionPredictionKalman::MotionPredictionKalman() : MotionPrediction()
-//  , _kalman(std::make_unique<kalman::EKFConstantVelocitySE3>(Matd<12,12>::Identity()))
+MotionPredictionKalman::MotionPredictionKalman()
+: MotionPrediction(),
+  _kalman(std::make_unique<kalman::EKFConstantVelocitySE3>(Matd<12, 12>::Identity())),
+  _speed(Vec6d::Zero()),
+  _lastPose(std::make_shared<PoseWithCovariance>(SE3d(), MatXd::Identity(6, 6))),
+  _lastT(0U)
 {
 }
 PoseWithCovariance::UnPtr MotionPredictionKalman::predict(Timestamp timestamp) const
 {
-  return std::make_unique<PoseWithCovariance>();
+  kalman::EKFConstantVelocitySE3::State::ConstPtr state = _kalman->predict(timestamp);
+  return std::make_unique<PoseWithCovariance>(SE3d::exp(state->pose), state->covPose);
 }
-void MotionPredictionKalman::update(PoseWithCovariance::ConstShPtr pose, Timestamp timestamp) {}
+void MotionPredictionKalman::update(PoseWithCovariance::ConstShPtr pose, Timestamp timestamp)
+{
+  if (timestamp < _lastT) {
+    throw pd::Exception("New timestamp is older than last one!");
+  }
+  const double dT = (static_cast<double>(timestamp) - static_cast<double>(_lastT)) / 1e9;
+
+  _speed = algorithm::computeRelativeTransform(_lastPose->pose(), pose->pose()).log() / dT;
+  _lastPose = pose;
+  _lastT = timestamp;
+  _kalman->update(_speed, Matd<6, 6>::Identity(), timestamp);
+}
 
 }  // namespace pd::vslam
