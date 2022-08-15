@@ -59,7 +59,7 @@ ADD --chown=ros:ros . /home/ros/vslam_ros
 
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
 --cmake-args '-DCMAKE_BUILD_TYPE=Release' '-DVSLAM_TEST_VISUALIZE=Off' '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic &&\
-touch build/AMENT_IGNORE && log/AMENT_IGNORE && install/AMENT_IGNORE
+touch build/AMENT_IGNORE && touch log/AMENT_IGNORE && touch install/AMENT_IGNORE
 
 FROM developer as runtime
 # The final application only copy whats necessary to run

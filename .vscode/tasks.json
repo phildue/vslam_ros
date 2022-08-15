@@ -150,7 +150,7 @@
             "label": "flake8",
             "detail": "Run flake8 on python files.",
             "type": "shell",
-            "command": "ament_flake8 src/",
+            "command": "ament_flake8",
             "presentation": {
                 "panel": "dedicated",
                 "reveal": "silent",

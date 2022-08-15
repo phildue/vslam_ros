@@ -45,15 +45,23 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:include/>)
 
-add_library(rgbdAlignmentComponent SHARED
-  src/ros/nodes/RgbdAlignmentNode.cpp)
-target_link_libraries(rgbdAlignmentComponent ${PROJECT_NAME})
-set_property(TARGET rgbdAlignmentComponent PROPERTY POSITION_INDEPENDENT_CODE ON)
+add_library(vslam_ros_nodes SHARED
+  src/ros/nodes/RgbdAlignmentNode.cpp
+  src/ros/nodes/NodeGtLoader.cpp
+  src/ros/nodes/NodeResultWriter.cpp
+  src/ros/nodes/NodeReplayer.cpp
+  
+  )
+target_link_libraries(vslam_ros_nodes ${PROJECT_NAME})
+set_property(TARGET vslam_ros_nodes PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-rclcpp_components_register_node(
-    rgbdAlignmentComponent
-    PLUGIN "vslam_ros::RgbdAlignmentNode"
-    EXECUTABLE rgbdAlignment)
+rclcpp_components_register_nodes(
+    vslam_ros_nodes
+    "vslam_ros::RgbdAlignmentNode"
+    "vslam_ros::NodeResultWriter"
+    "vslam_ros::NodeReplayer"
+    "vslam_ros::NodeGtLoader"
+)
 ament_target_dependencies(${PROJECT_NAME}
   OpenCV
   Eigen3
@@ -88,7 +96,7 @@ install(DIRECTORY
   config
   DESTINATION share/${PROJECT_NAME}/)
 install(
-  TARGETS ${PROJECT_NAME} rgbdAlignmentComponent rgbdAlignment
+  TARGETS ${PROJECT_NAME} vslam_ros_nodes
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
