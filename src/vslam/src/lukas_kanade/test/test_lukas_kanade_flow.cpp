@@ -46,7 +46,7 @@ public:
   }
 };
 
-TEST_F(LukasKanadeOpticalFlowTest, LukasKanadeOpticalFlow)
+TEST_F(LukasKanadeOpticalFlowTest, DISABLE_LukasKanadeOpticalFlow)
 {
   for (int i = 0; i < _nRuns; i++) {
     Eigen::Vector2d x;

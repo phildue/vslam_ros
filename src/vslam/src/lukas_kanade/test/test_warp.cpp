@@ -68,11 +68,11 @@ Eigen::Vector6d ourJ(double dIdx, double dIdy, const Vec3d & p, double fx, doubl
   return jac.row(0) * dIdx + jac.row(1) * dIdy;
 }
 
-TEST(WarpSE3Test, Jacobian)
+TEST(WarpSE3Test, DISABLE_Jacobian)
 {
   SE3d pose;
-  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.png") / 5000.0;
-  Image img = utils::loadImage(TEST_RESOURCE "/rgb.png");
+  DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
+  Image img = utils::loadImage(TEST_RESOURCE "/rgb.jpg");
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
   auto frame = std::make_shared<FrameRgbd>(
     img, depth, cam, 1, 0, PoseWithCovariance(pose, Eigen::MatrixXd::Identity(6, 6)));
