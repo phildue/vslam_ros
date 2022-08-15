@@ -10,6 +10,8 @@
   <depend>tf2_ros</depend>
   <depend>tf2_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
+  <depend>rosbag2_cpp</depend>
+  <depend>rosbag2</depend>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <build_depend>
     vision_opencv

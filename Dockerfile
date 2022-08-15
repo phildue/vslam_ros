@@ -54,9 +54,8 @@ FROM developer AS builder
 ENV MAKEFLAGS="-j 2"
 # The builder image, additionally contains the source code for compilation
 USER ros
-WORKDIR /home/ros/
 ADD --chown=ros:ros . /home/ros/vslam_ros
-
+WORKDIR /home/ros/vslam_ros
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
 --cmake-args '-DCMAKE_BUILD_TYPE=Release' '-DVSLAM_TEST_VISUALIZE=Off' '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic &&\
 touch build/AMENT_IGNORE && touch log/AMENT_IGNORE && touch install/AMENT_IGNORE
@@ -65,6 +64,6 @@ FROM developer as runtime
 # The final application only copy whats necessary to run
 SHELL ["/bin/bash"]
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
-RUN echo "source /app/install/setup.bash" >> /home/ros/.bashrc
+RUN echo "source /app/setup.bash" >> /home/ros/.bashrc
 WORKDIR /app/vslam
 ENTRYPOINT ["/bin/bash", "-c","source setup.bash"]
