@@ -35,7 +35,7 @@ build:
 test:
   stage: test
   script:
-    - docker run vslam:builder colcon test --packages-up-to vslam_ros --merge-install
+    - docker run vslam:builder /bin/bash -c "colcon test --event-handler console_direct+ ; colcon test-result"
 
 evaluate:
   stage: test
