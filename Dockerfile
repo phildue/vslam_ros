@@ -65,7 +65,7 @@ FROM developer as runtime
 # The final application only copy whats necessary to run
 SHELL ["/bin/bash"]
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
-RUN echo "source /app/vslam/install/setup.bash" >> /home/ros/.bashrc
+#RUN echo "source /app/vslam/install/setup.bash" >> /home/ros/.bashrc
 
 WORKDIR /app/vslam
 ENTRYPOINT ["/bin/bash", "-c","source setup.bash"]
