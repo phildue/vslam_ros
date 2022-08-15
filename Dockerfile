@@ -59,12 +59,13 @@ WORKDIR /home/ros/vslam_ros
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
 --cmake-args '-DCMAKE_BUILD_TYPE=Release' '-DVSLAM_TEST_VISUALIZE=Off' '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic &&\
 touch build/AMENT_IGNORE && touch log/AMENT_IGNORE && touch install/AMENT_IGNORE
-RUN echo "source /app/setup.bash" >> /home/ros/.bashrc
+RUN echo "source /home/ros/vslam_ros/install/setup.bash" >> /home/ros/.bashrc
 
 FROM developer as runtime
 # The final application only copy whats necessary to run
 SHELL ["/bin/bash"]
-COPY --from=builder --chown=ros:ros /home/ros/.bashrc /home/ros/.bashrc
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
+RUN echo "source /app/vslam/install/setup.bash" >> /home/ros/.bashrc
+
 WORKDIR /app/vslam
 ENTRYPOINT ["/bin/bash", "-c","source setup.bash"]

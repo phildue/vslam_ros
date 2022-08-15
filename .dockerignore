@@ -2,3 +2,9 @@ build/
 install/
 log/
 .git/
+.gitlab-ci.yml
+Dockerfile
+.gitignore
+.dockerignore
+.vscode
+.devcontainer
