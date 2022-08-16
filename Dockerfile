@@ -47,25 +47,24 @@ git clone https://github.com/ros-perception/vision_opencv.git && cd vision_openc
 cd /opt/ros_deps_ws/ && colcon build --packages-up-to vision_opencv && echo "source /opt/ros_deps_ws/install/local_setup.bash" >> /home/ros/.bashrc
 
 USER ros
-
-ENV PYTHONPATH=${PYTHONPATH}:/workspaces/ws/src/vslam_ros/vslam_ros_evaluation/script/
 WORKDIR /home/ros/
+
 FROM developer AS builder
-ENV MAKEFLAGS="-j 2"
 # The builder image, additionally contains the source code for compilation
 USER ros
 ADD --chown=ros:ros . /home/ros/vslam_ros
 WORKDIR /home/ros/vslam_ros
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
 --cmake-args '-DCMAKE_BUILD_TYPE=Release' '-DVSLAM_TEST_VISUALIZE=Off' '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic &&\
+git rev-parse HEAD > install/HEAD.sha &&\
 touch build/AMENT_IGNORE && touch log/AMENT_IGNORE && touch install/AMENT_IGNORE
 RUN echo "source /home/ros/vslam_ros/install/setup.bash" >> /home/ros/.bashrc
 
 FROM developer as runtime
 # The final application only copy whats necessary to run
-SHELL ["/bin/bash"]
+USER ros
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
-#RUN echo "source /app/vslam/install/setup.bash" >> /home/ros/.bashrc
+RUN echo "source /app/vslam/local_setup.bash" >> /home/ros/.bashrc
 
 WORKDIR /app/vslam
-ENTRYPOINT ["/bin/bash", "-c","source setup.bash"]
+#ENTRYPOINT ["/bin/bash", "-c","source local.bash"]
