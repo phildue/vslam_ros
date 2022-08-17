@@ -26,10 +26,7 @@
 #define LOG_ODOM(level) CLOG(level, "odometry")
 namespace pd::vslam
 {
-RgbdAlignmentOpenCv::RgbdAlignmentOpenCv()
-{
-  Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
-}
+RgbdAlignmentOpenCv::RgbdAlignmentOpenCv() { Log::get("odometry"); }
 
 PoseWithCovariance::UnPtr RgbdAlignmentOpenCv::align(
   FrameRgbd::ConstShPtr from, FrameRgbd::ConstShPtr to) const

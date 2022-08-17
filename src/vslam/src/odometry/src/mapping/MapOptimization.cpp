@@ -20,7 +20,7 @@
 
 namespace pd::vslam::mapping
 {
-MapOptimization::MapOptimization() { Log::get("mapping", ODOMETRY_CFG_DIR "/log/mapping.conf"); }
+MapOptimization::MapOptimization() { Log::get("mapping"); }
 void MapOptimization::optimize(
   const std::vector<FrameRgbd::ShPtr> & frames, const std::vector<Point3D::ShPtr> & points) const
 {

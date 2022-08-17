@@ -55,8 +55,10 @@ USER ros
 ADD --chown=ros:ros . /home/ros/vslam_ros
 WORKDIR /home/ros/vslam_ros
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
---cmake-args '-DCMAKE_BUILD_TYPE=Release' '-DVSLAM_TEST_VISUALIZE=Off' '-DCMAKE_EXPORT_COMPILE_COMMANDS=On' -Wall -Wextra -Wpedantic &&\
-git rev-parse HEAD > install/HEAD.sha &&\
+--cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
+-DVSLAM_LOG_MINIMAL=On -DVSLAM_LOG_PERFORMANCE_TRACKING=Off -DVSLAM_TEST_VISUALIZE=Off\
+-Wall -Wextra -Wpedantic &&\
+git rev-parse HEAD > install/COMMIT.sha &&\
 touch build/AMENT_IGNORE && touch log/AMENT_IGNORE && touch install/AMENT_IGNORE
 RUN echo "source /home/ros/vslam_ros/install/setup.bash" >> /home/ros/.bashrc
 
@@ -65,6 +67,5 @@ FROM developer as runtime
 USER ros
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
 RUN echo "source /app/vslam/local_setup.bash" >> /home/ros/.bashrc
-
 WORKDIR /app/vslam
-#ENTRYPOINT ["/bin/bash", "-c","source local.bash"]
+#ENTRYPOINT ["/bin/bash", "-c","source /app/vslam/local_setup.bash"]

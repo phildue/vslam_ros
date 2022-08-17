@@ -61,7 +61,7 @@ private:
   const Eigen::Vector2d _obs;
   const Eigen::Matrix3d _K;
 };
-BundleAdjustment::BundleAdjustment() { Log::get("mapping", ODOMETRY_CFG_DIR "/log/mapping.conf"); }
+BundleAdjustment::BundleAdjustment() { Log::get("mapping"); }
 
 void BundleAdjustment::setFrame(std::uint64_t frameId, const SE3d & pose, const Mat3d & K)
 {

@@ -30,10 +30,6 @@ set( headers
 
 pd_setup_lib(${PROJECT_NAME} ${PROJECT_VERSION} "${sources}" "${headers}" pd)
 
-target_compile_definitions( ${PROJECT_NAME} PUBLIC
-$<BUILD_INTERFACE:ODOMETRY_CFG_DIR="${CMAKE_CURRENT_LIST_DIR}/cfg">
-$<INSTALL_INTERFACE:ODOMETRY_CFG_DIR="/share/vslam/cfg"> )
-
 target_link_libraries(${PROJECT_NAME} kalman lukas_kanade utils core)
 
 target_link_libraries(${PROJECT_NAME} core utils least_squares)
@@ -99,14 +95,14 @@ if(VSLAM_ODOMETRY_BUILD_TESTS)
 
   option(VSLAM_TEST_VISUALIZE "Enable visuals in unit test" Off)
   if(VSLAM_TEST_VISUALIZE)
-    target_compile_definitions(odometry_icpTest TEST_VISUALIZE)
-    target_compile_definitions(odometry_rgbd_cvTest TEST_VISUALIZE)
-    target_compile_definitions(trajectoryTest TEST_VISUALIZE)
-    target_compile_definitions(odometry TEST_VISUALIZE)
-    target_compile_definitions(ceres_baTest TEST_VISUALIZE)
-    target_compile_definitions(ceres_baTest TEST_VISUALIZE)
-    target_compile_definitions(baTest TEST_VISUALIZE)
-    target_compile_definitions(trackingTest TEST_VISUALIZE)
+    target_compile_definitions(odometry_icpTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(odometry_rgbd_cvTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(trajectoryTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(odometry PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(ceres_baTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(ceres_baTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(baTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(trackingTest PUBLIC TEST_VISUALIZE)
   endif()
 
 endif()

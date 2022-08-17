@@ -52,7 +52,9 @@ def ld_opaque(context):
                 name='rgbdAlignment',
                 # remappings=[('/image', '/burgerimage')],
                 parameters=[params_algo,
-                            {"use_sim_time": use_sim_time}],
+                            {"use_sim_time": use_sim_time}
+                            {"log.conf_dir": os.path.join(get_package_share_directory('vslam_ros'),'config','log')}
+                            ],
                 extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(
                 package='vslam_ros',

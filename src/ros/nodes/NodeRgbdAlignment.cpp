@@ -65,22 +65,6 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   Log::_blockLevel = Level::Unknown;
   Log::_showLevel = Level::Unknown;
 
-  const std::vector<std::string> imageLogs = {"ImageWarped", "Residual", "Weights",
-                                              "Template",    "Image",    "Depth"};
-  const std::vector<std::string> plotLogs = {"ErrorDistribution"};
-  for (const auto & imageLog : imageLogs) {
-    declare_parameter("log.image." + imageLog + ".show", false);
-    declare_parameter("log.image." + imageLog + ".block", false);
-    LOG_IMG(imageLog)->_show = get_parameter("log.image." + imageLog + ".show").as_bool();
-    LOG_IMG(imageLog)->_block = get_parameter("log.image." + imageLog + ".block").as_bool();
-  }
-  for (const auto & plotLog : plotLogs) {
-    declare_parameter("log.plot." + plotLog + ".show", false);
-    declare_parameter("log.plot." + plotLog + ".block", false);
-    LOG_PLT(plotLog)->_show = get_parameter("log.plot." + plotLog + ".show").as_bool();
-    LOG_PLT(plotLog)->_block = get_parameter("log.plot." + plotLog + ".block").as_bool();
-  }
-
   RCLCPP_INFO(get_logger(), "Setting up..");
 
   least_squares::Loss::ShPtr loss = nullptr;
@@ -114,6 +98,22 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
   //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
 
+  declare_parameter("log.config_dir", "/share/cfg/log/");
+  for (const auto & name : Log::registeredLogs()) {
+    Log::get(name)->configure(get_parameter("log.config_dir").as_string() + "/" + name + ".conf");
+  }
+  for (const auto & name : Log::registeredLogsImage()) {
+    declare_parameter("log.image." + name + ".show", false);
+    declare_parameter("log.image." + name + ".block", false);
+    LOG_IMG(name)->_show = get_parameter("log.image." + name + ".show").as_bool();
+    LOG_IMG(name)->_block = get_parameter("log.image." + name + ".block").as_bool();
+  }
+  for (const auto & name : Log::registeredLogsPlot()) {
+    declare_parameter("log.image." + name + ".show", false);
+    declare_parameter("log.image." + name + ".block", false);
+    LOG_PLT(name)->_show = get_parameter("log.image." + name + ".show").as_bool();
+    LOG_PLT(name)->_block = get_parameter("log.image." + name + ".block").as_bool();
+  }
   RCLCPP_INFO(get_logger(), "Ready.");
 }
 

@@ -42,7 +42,7 @@ public:
     std::uint64_t t0 = std::numeric_limits<uint64_t>::max())
   : _P(P0), _K(), _t(t0), _x(x0), _Q()
   {
-    Log::get("kalman", KALMAN_CFG_DIR "/log/kalman.conf");
+    Log::get("kalman");
   }
   Prediction predict(std::uint64_t t)
   {

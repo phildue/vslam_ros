@@ -15,10 +15,6 @@ set( headers
 
 pd_setup_lib(${PROJECT_NAME} ${PROJECT_VERSION} "${sources}" "${headers}" pd)
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC
-$<BUILD_INTERFACE:CFG_DIR="${CMAKE_CURRENT_LIST_DIR}/cfg">
-$<INSTALL_INTERFACE:CFG_DIR="/share/vslam/cfg">)
-
 target_link_libraries(${PROJECT_NAME} core utils least_squares)
 if(UNIX)
   target_link_libraries(${PROJECT_NAME} stdc++fs)
@@ -50,8 +46,8 @@ if(VSLAM_BUILD_TESTS)
         #target_compile_definitions(lukas_kanade_se3Test PUBLIC TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource")
   option(VSLAM_TEST_VISUALIZE "Enable visuals in unit test" Off)
   if(VSLAM_TEST_VISUALIZE)
-    target_compile_definitions(lukas_kanade_flowTest TEST_VISUALIZE)
-    target_compile_definitions(warpTest TEST_VISUALIZE)
+    target_compile_definitions(lukas_kanade_flowTest PUBLIC TEST_VISUALIZE)
+    target_compile_definitions(warpTest PUBLIC TEST_VISUALIZE)
 
   endif()
 endif()

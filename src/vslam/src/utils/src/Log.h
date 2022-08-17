@@ -114,8 +114,10 @@ public:
   bool _save;
 
 protected:
+  static std::string _rootFolder;
   const std::string _name;
   const std::string _folder;
+
   std::uint32_t _ctr;
 
   void logMat(const cv::Mat & mat);
@@ -131,19 +133,26 @@ void operator<<(LogImage::ShPtr log, vis::Drawable::ConstShPtr drawable);
 class Log
 {
 public:
-  static std::shared_ptr<Log> get(
-    const std::string & name, const std::string & configFilePath, Level level = el::Level::Info);
+  static std::shared_ptr<Log> get(const std::string & name);
   static std::shared_ptr<LogImage> getImageLog(
     const std::string & name, Level level = el::Level::Info);
   static std::shared_ptr<LogPlot> getPlotLog(const std::string & name, Level level);
+  static const std::map<std::string, std::shared_ptr<Log>> & loggers() { return _logs; };
+  static const std::map<std::string, std::map<Level, std::shared_ptr<LogImage>>> & imageLoggers();
+  static const std::map<std::string, std::map<Level, std::shared_ptr<LogPlot>>> & plotLoggers();
+  static std::vector<std::string> registeredLogs();
+  static std::vector<std::string> registeredLogsImage();
+  static std::vector<std::string> registeredLogsPlot();
+
   static Level _showLevel;
   static Level _blockLevel;
 
-  Log(const std::string & name, const std::string & configFilePath);
+  Log(const std::string & name);
+  void configure(const std::string & configFilePath);
 
 private:
   const std::string _name;
-  static std::map<std::string, std::map<Level, std::shared_ptr<Log>>> _logs;
+  static std::map<std::string, std::shared_ptr<Log>> _logs;
   static std::map<std::string, std::map<Level, std::shared_ptr<LogPlot>>> _logsPlot;
   static std::map<std::string, std::map<Level, std::shared_ptr<LogImage>>> _logsImage;
 };

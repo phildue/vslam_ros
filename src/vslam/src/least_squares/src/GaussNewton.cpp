@@ -27,7 +27,7 @@ GaussNewton::GaussNewton(double minStepSize, size_t maxIterations)
   _minReduction(minStepSize),
   _maxIterations(maxIterations)
 {
-  Log::get("solver", LEAST_SQUARES_CFG_DIR "/log/solver.conf");
+  Log::get("solver");
 }
 
 Solver::Results::ConstUnPtr GaussNewton::solve(std::shared_ptr<Problem> problem)

@@ -27,7 +27,7 @@ OdometryRgbd::OdometryRgbd(
   _includeKeyFrame(true),
   _trackKeyFrame(false)
 {
-  Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
+  Log::get("odometry");
 }
 void OdometryRgbd::update(FrameRgbd::ConstShPtr frame)
 {

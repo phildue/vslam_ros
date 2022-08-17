@@ -29,29 +29,20 @@ INITIALIZE_EASYLOGGINGPP
 
 namespace pd::vslam
 {
-std::map<std::string, std::map<Level, std::shared_ptr<Log>>> Log::_logs = {};
+std::map<std::string, std::shared_ptr<Log>> Log::_logs = {};
 std::map<std::string, std::map<Level, std::shared_ptr<LogPlot>>> Log::_logsPlot = {};
 std::map<std::string, std::map<Level, std::shared_ptr<LogImage>>> Log::_logsImage = {};
 Level Log::_blockLevel = Level::Unknown;
 Level Log::_showLevel = Level::Unknown;
-
-std::shared_ptr<Log> Log::get(
-  const std::string & name, const std::string & confFilePath, Level level)
+std::string LogImage::_rootFolder = "/tmp/log/";
+std::shared_ptr<Log> Log::get(const std::string & name)
 {
   auto it = _logs.find(name);
   if (it != _logs.end()) {
-    return it->second[level];
-  } else {
-    std::map<Level, std::shared_ptr<Log>> log = {
-      {el::Level::Debug, std::make_shared<Log>(name, confFilePath)},
-      {el::Level::Info, std::make_shared<Log>(name, confFilePath)},
-      {el::Level::Warning, std::make_shared<Log>(name, confFilePath)},
-      {el::Level::Error, std::make_shared<Log>(name, confFilePath)},
-
-    };
-    _logs[name] = log;
-    return log[level];
-  }
+    return it->second;
+  } else
+    _logs[name] = std::make_shared<Log>(name);
+  return _logs[name];
 }
 
 std::shared_ptr<LogImage> Log::getImageLog(const std::string & name, Level level)
@@ -86,13 +77,37 @@ std::shared_ptr<LogPlot> Log::getPlotLog(const std::string & name, Level level)
   }
 }
 
-Log::Log(const std::string & name, const std::string & configFilePath) : _name(name)
+Log::Log(const std::string & name) : _name(name) {}
+void Log::configure(const std::string & configFilePath)
 {
   el::Configurations config(configFilePath);
   // Actually reconfigure all loggers instead
-  el::Loggers::reconfigureLogger(name, config);
+  el::Loggers::reconfigureLogger(_name, config);
 }
-
+std::vector<std::string> Log::registeredLogs()
+{
+  std::vector<std::string> keys;
+  std::transform(Log::_logs.begin(), Log::_logs.end(), std::back_inserter(keys), [&](auto id_l) {
+    return id_l.first;
+  });
+  return keys;
+}
+std::vector<std::string> Log::registeredLogsImage()
+{
+  std::vector<std::string> keys;
+  std::transform(
+    Log::_logsImage.begin(), Log::_logsImage.end(), std::back_inserter(keys),
+    [&](auto id_l) { return id_l.first; });
+  return keys;
+}
+std::vector<std::string> Log::registeredLogsPlot()
+{
+  std::vector<std::string> keys;
+  std::transform(
+    Log::_logsPlot.begin(), Log::_logsPlot.end(), std::back_inserter(keys),
+    [&](auto id_l) { return id_l.first; });
+  return keys;
+}
 LogPlot::LogPlot(const std::string & name, bool block, bool show, bool save)
 : _block(block), _show(show), _save(save), _name(name)
 {
@@ -100,7 +115,12 @@ LogPlot::LogPlot(const std::string & name, bool block, bool show, bool save)
 void operator<<(LogPlot::ShPtr log, vis::Plot::ConstShPtr plot) { log->append(plot); }
 
 LogImage::LogImage(const std::string & name, bool block, bool show, bool save)
-: _block(block), _show(show), _save(save), _name(name), _folder(LOG_DIR "/" + name), _ctr(0U)
+: _block(block),
+  _show(show),
+  _save(save),
+  _name(name),
+  _folder(LogImage::_rootFolder + "/" + name),
+  _ctr(0U)
 {
 }
 

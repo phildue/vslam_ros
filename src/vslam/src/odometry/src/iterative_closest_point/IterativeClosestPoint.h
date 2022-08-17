@@ -38,7 +38,7 @@ public:
   IterativeClosestPoint(size_t level, int maxIterations)
   : _level(level), _maxIterations(maxIterations)
   {
-    Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
+    Log::get("odometry");
   }
 
   PoseWithCovariance::UnPtr align(
