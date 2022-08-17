@@ -57,17 +57,17 @@ if args.run_algo:
         experiment_name:={args.experiment_name}")
 # TODO plot
 print("---------Creating Plots-----------------")
-os.system(f"python3 {script_path}/plot/plot_traj.py \
+os.system(f"python3 {script_dir}/plot/plot_traj.py \
     {algo_traj} {gt_traj} --xy_out {xy_plot} --z_out {z_plot}")
 
 
 print("---------Evaluating Relative Pose Error-----------------")
-os.system(f"python3 {script_path}/tum/evaluate_rpe.py \
+os.system(f"python3 {script_dir}/tum/evaluate_rpe.py \
     {gt_traj} {algo_traj} \
     --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot}")
 
 print("---------Evaluating Average Trajectory Error------------")
-os.system(f"python3 {script_path}/tum/evaluate_ate.py \
+os.system(f"python3 {script_dir}/tum/evaluate_ate.py \
     {gt_traj} {algo_traj} \
     --verbose --plot {ate_plot} --save {ate_txt}")
 
