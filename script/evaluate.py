@@ -4,6 +4,8 @@ import argparse
 import git
 import yaml
 
+script_dir = os.path.abspath( os.path.dirname( __file__ ) )
+
 parser = argparse.ArgumentParser(description='''
 Run evaluation of algorithm''')
 parser.add_argument('experiment_name', help='Name for the experiment')
@@ -12,16 +14,26 @@ parser.add_argument('sequence_id', help='Id of the sequence to run on)',
 parser.add_argument('--sequence_root',
                     help='Root folder for sequences',
                     default='/mnt/dataset/tum_rgbd')
+parser.add_argument('--out_root',
+                    help='Root folder for generating output, defaults to <sequence_root>',
+                    default='')
 parser.add_argument('--run_algo', help='Set to create algorithm results', action="store_true")
+parser.add_argument('--commit_hash',
+                    help='Id to identify algorithm version',
+                    default='')
+parser.add_argument('--workspace_dir',
+                    help='Directory of repository (only applicable if commit_hash not given)',
+                    default='/home/ros/vslam_ros')
 args = parser.parse_args()
 
-repo_dir = '/workspaces/vslam'
-output_dir = args.sequence_root + "/" + args.sequence_id + "/" + args.experiment_name
-algo_traj = output_dir + "/" + args.sequence_id+"-algo.txt"
-rpe_plot = output_dir + "/" + "rpe.png"
-ate_plot = output_dir + "/" + "ate.png"
-xy_plot = output_dir + "/" + "xy.png"
-z_plot = output_dir + "/" + "z.png"
+if not args.out_root:
+    args.out_root = args.sequence_root
+output_dir = os.path.join(args.out_root, args.sequence_id, args.experiment_name)
+algo_traj = os.path.join(output_dir, args.sequence_id+"-algo.txt")
+rpe_plot = os.path.join(output_dir, "rpe.png")
+ate_plot = os.path.join(output_dir, "ate.png")
+xy_plot = os.path.join(output_dir, "xy.png")
+z_plot = os.path.join(output_dir, "z.png")
 rpe_txt = os.path.join(output_dir, 'rpe.txt')
 ate_txt = os.path.join(output_dir, 'ate.txt')
 
@@ -34,8 +46,7 @@ if not os.path.exists(output_dir):
 
 if args.run_algo:
     print("---------Running Algorithm-----------------")
-    repo = git.Repo(repo_dir)
-    sha = repo.head.object.hexsha
+    sha = args.commit_hash if args.commit_hash else git.Repo(args.workspace_dir).head.object.hexsha
     with open(os.path.join(output_dir, 'meta.yaml'), 'w') as f:
         yaml.dump([
                 {'name': args.experiment_name},
@@ -46,17 +57,17 @@ if args.run_algo:
         experiment_name:={args.experiment_name}")
 # TODO plot
 print("---------Creating Plots-----------------")
-os.system(f"python3 /workspaces/vslam/script/plot/plot_traj.py \
+os.system(f"python3 {script_path}/plot/plot_traj.py \
     {algo_traj} {gt_traj} --xy_out {xy_plot} --z_out {z_plot}")
 
 
 print("---------Evaluating Relative Pose Error-----------------")
-os.system(f"python3 /workspaces/vslam/script/tum/evaluate_rpe.py \
+os.system(f"python3 {script_path}/tum/evaluate_rpe.py \
     {gt_traj} {algo_traj} \
     --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot}")
 
 print("---------Evaluating Average Trajectory Error------------")
-os.system(f"python3 /workspaces/vslam/script/tum/evaluate_ate.py \
+os.system(f"python3 {script_path}/tum/evaluate_ate.py \
     {gt_traj} {algo_traj} \
     --verbose --plot {ate_plot} --save {ate_txt}")
 
