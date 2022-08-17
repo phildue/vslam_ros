@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "SE3Alignment.h"
-
 #include "utils/utils.h"
 
 #define LOG_ODOM(level) CLOG(level, "odometry")
@@ -59,7 +58,7 @@ SE3Alignment::SE3Alignment(
   _solver(solver),
   _includePrior(includePrior)
 {
-  Log::get("odometry", ODOMETRY_CFG_DIR "/log/odometry.conf");
+  Log::get("odometry");
 }
 
 PoseWithCovariance::UnPtr SE3Alignment::align(
