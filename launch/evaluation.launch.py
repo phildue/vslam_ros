@@ -52,8 +52,8 @@ def ld_opaque(context):
                 name='rgbdAlignment',
                 # remappings=[('/image', '/burgerimage')],
                 parameters=[params_algo,
-                            {"use_sim_time": use_sim_time}
-                            {"log.conf_dir": os.path.join(get_package_share_directory('vslam_ros'),'config','log')}
+                            {"use_sim_time": use_sim_time},
+                            {"log.config_dir": os.path.join(get_package_share_directory('vslam_ros'), 'cfg', 'log')}
                             ],
                 extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(
@@ -95,7 +95,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'sequence_root',
-            default_value=os.path.join('/media', 'data', 'dataset'),
+            default_value=os.path.join('/mnt', 'dataset'),
             description='Root folder of sequences'),
         DeclareLaunchArgument(
             'experiment_name',
@@ -103,7 +103,7 @@ def generate_launch_description():
             description='Name for the experiment'),
         DeclareLaunchArgument(
             'sequence_id',
-            default_value="rgbd_dataset_freiburg1_xyz",
+            default_value="rgbd_dataset_freiburg2_desk",
             description='id of the sequence'),
         OpaqueFunction(function=ld_opaque)
     ])

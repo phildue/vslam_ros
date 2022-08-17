@@ -89,14 +89,30 @@ install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ros/
     DESTINATION include/${PROJECT_NAME}
     FILES_MATCHING # install only matched files
     PATTERN "*.h*") # select header files
+
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
     DESTINATION include/)
+
 install(DIRECTORY
     launch
     DESTINATION share/${PROJECT_NAME}/)
+
 install(DIRECTORY
   config
   DESTINATION share/${PROJECT_NAME}/)
+
+install(DIRECTORY
+  src/vslam/src/kalman/cfg
+  DESTINATION share/${PROJECT_NAME}/)
+
+install(DIRECTORY
+  src/vslam/src/least_squares/cfg
+  DESTINATION share/${PROJECT_NAME}/)
+
+install(DIRECTORY
+  src/vslam/src/odometry/cfg/log
+  DESTINATION share/${PROJECT_NAME}/)
+
 install(
   TARGETS ${PROJECT_NAME} vslam_ros_nodes
   ARCHIVE DESTINATION lib

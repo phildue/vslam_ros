@@ -18,7 +18,6 @@
 //
 
 #include "NodeRgbdAlignment.h"
-
 #include "vslam_ros/converters.h"
 using namespace pd::vslam;
 using namespace std::chrono_literals;

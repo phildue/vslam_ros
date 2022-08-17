@@ -34,6 +34,7 @@ install(TARGETS ${PROJECT_NAME} core utils least_squares lukas_kanade kalman odo
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin)
+    
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/
     DESTINATION include/
     FILES_MATCHING # install only matched files
