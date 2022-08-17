@@ -66,6 +66,8 @@ FROM developer as runtime
 # The final application only copy whats necessary to run
 USER ros
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
+COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/script /script
+
 RUN echo "source /app/vslam/local_setup.bash" >> /home/ros/.bashrc
 WORKDIR /app/vslam
 #ENTRYPOINT ["/bin/bash", "-c","source /app/vslam/local_setup.bash"]
