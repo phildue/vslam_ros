@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 import os
+import sys
 import argparse
 import git
 import yaml
 
 script_dir = os.path.abspath( os.path.dirname( __file__ ) )
-
+sys.path.append(script_dir)
 parser = argparse.ArgumentParser(description='''
 Run evaluation of algorithm''')
 parser.add_argument('experiment_name', help='Name for the experiment')
