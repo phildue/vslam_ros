@@ -32,10 +32,10 @@ before_script:
 #    - docker build -t vslam:dev --target developer .
 #    - docker build -t vslam:builder --target builder .
 #    - docker build -t vslam:runtime --target runtime .
-test:
-  stage: test
-  script:
-    - docker run vslam:builder /bin/bash -c "colcon test --event-handler console_direct+ ; colcon test-result"
+#test:
+#  stage: test
+#  script:
+#    - docker run vslam:builder /bin/bash -c "colcon test --event-handler console_direct+ ; colcon test-result"
 
 evaluate:
   stage: test
