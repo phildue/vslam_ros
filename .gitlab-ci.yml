@@ -22,8 +22,9 @@ services:
 
 before_script:
   - docker info
-  - docker pull phildue/vslam:dev
-  - docker tag phildue/vslam:dev vslam:dev
+  - ls /mnt/dataset
+#  - docker pull phildue/vslam:dev
+#  - docker tag phildue/vslam:dev vslam:dev
 
 #build:
 #  stage: build
