@@ -8,3 +8,5 @@ Dockerfile
 .dockerignore
 .vscode
 .devcontainer
+.venv
+*.egg-info
