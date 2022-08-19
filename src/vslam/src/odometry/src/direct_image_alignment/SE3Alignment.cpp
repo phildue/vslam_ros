@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "SE3Alignment.h"
+
 #include "utils/utils.h"
 
 #define LOG_ODOM(level) CLOG(level, "odometry")
