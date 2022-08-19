@@ -52,11 +52,6 @@ find_package(Ceres REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CERES_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${CERES_LIBRARIES})
 
-option(VSLAM_LOG_MINIMAL Off)
-if(NOT VSLAM_LOG_MINIMAL)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_DEBUG_LOGS)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_INFO_LOGS)
-endif()
 # Add tests
 option(VSLAM_ODOMETRY_BUILD_TESTS "Enable to build odometry tests" ON)
 if(VSLAM_ODOMETRY_BUILD_TESTS)

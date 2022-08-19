@@ -29,11 +29,6 @@ find_package(TBB REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} TBB::tbb)
 
-option(VSLAM_LOG_MINIMAL Off)
-if(NOT VSLAM_LOG_MINIMAL)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_DEBUG_LOGS)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_INFO_LOGS)
-endif()
 # Add tests
 option(VSLAM_BUILD_TESTS "Enable to build tests" ON)
 if(VSLAM_BUILD_TESTS)
