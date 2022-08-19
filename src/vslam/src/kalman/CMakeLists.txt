@@ -22,6 +22,11 @@ target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
 find_package(Sophus REQUIRED)
 target_link_libraries(${PROJECT_NAME} Sophus::Sophus)
 
+option(VSLAM_LOG_MINIMAL Off)
+if(NOT VSLAM_LOG_MINIMAL)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_DEBUG_LOGS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_INFO_LOGS)
+endif()
 # Add tests
 option(KALMAN_BUILD_TESTS "Enable to build tests" ON)
 if(KALMAN_BUILD_TESTS)
