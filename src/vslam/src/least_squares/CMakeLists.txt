@@ -36,9 +36,14 @@ if(VSLAM_BUILD_TESTS)
 
   find_package(GTest CONFIG REQUIRED)
 
-  set(VSLAM_TEST_VISUALIZE false CACHE BOOL "Enable test visualizations.")
+  option(VSLAM_TEST_VISUALIZE "Enable test visualizations." ON)
+  if(VSLAM_TEST_VISUALIZE)
+    set(TEST_VISUALIZE true)
+  else()
+    set(TEST_VISUALIZE false)
+  endif()
   pd_add_test(loss least_squares
-  TEST_VISUALIZE=${VSLAM_TEST_VISUALIZE})
+  TEST_VISUALIZE=${TEST_VISUALIZE})
 endif()
 
 # Install

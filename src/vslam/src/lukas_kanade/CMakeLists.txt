@@ -34,15 +34,19 @@ option(VSLAM_BUILD_TESTS "Enable to build tests" ON)
 if(VSLAM_BUILD_TESTS)
   enable_testing()
   find_package(GTest CONFIG REQUIRED)
-  set(VSLAM_TEST_VISUALIZE false CACHE BOOL "Enable test visualizations.")
-
+  option(VSLAM_TEST_VISUALIZE "Enable test visualizations." ON)
+  if(VSLAM_TEST_VISUALIZE)
+    set(TEST_VISUALIZE true)
+  else()
+    set(TEST_VISUALIZE false)
+  endif()
   pd_add_test(lukas_kanade_flow ${PROJECT_NAME} 
   TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  TEST_VISUALIZE=${VSLAM_TEST_VISUALIZE})
+  TEST_VISUALIZE=${TEST_VISUALIZE})
 
   pd_add_test(warp ${PROJECT_NAME} 
   TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  TEST_VISUALIZE=${VSLAM_TEST_VISUALIZE})
+  TEST_VISUALIZE=${TEST_VISUALIZE})
 
   #pd_add_test(lukas_kanade_affine ${PROJECT_NAME})
     #pd_add_test(lukas_kanade_se3 ${PROJECT_NAME})
