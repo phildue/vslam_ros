@@ -27,7 +27,7 @@ NodeReplayer::NodeReplayer(const rclcpp::NodeOptions & options)
   rosbag2_cpp::ConverterOptions converterOptions;
   RCLCPP_INFO(get_logger(), "Opening: %s", get_parameter("bag_file").as_string().c_str());
 
-  //TODO file exists check
+  // TODO(unknown): file exists check
   if (!fs::exists(storageOptions.uri)) {
     throw std::runtime_error("Did not find bag file: " + storageOptions.uri);
   }

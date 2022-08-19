@@ -40,8 +40,9 @@ std::shared_ptr<Log> Log::get(const std::string & name)
   auto it = _logs.find(name);
   if (it != _logs.end()) {
     return it->second;
-  } else
+  } else {
     _logs[name] = std::make_shared<Log>(name);
+}
   return _logs[name];
 }
 
