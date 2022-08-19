@@ -1,9 +1,6 @@
-import sys
-import os
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-sys.path.append( os.path.abspath( os.path.dirname( __file__ )+'../' ))
 from tum.dataset_analysis import read_trajectory
 
 

@@ -5,7 +5,7 @@ import argparse
 import git
 import yaml
 
-script_dir = os.path.abspath( os.path.dirname( __file__ ) )
+script_dir = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(script_dir)
 parser = argparse.ArgumentParser(description='''
 Run evaluation of algorithm''')
@@ -67,7 +67,7 @@ os.system(f"python3 {script_dir}/vslam_evaluation/tum/evaluate_rpe.py \
     {gt_traj} {algo_traj} \
     --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot} \
         > {output_dir}/rpe_summary.txt && cat {output_dir}/rpe_summary.txt")
-        
+
 print("---------Evaluating Average Trajectory Error------------")
 os.system(f"python3 {script_dir}/vslam_evaluation/tum/evaluate_ate.py \
     {gt_traj} {algo_traj} \
