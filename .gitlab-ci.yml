@@ -1,20 +1,6 @@
 image: docker:20.10.16
 
 variables:
-  # When you use the dind service, you must instruct Docker to talk with
-  # the daemon started inside of the service. The daemon is available
-  # with a network connection instead of the default
-  # /var/run/docker.sock socket. Docker 19.03 does this automatically
-  # by setting the DOCKER_HOST in
-  # https://github.com/docker-library/docker/blob/d45051476babc297257df490d22cbd806f1b11e4/19.03/docker-entrypoint.sh#L23-L29
-  #
-  # The 'docker' hostname is the alias of the service container as described at
-  # https://docs.gitlab.com/ee/ci/services/#accessing-the-services.
-  #
-  # Specify to Docker where to create the certificates. Docker
-  # creates them automatically on boot, and creates
-  # `/certs/client` to share between the service and job
-  # container, thanks to volume mount from config.toml
   DOCKER_TLS_CERTDIR: "/certs"
 
 services:
@@ -22,9 +8,6 @@ services:
 
 before_script:
   - docker info
-  - ls /mnt/dataset
-#  - docker pull phildue/vslam:dev
-#  - docker tag phildue/vslam:dev vslam:dev
 
 build:
   stage: build
@@ -42,18 +25,18 @@ evaluate:
   script: 
     - docker run -v/home/phil/dataset:/mnt/dataset phildue/vslam:runtime python3 /script/evaluate.py ci-evaluation rgbd_dataset_freiburg2_desk --run_algo --commit_hash $CI_COMMIT_SHA
 
-lint:
-  stage: test
-  only: [master,development]
-  script:
-    - mkdir lint_results
-    - docker run -v $(pwd)/lint_results:/results/ phildue/vslam:builder ament_clang_format --xunit-file /results/clang_format.xunit.xml"
-    - docker run -v $(pwd)/lint_results:/results/ phildue/vslam:builder ament_clang_tidy --xunit-file /results/clang_tidy.xunit.xml"
-    - docker run -v $(pwd)/lint_results:/results/ phildue/vslam:builder ament_flake8 --linelength 200 --xunit-file /results/flake8.xunit.xml"
-    
-deploy-container:
-  stage: deploy
-  only: [master]
-  script:
-    - docker push phildue/vslam:dev
-    - docker push phildue/vslam:runtime
+#lint:
+#  stage: test
+#  only: [master,development]
+#  script:
+#    - mkdir lint_results
+#    - docker run -v $(pwd)/lint_results:/results/ phildue/vslam:builder ament_clang_format --xunit-file /results/clang_format.xunit.xml"
+#    - docker run -v $(pwd)/lint_results:/results/ phildue/vslam:builder ament_clang_tidy --xunit-file /results/clang_tidy.xunit.xml"
+#    - docker run -v $(pwd)/lint_results:/results/ phildue/vslam:builder ament_flake8 --linelength 200 --xunit-file /results/flake8.xunit.xml"
+
+#deploy-container:
+#  stage: deploy
+#  only: [master]
+#  script:
+#    - docker push phildue/vslam:dev
+#    - docker push phildue/vslam:runtime
