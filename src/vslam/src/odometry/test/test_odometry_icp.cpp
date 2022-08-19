@@ -29,11 +29,6 @@ using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
 
-#ifdef TEST_VISUALIZE
-#define VISUALIZE true
-#else
-#define VISUALIZE false
-#endif
 class TestIcp : public Test
 {
 public:

@@ -32,12 +32,6 @@ using namespace pd::vslam;
 using namespace pd::vslam::least_squares;
 using namespace pd::vslam::lukas_kanade;
 
-#ifdef TEST_VISUALIZE
-#define VISUALIZE true
-#else
-#define VISUALIZE false
-#endif
-
 class TestSE3Alignment : public Test
 {
 public:
@@ -46,7 +40,7 @@ public:
     auto solver = std::make_shared<GaussNewton>(1e-7, 10);
     auto loss = std::make_shared<QuadraticLoss>();
     auto scaler = std::make_shared<Scaler>();
-    if (VISUALIZE) {
+    if (TEST_VISUALIZE) {
       LOG_IMG("ImageWarped")->_show = true;
       LOG_IMG("Depth")->_show = true;
       LOG_IMG("Residual")->_show = true;

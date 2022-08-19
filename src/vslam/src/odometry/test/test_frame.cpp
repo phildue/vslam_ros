@@ -28,11 +28,6 @@ using namespace pd;
 using namespace pd::vslam;
 using namespace pd::vslam::lukas_kanade;
 
-#ifdef TEST_VISUALIZE
-#define VISUALIZE true
-#else
-#define VISUALIZE false
-#endif
 TEST(FrameTest, CreatePyramid)
 {
   DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
@@ -69,7 +64,7 @@ TEST(FrameTest, CreatePyramid)
 
     EXPECT_NEAR((depthReproj - f->depth(i)).norm(), 0.0, 1e-6);
 
-    if (VISUALIZE) {
+    if (TEST_VISUALIZE) {
       cv::imshow("Image", vis::drawMat(f->intensity(i)));
       cv::imshow("dIx", vis::drawAsImage(f->dIx(i).cast<double>()));
       cv::imshow("dIy", vis::drawAsImage(f->dIy(i).cast<double>()));
@@ -94,7 +89,7 @@ TEST(WarpTest, Warp)
       f0->pose().pose(), f0->pcl(i, false), f0->width(i), f0->camera(i), f1->camera(i),
       f1->pose().pose());
 
-    if (VISUALIZE) {
+    if (TEST_VISUALIZE) {
       auto & img = f0->intensity(i);
       Image iwxp = w->apply(img);
       Eigen::MatrixXd steepestDescent = Eigen::MatrixXd::Zero(iwxp.rows(), iwxp.cols());

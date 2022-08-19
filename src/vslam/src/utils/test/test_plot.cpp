@@ -25,18 +25,13 @@ using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
 
-#ifdef TEST_VISUALIZE
-#define VISUALIZE true
-#else
-#define VISUALIZE false
-#endif
 TEST(LogTest, Plot)
 {
   vis::plt::plot({1, 3, 2, 4});
   vis::plt::figure();
   vis::plt::hist<double>({1.0, 3.0, 2.0, 4.0});
 
-  if (VISUALIZE) {
+  if (TEST_VISUALIZE) {
     vis::plt::show();
   }
 }
@@ -47,7 +42,7 @@ TEST(LogTest, Histogram)
   v << -1, -1, 1, 3, 3, 3, 0, 0, 0;
   auto h = std::make_shared<vis::Histogram>(v, "TestHistogram");
   h->plot();
-  if (VISUALIZE) {
+  if (TEST_VISUALIZE) {
     vis::plt::show();
   }
 }
@@ -60,7 +55,7 @@ TEST(LogTest, HistogramLarge)
   }
   auto h = std::make_shared<vis::Histogram>(v, "TestHistogram");
   h->plot();
-  if (VISUALIZE) {
+  if (TEST_VISUALIZE) {
     vis::plt::show();
   }
 }

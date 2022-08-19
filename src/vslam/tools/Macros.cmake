@@ -55,11 +55,19 @@ endfunction()
 
 
 macro(pd_add_test unit lib)
-  add_executable( ${unit}Test test/test_${unit}.cpp )
-  target_compile_features(${unit}Test PUBLIC cxx_std_17)
+    add_executable( ${unit}Test test/test_${unit}.cpp )
+    target_compile_features(${unit}Test PUBLIC cxx_std_17)
 
-  target_link_libraries( ${unit}Test PRIVATE pd::${lib} GTest::gtest_main )
-  add_test( NAME ${unit}.UnitTest COMMAND ${unit}Test )
-
+    target_link_libraries( ${unit}Test PRIVATE pd::${lib} GTest::gtest_main )
+    add_test( NAME ${unit}.UnitTest COMMAND ${unit}Test )
+    set_property(TARGET ${unit}Test PROPERTY POSITION_INDEPENDENT_CODE ON)
+    
+    set(ExtraMacroArgs ${ARGN})
+    list(LENGTH ExtraMacroArgs NumExtraMacroArgs)
+    if(NumExtraMacroArgs GREATER 0)
+        foreach(ExtraArg ${ExtraMacroArgs})
+            target_compile_definitions(${unit}Test PUBLIC ${ExtraArg})
+        endforeach()
+    endif()
 endmacro()
 

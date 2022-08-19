@@ -56,7 +56,7 @@ ADD --chown=ros:ros . /home/ros/vslam_ros
 WORKDIR /home/ros/vslam_ros
 RUN colcon build --packages-up-to vslam_ros --parallel-workers 1 --event-handler console_direct+ \
 --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
--DVSLAM_LOG_MINIMAL=On -DVSLAM_LOG_PERFORMANCE_TRACKING=Off -DVSLAM_TEST_VISUALIZE=Off\
+-DVSLAM_LOG_MINIMAL=On -DVSLAM_LOG_PERFORMANCE_TRACKING=Off -DVSLAM_TEST_VISUALIZE=false\
 -Wall -Wextra -Wpedantic &&\
 git rev-parse HEAD > install/COMMIT.sha &&\
 touch build/AMENT_IGNORE && touch log/AMENT_IGNORE && touch install/AMENT_IGNORE

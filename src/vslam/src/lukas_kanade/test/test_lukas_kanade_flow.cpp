@@ -55,14 +55,14 @@ TEST_F(LukasKanadeOpticalFlowTest, DISABLED_LukasKanadeOpticalFlow)
     auto gn = std::make_shared<GaussNewton>(1e-7, 100);
     auto lk = std::make_shared<InverseCompositional>(img1, img0, w);
 
-#ifdef TEST_VISUALIZE
-    LOG_IMG("ImageWarped")->_show = true;
-    LOG_IMG("Depth")->_show = true;
-    LOG_IMG("Residual")->_show = true;
-    LOG_IMG("Image")->_show = true;
-    LOG_IMG("Depth")->_show = true;
-    LOG_IMG("Weights")->_show = true;
-#endif
+    if (TEST_VISUALIZE) {
+      LOG_IMG("ImageWarped")->_show = true;
+      LOG_IMG("Depth")->_show = true;
+      LOG_IMG("Residual")->_show = true;
+      LOG_IMG("Image")->_show = true;
+      LOG_IMG("Depth")->_show = true;
+      LOG_IMG("Weights")->_show = true;
+    }
 
     ASSERT_GT(w->x().norm(), 1.0) << "Noise should be greater than that.";
 

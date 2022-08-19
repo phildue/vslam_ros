@@ -37,14 +37,14 @@ TEST(LossTest, TukeyLoss)
     w.push_back(tk->computeWeight(ri) * ri * ri);
   }
 
-#ifdef TEST_VISUALIZE
-  vis::plt::figure();
-  vis::plt::title("TukeyLoss");
-  vis::plt::named_plot("l(r)", r, l);
-  vis::plt::named_plot("l'(r)", r, l_);
-  vis::plt::named_plot("$w(r)r^2$'", r, w);
-  vis::plt::legend();
-  vis::plt::xlabel("r");
-  vis::plt::show();
-#endif
+  if (TEST_VISUALIZE) {
+    vis::plt::figure();
+    vis::plt::title("TukeyLoss");
+    vis::plt::named_plot("l(r)", r, l);
+    vis::plt::named_plot("l'(r)", r, l_);
+    vis::plt::named_plot("$w(r)r^2$'", r, w);
+    vis::plt::legend();
+    vis::plt::xlabel("r");
+    vis::plt::show();
+  }
 }

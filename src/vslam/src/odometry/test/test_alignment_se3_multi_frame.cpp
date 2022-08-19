@@ -30,11 +30,6 @@ using namespace testing;
 using namespace pd;
 using namespace pd::vslam;
 using namespace pd::vslam::least_squares;
-#ifdef TEST_VISUALIZE
-#define VISUALIZE true
-#else
-#define VISUALIZE false
-#endif
 
 void readAssocTextfile(
   std::string filename, std::vector<std::string> & inputRGBPaths,
@@ -70,7 +65,7 @@ class TestSE3Alignment : public Test
 public:
   TestSE3Alignment()
   {
-    if (VISUALIZE) {
+    if (TEST_VISUALIZE) {
       LOG_IMG("ImageWarped")->_show = true;
       LOG_IMG("Depth")->_show = true;
       LOG_IMG("Residual")->_show = true;
