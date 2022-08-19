@@ -3,3 +3,5 @@ build/
 install/
 __pycache__
 *.log
+.venv
+*.egg-info

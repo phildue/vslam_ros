@@ -67,7 +67,8 @@ FROM developer as runtime
 USER ros
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/install /app/vslam
 COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/script /script
-
-RUN echo "source /app/vslam/local_setup.bash" >> /home/ros/.bashrc
+RUN pip3 install /script/vslam_evaluation
+COPY --from=builder --chown=ros:ros /home/ros/vslam_ros/script/entrypoint.sh /app/vslam/entrypoint.sh
 WORKDIR /app/vslam
-#ENTRYPOINT ["/bin/bash", "-c","source /app/vslam/local_setup.bash"]
+
+ENTRYPOINT ["/app/vslam/entrypoint.sh"]

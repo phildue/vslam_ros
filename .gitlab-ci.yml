@@ -26,13 +26,12 @@ before_script:
 #  - docker pull phildue/vslam:dev
 #  - docker tag phildue/vslam:dev vslam:dev
 
-#build:
-#  stage: build
-#  script:
-#    
-#    - docker build -t vslam:dev --target developer .
-#    - docker build -t vslam:builder --target builder .
-#    - docker build -t vslam:runtime --target runtime .
+build:
+  stage: build
+  script:
+    - docker build -t vslam:dev --target developer .
+    - docker build -t vslam:builder --target builder .
+    - docker build -t vslam:runtime --target runtime .
 test:
   stage: test
   script:
@@ -41,8 +40,7 @@ test:
 evaluate:
   stage: test
   script: 
-    - ls /mnt/dataset
-    - docker run -v/home/phil/dataset:/mnt/dataset vslam:runtime /bin/bash -c "source local_setup.bash && python3 /script/evaluate.py ci-evaluation rgbd_dataset_freiburg1_desk --run_algo --commit_hash $CI_COMMIT_SHA" #--out_root /home/ros/"
+    - docker run -v/home/phil/dataset:/mnt/dataset vslam:runtime python3 /script/evaluate.py ci-evaluation rgbd_dataset_freiburg2_desk --run_algo --commit_hash $CI_COMMIT_SHA
 
 lint:
   stage: test

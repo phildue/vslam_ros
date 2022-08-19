@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 import os
+import sys
 import argparse
 import git
 import yaml
 
 script_dir = os.path.abspath( os.path.dirname( __file__ ) )
-
+sys.path.append(script_dir)
 parser = argparse.ArgumentParser(description='''
 Run evaluation of algorithm''')
 parser.add_argument('experiment_name', help='Name for the experiment')
@@ -55,21 +56,22 @@ if args.run_algo:
     os.system(f"ros2 launch vslam_ros evaluation.launch.py \
         sequence_root:={args.sequence_root} sequence_id:={args.sequence_id} \
         experiment_name:={args.experiment_name}")
-# TODO plot
+# TODO plot, fix paths
 print("---------Creating Plots-----------------")
-os.system(f"python3 {script_dir}/plot/plot_traj.py \
+os.system(f"python3 {script_dir}/vslam_evaluation/plot/plot_traj.py \
     {algo_traj} {gt_traj} --xy_out {xy_plot} --z_out {z_plot}")
 
 
 print("---------Evaluating Relative Pose Error-----------------")
-os.system(f"python3 {script_dir}/tum/evaluate_rpe.py \
+os.system(f"python3 {script_dir}/vslam_evaluation/tum/evaluate_rpe.py \
     {gt_traj} {algo_traj} \
-    --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot}")
-
+    --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot} \
+        > {output_dir}/rpe_summary.txt && cat {output_dir}/rpe_summary.txt")
+        
 print("---------Evaluating Average Trajectory Error------------")
-os.system(f"python3 {script_dir}/tum/evaluate_ate.py \
+os.system(f"python3 {script_dir}/vslam_evaluation/tum/evaluate_ate.py \
     {gt_traj} {algo_traj} \
-    --verbose --plot {ate_plot} --save {ate_txt}")
-
+    --verbose --plot {ate_plot} --save {ate_txt} \
+        > {output_dir}/ate_summary.txt && cat {output_dir}/ate_summary.txt")
 
 # TODO upload to WandB
