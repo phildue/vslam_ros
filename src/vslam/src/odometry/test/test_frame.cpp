@@ -75,7 +75,7 @@ TEST(FrameTest, CreatePyramid)
   }
 }
 
-TEST(WarpTest, Warp)
+TEST(WarpTest, DISABLED_Warp)
 {
   DepthMap depth = utils::loadDepth(TEST_RESOURCE "/depth.jpg") / 5000.0;
   Image img = utils::loadImage(TEST_RESOURCE "/rgb.jpg");
@@ -89,24 +89,24 @@ TEST(WarpTest, Warp)
       f0->pose().pose(), f0->pcl(i, false), f0->width(i), f0->camera(i), f1->camera(i),
       f1->pose().pose());
 
-    if (TEST_VISUALIZE) {
-      auto & img = f0->intensity(i);
-      Image iwxp = w->apply(img);
-      Eigen::MatrixXd steepestDescent = Eigen::MatrixXd::Zero(iwxp.rows(), iwxp.cols());
-      std::vector<MatXd> Js(6, MatXd::Zero(iwxp.rows(), iwxp.cols()));
-      for (int v = 0; v < steepestDescent.rows(); v++) {
-        for (int u = 0; u < steepestDescent.cols(); u++) {
-          const Eigen::Matrix<double, 2, 6> Jw = w->J(u, v);
-          const Eigen::Matrix<double, 1, 6> Jwi =
-            Jw.row(0) * f0->dIx(i)(v, u) + Jw.row(1) * f0->dIx(i)(v, u);
-          // std::cout << "J = " << Jwi << std::endl;
-          for (int j = 0; j < 6; j++) {
-            Js[j](v, u) = Jwi(j);
-          }
-
-          steepestDescent(v, u) = std::isfinite(Jwi.norm()) ? Jwi.norm() : 0.0;
+    auto & img = f0->intensity(i);
+    Image iwxp = w->apply(img);
+    Eigen::MatrixXd steepestDescent = Eigen::MatrixXd::Zero(iwxp.rows(), iwxp.cols());
+    std::vector<MatXd> Js(6, MatXd::Zero(iwxp.rows(), iwxp.cols()));
+    for (int v = 0; v < steepestDescent.rows(); v++) {
+      for (int u = 0; u < steepestDescent.cols(); u++) {
+        const Eigen::Matrix<double, 2, 6> Jw = w->J(u, v);
+        const Eigen::Matrix<double, 1, 6> Jwi =
+          Jw.row(0) * f0->dIx(i)(v, u) + Jw.row(1) * f0->dIx(i)(v, u);
+        // std::cout << "J = " << Jwi << std::endl;
+        for (int j = 0; j < 6; j++) {
+          Js[j](v, u) = Jwi(j);
         }
+
+        steepestDescent(v, u) = std::isfinite(Jwi.norm()) ? Jwi.norm() : 0.0;
       }
+    }
+    if (TEST_VISUALIZE) {
       for (int j = 0; j < 6; j++) {
         cv::imshow("J" + std::to_string(j), vis::drawAsImage(Js.at(j)));
       }
