@@ -65,12 +65,13 @@ os.system(f"python3 {script_dir}/plot/plot_traj.py \
 print("---------Evaluating Relative Pose Error-----------------")
 os.system(f"python3 {script_dir}/tum/evaluate_rpe.py \
     {gt_traj} {algo_traj} \
-    --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot}")
-
+    --verbose --plot {rpe_plot} --fixed_delta --delta_unit s --save {rpe_plot} \
+        > {output_dir}/rpe_summary.txt && cat {output_dir}/rpe_summary.txt")
+        
 print("---------Evaluating Average Trajectory Error------------")
 os.system(f"python3 {script_dir}/tum/evaluate_ate.py \
     {gt_traj} {algo_traj} \
-    --verbose --plot {ate_plot} --save {ate_txt}")
-
+    --verbose --plot {ate_plot} --save {ate_txt} \
+        > {output_dir}/ate_summary.txt && cat {output_dir}/ate_summary.txt")
 
 # TODO upload to WandB
