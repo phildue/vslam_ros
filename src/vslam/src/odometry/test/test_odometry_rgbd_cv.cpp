@@ -40,18 +40,7 @@ public:
     auto solver = std::make_shared<GaussNewton>(1e-7, 10);
     auto loss = std::make_shared<QuadraticLoss>();
     auto scaler = std::make_shared<Scaler>();
-    if (TEST_VISUALIZE) {
-      LOG_IMG("ImageWarped")->_show = true;
-      LOG_IMG("Depth")->_show = true;
-      LOG_IMG("Residual")->_show = true;
-      LOG_IMG("Image")->_show = true;
-      LOG_IMG("Template")->_show = true;
-      LOG_IMG("Depth")->_show = true;
-      LOG_IMG("Weights")->_show = true;
-      // LOG_PLT("MedianScaler")->_show = true;
-      // LOG_PLT("MedianScaler")->_block = true;
-      LOG_IMG("Residual")->_block = true;
-    }
+
     _aligner = std::make_shared<RgbdAlignmentOpenCv>();
 
     // tum depth format:
@@ -77,6 +66,9 @@ public:
       {-0.0255, 0.0066, 0.0108, -0.0148, -0.0306, 0.0042},
 
     };
+    for (auto log : Log::registeredLogsImage()) {
+      LOG_IMG(log)->show() = TEST_VISUALIZE;
+    }
   }
 
 protected:
@@ -99,10 +91,10 @@ TEST_F(TestSE3Alignment, DISABLED_TestOnSyntheticDataTranslation)
     _img1 = warpGt->apply(_img0);
     _depth1 = warpGt->apply(_depth0);
 
-    auto fRef = std::make_shared<FrameRgbd>(
-      _img0, _depth0, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
-    auto fCur = std::make_shared<FrameRgbd>(
-      _img1, _depth1, _cam, 3, 1, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fRef = std::make_shared<Frame>(
+      _img0, _depth0, _cam, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<Frame>(
+      _img1, _depth1, _cam, 1, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().inverse().log();
     auto angleAxis = result.tail(3);
@@ -125,10 +117,10 @@ TEST_F(TestSE3Alignment, DISABLED_TestOnSyntheticDataRotation)
     _img1 = warpGt->apply(_img0);
     _depth1 = warpGt->apply(_depth0);
 
-    auto fRef = std::make_shared<FrameRgbd>(
-      _img0, _depth0, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
-    auto fCur = std::make_shared<FrameRgbd>(
-      _img1, _depth1, _cam, 3, 1, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fRef = std::make_shared<Frame>(
+      _img0, _depth0, _cam, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<Frame>(
+      _img1, _depth1, _cam, 1, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().inverse().log();
     auto angleAxis = result.tail(3);
@@ -153,10 +145,10 @@ TEST_F(TestSE3Alignment, DISABLED_TestOnSyntheticData)
     _img1 = warpGt->apply(_img0);
     _depth1 = warpGt->apply(_depth0);
 
-    auto fRef = std::make_shared<FrameRgbd>(
-      _img0, _depth0, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
-    auto fCur = std::make_shared<FrameRgbd>(
-      _img1, _depth1, _cam, 3, 1, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fRef = std::make_shared<Frame>(
+      _img0, _depth0, _cam, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<Frame>(
+      _img1, _depth1, _cam, 1, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().inverse().log();
     auto angleAxis = result.tail(3);
@@ -177,10 +169,10 @@ TEST_F(TestSE3Alignment, DISABLED_TestOnSyntheticDataTranslationAbsolute)
       transforms::euler2quaternion(0, 0, 0), {_noise[ri][0], _noise[ri][1], _noise[ri][2]});
     // SE3d
     // initialPose(transforms::euler2quaternion(0.03,0.03,0.03),{0.03,0.05,0.03});
-    auto fRef = std::make_shared<FrameRgbd>(
-      _img0, _depth0, _cam, 3, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
-    auto fCur = std::make_shared<FrameRgbd>(
-      _img1, _depth1, _cam, 3, 1, PoseWithCovariance(initialPose * refPose, MatXd::Identity(6, 6)));
+    auto fRef = std::make_shared<Frame>(
+      _img0, _depth0, _cam, 0, PoseWithCovariance(refPose, MatXd::Identity(6, 6)));
+    auto fCur = std::make_shared<Frame>(
+      _img1, _depth1, _cam, 1, PoseWithCovariance(initialPose * refPose, MatXd::Identity(6, 6)));
 
     auto result = _aligner->align(fRef, fCur)->pose().log();
     auto angleAxis = result.tail(3);

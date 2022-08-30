@@ -15,6 +15,7 @@
 
 #ifndef VSLAM_FEATURE_TRACKING_H__
 #define VSLAM_FEATURE_TRACKING_H__
+#include "Matcher.h"
 #include "core/core.h"
 namespace pd::vslam
 {
@@ -26,18 +27,26 @@ public:
   typedef std::shared_ptr<const FeatureTracking> ConstShPtr;
   typedef std::unique_ptr<const FeatureTracking> ConstUnPtr;
 
-  std::vector<Point3D::ShPtr> track(
-    FrameRgbd::ShPtr frameCur, const std::vector<FrameRgbd::ShPtr> & framesRef);
+  FeatureTracking(Matcher::ConstShPtr matcher = std::make_shared<MatcherBruteForce>());
 
-  void extractFeatures(FrameRgbd::ShPtr frame) const;
+  std::vector<Point3D::ShPtr> track(
+    Frame::ShPtr frameCur, const std::vector<Frame::ShPtr> & framesRef);
+
+  void extractFeatures(Frame::ShPtr frame) const;
+
   std::vector<Point3D::ShPtr> match(
-    FrameRgbd::ShPtr frameCur, const std::vector<Feature2D::ShPtr> & featuresRef) const;
+    Frame::ShPtr frameCur, const std::vector<Feature2D::ShPtr> & featuresRef) const;
+
+  std::vector<Point3D::ShPtr> match(
+    const std::vector<Feature2D::ShPtr> & featuresCur,
+    const std::vector<Feature2D::ShPtr> & featuresRef) const;
 
   std::vector<Feature2D::ShPtr> selectCandidates(
-    FrameRgbd::ConstShPtr frameCur, const std::vector<FrameRgbd::ShPtr> & framesRef) const;
+    Frame::ConstShPtr frameCur, const std::vector<Frame::ShPtr> & framesRef) const;
 
 private:
-  const size_t _nFeatures = 100;
+  const size_t _gridCellSize = 30;
+  const Matcher::ConstShPtr _matcher;
 };
 }  // namespace pd::vslam
 

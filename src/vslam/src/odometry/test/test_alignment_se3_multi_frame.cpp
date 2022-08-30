@@ -65,20 +65,6 @@ class TestSE3Alignment : public Test
 public:
   TestSE3Alignment()
   {
-    if (TEST_VISUALIZE) {
-      LOG_IMG("ImageWarped")->_show = true;
-      LOG_IMG("Depth")->_show = true;
-      LOG_IMG("Residual")->_show = true;
-      LOG_IMG("Image")->_show = true;
-      LOG_IMG("Template")->_show = true;
-      LOG_IMG("Depth")->_show = true;
-      LOG_IMG("Weights")->_show = true;
-      LOG_IMG("SteepestDescent")->_show = true;
-      //LOG_PLT("MedianScaler")->_show = true;
-      //LOG_PLT("MedianScaler")->_block = true;
-      //LOG_IMG("Residual")->_block = true;
-    }
-
     // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
     _datasetPath = TEST_RESOURCE "/rgbd_dataset_freiburg2_desk";
     _cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
@@ -89,15 +75,22 @@ public:
     auto solver = std::make_shared<GaussNewton>(1e-9, 30);
     auto loss = std::make_shared<HuberLoss>(std::make_shared<MeanScaler>());
     _aligner = std::make_shared<SE3Alignment>(5, solver, loss, true);
+
+    for (auto log : Log::registeredLogsImage()) {
+      LOG_IMG(log)->show() = TEST_VISUALIZE;
+    }
   }
 
-  FrameRgbd::ShPtr loadFrame(size_t fNo)
+  Frame::ShPtr loadFrame(size_t fNo)
   {
     // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
-    return std::make_shared<FrameRgbd>(
+    auto f = std::make_shared<Frame>(
       utils::loadImage(_datasetPath + "/" + _imgFilenames.at(fNo)),
-      utils::loadDepth(_datasetPath + "/" + _depthFilenames.at(fNo)) / 5000.0, _cam, 3,
+      utils::loadDepth(_datasetPath + "/" + _depthFilenames.at(fNo)) / 5000.0, _cam,
       _timestamps.at(fNo));
+    f->computeDerivatives();
+    f->computePyramid(3);
+    return f;
   }
 
 protected:
@@ -131,7 +124,7 @@ TEST_F(TestSE3Alignment, DISABLED_Comparison)
     fCur->set(fRef1->pose());
 
     auto result =
-      _aligner->align(std::vector<FrameRgbd::ConstShPtr>({fRef, fRef1}), fCur)->pose().log();
+      _aligner->align(std::vector<Frame::ConstShPtr>({fRef, fRef1}), fCur)->pose().log();
     //auto result = _aligner->align(fRef1,fCur)->pose().log();
     fCur->set(result);
     error += (fCur->pose().pose().inverse() * poseGt).log();

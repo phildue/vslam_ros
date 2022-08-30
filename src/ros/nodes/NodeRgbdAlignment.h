@@ -64,7 +64,7 @@ public:
     sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
   void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
-  pd::vslam::FrameRgbd::ShPtr createFrame(
+  pd::vslam::Frame::ShPtr createFrame(
     sensor_msgs::msg::Image::ConstSharedPtr msgImg,
     sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
 
@@ -94,7 +94,7 @@ private:
   pd::vslam::MotionPrediction::ShPtr _prediction;
   pd::vslam::Map::ShPtr _map;
   pd::vslam::FeatureTracking::ShPtr _tracking;
-  pd::vslam::mapping::MapOptimization::ShPtr _mapOptimization;
+  pd::vslam::mapping::BundleAdjustment::ShPtr _ba;
 
   pd::vslam::Camera::ShPtr _camera;
   geometry_msgs::msg::TransformStamped

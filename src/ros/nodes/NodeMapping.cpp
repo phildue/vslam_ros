@@ -18,7 +18,6 @@
 //
 
 #include "NodeMapping.h"
-
 #include "vslam_ros/converters.h"
 using namespace pd::vslam;
 using namespace std::chrono_literals;
@@ -61,25 +60,10 @@ NodeMapping::NodeMapping(const rclcpp::NodeOptions & options)
   declare_parameter("loss.tdistribution.v", 5.0);
   declare_parameter("keyframe_selection.method", "idx");
   declare_parameter("keyframe_selection.idx.period", 5);
+  declare_parameter("keyframe_selection.visible_map.min_visible_points", 50);
   declare_parameter("prediction.model", "NoMotion");
   Log::_blockLevel = Level::Unknown;
   Log::_showLevel = Level::Unknown;
-
-  const std::vector<std::string> imageLogs = {"ImageWarped", "Residual", "Weights",
-                                              "Template",    "Image",    "Depth"};
-  const std::vector<std::string> plotLogs = {"ErrorDistribution"};
-  for (const auto & imageLog : imageLogs) {
-    declare_parameter("log.image." + imageLog + ".show", false);
-    declare_parameter("log.image." + imageLog + ".block", false);
-    LOG_IMG(imageLog)->_show = get_parameter("log.image." + imageLog + ".show").as_bool();
-    LOG_IMG(imageLog)->_block = get_parameter("log.image." + imageLog + ".block").as_bool();
-  }
-  for (const auto & plotLog : plotLogs) {
-    declare_parameter("log.plot." + plotLog + ".show", false);
-    declare_parameter("log.plot." + plotLog + ".block", false);
-    LOG_PLT(plotLog)->_show = get_parameter("log.plot." + plotLog + ".show").as_bool();
-    LOG_PLT(plotLog)->_block = get_parameter("log.plot." + plotLog + ".block").as_bool();
-  }
 
   RCLCPP_INFO(get_logger(), "Setting up..");
 
@@ -105,15 +89,51 @@ NodeMapping::NodeMapping(const rclcpp::NodeOptions & options)
   _map = std::make_shared<Map>();
   _odometry = std::make_shared<OdometryRgbd>(
     get_parameter("features.min_gradient").as_int(), solver, loss, _map);
-  // _odometry = std::make_shared<pd::vision::OdometryIcp>(1,10,_map);
   _prediction = MotionPrediction::make(get_parameter("prediction.model").as_string());
-  _keyFrameSelection =
-    std::make_shared<KeyFrameSelectionIdx>(get_parameter("keyframe_selection.idx.period").as_int());
-  _tracking = std::make_shared<FeatureTracking>();
-  _mapOptimization = std::make_shared<mapping::MapOptimization>();
+
+  if (get_parameter("keyframe_selection.method").as_string() == "idx") {
+    _keyFrameSelection = std::make_shared<KeyFrameSelectionIdx>(
+      get_parameter("keyframe_selection.idx.period").as_int());
+  } else if (get_parameter("keyframe_selection.method").as_string() == "visible_map") {
+    _keyFrameSelection = std::make_shared<KeyFrameSelectionCustom>(
+      _map, get_parameter("keyframe_selection.custom.min_visible_points").as_int());
+  }
+  _ba = std::make_shared<mapping::BundleAdjustment>();
+
+  _matcher = std::make_shared<MatcherBruteForce>(
+    [&](Feature2D::ConstShPtr ftRef, Feature2D::ConstShPtr ftCur) {
+      const double d = (ftRef->descriptor() - ftCur->descriptor()).cwiseAbs().sum();
+      const double r = MatcherBruteForce::reprojectionError(ftRef, ftCur);
+
+      //LOG_TRACKING(DEBUG) << "(" << ftRef->id() << ") --> (" << ftCur->id() << ") d: " << d
+      //                    << " r: " << r;
+      return std::isfinite(r) ? d + r : d;
+    },
+    1000);
+  _tracking = std::make_shared<FeatureTracking>(_matcher);
+
   // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
   //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
+  declare_parameter("log.config_dir", "/share/cfg/log/");
+  for (const auto & name : Log::registeredLogs()) {
+    RCLCPP_INFO(get_logger(), "Found logger: %s", name.c_str());
+    Log::get(name)->configure(get_parameter("log.config_dir").as_string() + "/" + name + ".conf");
+  }
+  for (const auto & name : Log::registeredLogsImage()) {
+    RCLCPP_INFO(get_logger(), "Found image logger: %s", name.c_str());
 
+    declare_parameter("log.image." + name + ".show", false);
+    declare_parameter("log.image." + name + ".block", false);
+    LOG_IMG(name)->show() = get_parameter("log.image." + name + ".show").as_bool();
+    LOG_IMG(name)->block() = get_parameter("log.image." + name + ".block").as_bool();
+  }
+  for (const auto & name : Log::registeredLogsPlot()) {
+    RCLCPP_INFO(get_logger(), "Found plot logger: %s", name.c_str());
+    declare_parameter("log.image." + name + ".show", false);
+    declare_parameter("log.image." + name + ".block", false);
+    LOG_PLT(name)->show() = get_parameter("log.image." + name + ".show").as_bool();
+    LOG_PLT(name)->block() = get_parameter("log.image." + name + ".block").as_bool();
+  }
   RCLCPP_INFO(get_logger(), "Ready.");
 }
 
@@ -141,9 +161,12 @@ void NodeMapping::processFrame(
 
     if (_keyFrameSelection->isKeyFrame()) {
       auto points = _tracking->track(frame, _map->keyFrames());
+
       _map->insert(points);
 
-      _mapOptimization->optimize(_map->keyFrames(), _map->points());
+      auto outBa = _ba->optimize(Map::ConstShPtr(_map)->keyFrames());
+      _map->updatePoses(outBa->poses);
+      _map->updatePoints(outBa->positions);
     }
 
     publish(msgImg);
@@ -182,7 +205,7 @@ void NodeMapping::signalReplayer()
   }
 }
 
-FrameRgbd::ShPtr NodeMapping::createFrame(
+Frame::ShPtr NodeMapping::createFrame(
   sensor_msgs::msg::Image::ConstSharedPtr msgImg,
   sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
 {
@@ -199,8 +222,11 @@ FrameRgbd::ShPtr NodeMapping::createFrame(
   const Timestamp t =
     rclcpp::Time(msgImg->header.stamp.sec, msgImg->header.stamp.nanosec).nanoseconds();
 
-  return std::make_shared<FrameRgbd>(
-    img, depth, _camera, get_parameter("pyramid.levels").as_double_array().size(), t);
+  auto f = std::make_shared<Frame>(img, depth, _camera, t);
+  f->computePyramid(get_parameter("pyramid.levels").as_double_array().size());
+  f->computeDerivatives();
+  f->computePcl();
+  return f;
 }
 void NodeMapping::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
 {
@@ -292,7 +318,7 @@ void NodeMapping::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr ms
   _camera = vslam_ros::convert(*msg);
   _camInfoReceived = true;
 
-  RCLCPP_INFO(get_logger(), "Camera calibration received. Alignment initialized.");
+  RCLCPP_INFO(get_logger(), "Camera calibration received. Node ready.");
 }
 
 }  // namespace vslam_ros
