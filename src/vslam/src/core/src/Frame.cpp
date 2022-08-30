@@ -13,103 +13,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "Frame.h"
-
 #include <Eigen/Dense>
+#include <map>
 #include <opencv4/opencv2/calib3d.hpp>
 #include <opencv4/opencv2/core/eigen.hpp>
 #include <opencv4/opencv2/core/utility.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 
 #include "Exceptions.h"
+#include "Frame.h"
 #include "Point3D.h"
-#define USE_OPENCV
+#include "algorithm.h"
 namespace pd::vslam
 {
-std::uint64_t FrameRgb::_idCtr = 0U;
+std::uint64_t Frame::_idCtr = 0U;
 
-FrameRgb::FrameRgb(
-  const Image & intensity, Camera::ConstShPtr cam, size_t nLevels, const Timestamp & t,
+Frame::Frame(
+  const Image & intensity, Camera::ConstShPtr cam, const Timestamp & t,
   const PoseWithCovariance & pose)
-: _id(_idCtr++), _t(t), _pose(pose)
+: Frame(intensity, -1 * MatXd::Ones(intensity.rows(), intensity.cols()), cam, t, pose)
 {
-  _intensity.resize(nLevels);
-  _dIx.resize(nLevels);
-  _dIy.resize(nLevels);
-  _cam.resize(nLevels);
-  const double s = 0.5;
-
-#ifdef USE_OPENCV
-  // TODO(unknown): replace using custom implementation
-  cv::Mat mat;
-  cv::eigen2cv(intensity, mat);
-  std::vector<cv::Mat> mats;
-  cv::buildPyramid(mat, mats, nLevels - 1);
-  for (size_t i = 0; i < mats.size(); i++) {
-    cv::cv2eigen(mats[i], _intensity[i]);
-    cv::Mat mati_blur;
-    cv::GaussianBlur(mats[i], mati_blur, cv::Size(3, 3), 0, 0, cv::BORDER_DEFAULT);
-    cv::Mat dIdx, dIdy;
-    cv::Sobel(mati_blur, dIdx, CV_16S, 1, 0, 3);
-    cv::Sobel(mati_blur, dIdy, CV_16S, 0, 1, 3);
-    cv::cv2eigen(dIdx, _dIx[i]);
-    cv::cv2eigen(dIdy, _dIy[i]);
-    _cam[i] = Camera::resize(cam, std::pow(s, i));
-  }
-#else
-  //TODO make based on scales
-  Mat<double, 5, 5> gaussianKernel;
-  gaussianKernel << 1, 4, 6, 4, 1, 4, 16, 24, 16, 4, 6, 24, 36, 24, 6, 4, 16, 24, 16, 4, 1, 4, 6, 4,
-    1;
-  for (size_t i = 0; i < nLevels; i++) {
-    if (i == 0) {
-      _intensity[i] = intensity;
-      _cam[i] = cam;
-
-    } else {
-      Image imgBlur =
-        algorithm::conv2d(_intensity[i - 1].cast<double>(), gaussianKernel).cast<uint8_t>();
-      //TODO move padding to separate function
-      imgBlur.col(0) = imgBlur.col(2);
-      imgBlur.col(1) = imgBlur.col(2);
-      imgBlur.col(imgBlur.cols() - 2) = imgBlur.col(imgBlur.cols() - 3);
-      imgBlur.col(imgBlur.cols() - 1) = imgBlur.col(imgBlur.cols() - 3);
-      imgBlur.row(0) = imgBlur.row(2);
-      imgBlur.row(1) = imgBlur.row(2);
-      imgBlur.row(imgBlur.rows() - 2) = imgBlur.row(imgBlur.rows() - 3);
-      imgBlur.row(imgBlur.rows() - 1) = imgBlur.row(imgBlur.rows() - 3);
-
-      _intensity[i] = algorithm::resize(imgBlur, s);
-      _cam[i] = Camera::resize(_cam[i - 1], s);
-    }
-    _dIx[i] =
-      algorithm::conv2d(_intensity[i].cast<double>(), Kernel2d<double>::sobelX()).cast<int>();
-    _dIy[i] =
-      algorithm::conv2d(_intensity[i].cast<double>(), Kernel2d<double>::sobelY()).cast<int>();
-  }
-#endif
 }
-Eigen::Vector2d FrameRgb::camera2image(const Eigen::Vector3d & pCamera, size_t level) const
+Eigen::Vector2d Frame::camera2image(const Eigen::Vector3d & pCamera, size_t level) const
 {
   return _cam.at(level)->camera2image(pCamera);
 }
-Eigen::Vector3d FrameRgb::image2camera(
+Eigen::Vector3d Frame::image2camera(
   const Eigen::Vector2d & pImage, double depth, size_t level) const
 {
   return _cam.at(level)->image2camera(pImage, depth);
 }
-Eigen::Vector2d FrameRgb::world2image(const Eigen::Vector3d & pWorld, size_t level) const
+Eigen::Vector2d Frame::world2image(const Eigen::Vector3d & pWorld, size_t level) const
 {
   return camera2image(_pose.pose() * pWorld, level);
 }
-Eigen::Vector3d FrameRgb::image2world(
-  const Eigen::Vector2d & pImage, double depth, size_t level) const
+Eigen::Vector3d Frame::image2world(const Eigen::Vector2d & pImage, double depth, size_t level) const
 {
   return _pose.pose().inverse() * image2camera(pImage, depth, level);
 }
-Feature2D::ConstShPtr FrameRgb::observationOf(std::uint64_t pointId) const
+Feature2D::ConstShPtr Frame::observationOf(std::uint64_t pointId) const
 {
-  for (const auto & ft : _features) {
+  for (auto ft : _features) {
     if (ft->point() && ft->point()->id() == pointId) {
       return ft;
     }
@@ -117,24 +61,58 @@ Feature2D::ConstShPtr FrameRgb::observationOf(std::uint64_t pointId) const
   return nullptr;
 }
 
-void FrameRgb::addFeature(Feature2D::ShPtr ft) { _features.push_back(ft); }
+const MatXd & Frame::dIx(size_t level) const
+{
+  if (level >= _dIx.size()) {
+    throw pd::Exception(
+      "No dIdx available for level: " + std::to_string(level) +
+      ". Available: " + std::to_string(_dIx.size()));
+  }
+  return _dIx[level];
+}
+const MatXd & Frame::dIy(size_t level) const
+{
+  if (level >= _dIy.size()) {
+    throw pd::Exception(
+      "No dIdy available for level: " + std::to_string(level) +
+      ". Available: " + std::to_string(_dIy.size()));
+  }
+  return _dIy[level];
+}
 
-void FrameRgb::addFeatures(const std::vector<Feature2D::ShPtr> & features)
+void Frame::addFeature(Feature2D::ShPtr ft) { _features.push_back(ft); }
+
+void Frame::addFeatures(const std::vector<Feature2D::ShPtr> & features)
 {
   _features.reserve(_features.size() + features.size());
   for (const auto & ft : features) {
     _features.push_back(ft);
   }
 }
-std::vector<Feature2D::ConstShPtr> FrameRgb::features() const
+std::vector<Feature2D::ConstShPtr> Frame::features() const
 {
-  std::vector<Feature2D::ConstShPtr> features;
-  features.reserve(_features.size());
-  std::for_each(_features.begin(), _features.end(), [&](auto ft) { features.push_back(ft); });
-  return features;
+  return std::vector<Feature2D::ConstShPtr>(_features.begin(), _features.end());
+}
+std::vector<Feature2D::ShPtr> Frame::featuresWithPoints()
+{
+  std::vector<Feature2D::ShPtr> fts;
+  fts.reserve(_features.size());
+  std::copy_if(_features.begin(), _features.end(), std::back_inserter(fts), [&](auto ft) {
+    return ft->point();
+  });
+  return fts;
+}
+std::vector<Feature2D::ConstShPtr> Frame::featuresWithPoints() const
+{
+  std::vector<Feature2D::ConstShPtr> fts;
+  fts.reserve(_features.size());
+  std::copy_if(_features.begin(), _features.end(), std::back_inserter(fts), [&](auto ft) {
+    return ft->point();
+  });
+  return fts;
 }
 
-void FrameRgb::removeFeatures()
+void Frame::removeFeatures()
 {
   for (const auto & ft : _features) {
     ft->frame() = nullptr;
@@ -145,7 +123,7 @@ void FrameRgb::removeFeatures()
   }
   _features.clear();
 }
-void FrameRgb::removeFeature(Feature2D::ShPtr ft)
+void Frame::removeFeature(Feature2D::ShPtr ft)
 {
   auto it = std::find(_features.begin(), _features.end(), ft);
 
@@ -162,55 +140,28 @@ void FrameRgb::removeFeature(Feature2D::ShPtr ft)
   }
 }
 
-FrameRgb::~FrameRgb() { removeFeatures(); }
+Frame::~Frame() { removeFeatures(); }
 
-FrameRgbd::FrameRgbd(
-  const Image & intensity, const MatXd & depth, Camera::ConstShPtr cam, size_t nLevels,
-  const Timestamp & t, const PoseWithCovariance & pose)
-: FrameRgb(intensity, cam, nLevels, t, pose)
+Frame::Frame(
+  const Image & intensity, const MatXd & depth, Camera::ConstShPtr cam, const Timestamp & t,
+  const PoseWithCovariance & pose)
+: _id(_idCtr++), _intensity({intensity}), _cam({cam}), _t(t), _pose(pose), _depth({depth})
 {
-  auto depth2pcl = [](const DepthMap & d, Camera::ConstShPtr c) {
-    std::vector<Vec3d> pcl(d.rows() * d.cols());
-    for (int v = 0; v < d.rows(); v++) {
-      for (int u = 0; u < d.cols(); u++) {
-        if (std::isfinite(d(v, u)) && d(v, u) > 0.0) {
-          pcl[v * d.cols() + u] = c->image2camera({u + 0.5, v + 0.5}, d(v, u));
-        } else {
-          pcl[v * d.cols() + u] = Eigen::Vector3d::Zero();
-        }
-      }
-    }
-    return pcl;
-  };
-  _depth.resize(nLevels);
-  _pcl.resize(nLevels);
-  const double s = 0.5;
-#ifdef USE_OPENCV_DEPTH
-  cv::Mat mat;
-  cv::eigen2cv(depth, mat);
-  std::vector<cv::Mat> mats;
-  cv::buildPyramid(mat, mats, nLevels - 1);
-  for (size_t i = 0; i < mats.size(); i++) {
-    cv::cv2eigen(mats[i], _depth[i]);
-    _pcl[i] = depth2pcl(_depth[i], camera(i));
+  if (
+    intensity.cols() != depth.cols() ||
+    std::abs(intensity.cols() / 2 - cam->principalPoint().x()) > 10 ||
+    intensity.rows() != depth.rows()) {
+    throw pd::Exception("Inconsistent camera parameters / image / depth dimensions detected.");
   }
-#else
-  for (size_t i = 0; i < nLevels; i++) {
-    if (i == 0) {
-      _depth[i] = depth;
-      _pcl[i] = depth2pcl(depth, cam);
-
-    } else {
-      DepthMap depthBlur =
-        algorithm::medianBlur<double>(_depth[i - 1], 3, 3, [](double v) { return v <= 0.0; });
-      _depth[i] = algorithm::resize(depthBlur, s);
-      _pcl[i] = depth2pcl(_depth[i], camera(i));
-    }
-  }
-#endif
 }
-std::vector<Vec3d> FrameRgbd::pcl(size_t level, bool removeInvalid) const
+
+std::vector<Vec3d> Frame::pcl(size_t level, bool removeInvalid) const
 {
+  if (level >= _pcl.size()) {
+    throw pd::Exception(
+      "No PCL available for level: " + std::to_string(level) +
+      ". Available: " + std::to_string(_pcl.size()));
+  }
   if (removeInvalid) {
     std::vector<Vec3d> pcl;
     pcl.reserve(_pcl.at(level).size());
@@ -222,13 +173,105 @@ std::vector<Vec3d> FrameRgbd::pcl(size_t level, bool removeInvalid) const
     return _pcl.at(level);
   }
 }
-std::vector<Vec3d> FrameRgbd::pclWorld(size_t level, bool removeInvalid) const
+std::vector<Vec3d> Frame::pclWorld(size_t level, bool removeInvalid) const
 {
+  if (level >= _pcl.size()) {
+    throw pd::Exception(
+      "No PCL available for level: " + std::to_string(level) +
+      ". Available: " + std::to_string(_pcl.size()));
+  }
   auto points = pcl(level, removeInvalid);
   std::transform(points.begin(), points.end(), points.begin(), [&](auto p) {
     return pose().pose().inverse() * p;
   });
   return points;
+}
+
+const Vec3d & Frame::p3d(int v, int u, size_t level) const
+{
+  if (level >= _pcl.size()) {
+    throw pd::Exception(
+      "No PCL available for level: " + std::to_string(level) +
+      ". Available: " + std::to_string(_pcl.size()));
+  }
+  return _pcl.at(level)[v * width(level) + u];
+}
+Vec3d Frame::p3dWorld(int v, int u, size_t level) const
+{
+  if (level >= _pcl.size()) {
+    throw pd::Exception(
+      "No PCL available for level: " + std::to_string(level) +
+      ". Available: " + std::to_string(_pcl.size()));
+  }
+  return pose().pose().inverse() * _pcl.at(level)[v * width() + u];
+}
+
+bool Frame::withinImage(const Vec2d & pImage, double border, size_t level) const
+{
+  return 0 + border < pImage.x() && pImage.x() < width(level) - border && 0 + border < pImage.y() &&
+         pImage.y() < height(level) - border;
+}
+
+void Frame::computeDerivatives()
+{
+  _dIx.resize(nLevels());
+  _dIy.resize(nLevels());
+
+  // TODO(unknown): replace using custom implementation
+  for (size_t i = 0; i < nLevels(); i++) {
+    cv::Mat mat;
+    cv::eigen2cv(intensity(i), mat);
+    cv::Mat mati_blur;
+    cv::GaussianBlur(mat, mati_blur, cv::Size(3, 3), 0, 0, cv::BORDER_DEFAULT);
+    cv::Mat dIdx, dIdy;
+    cv::Sobel(mati_blur, dIdx, CV_16S, 1, 0, 3);
+    cv::Sobel(mati_blur, dIdy, CV_16S, 0, 1, 3);
+    cv::cv2eigen(dIdx, _dIx[i]);
+    cv::cv2eigen(dIdy, _dIy[i]);
+  }
+}
+void Frame::computePcl()
+{
+  _pcl.resize(nLevels());
+
+  auto depth2pcl = [](const DepthMap & d, Camera::ConstShPtr c) {
+    std::vector<Vec3d> pcl(d.rows() * d.cols());
+    for (int v = 0; v < d.rows(); v++) {
+      for (int u = 0; u < d.cols(); u++) {
+        if (std::isfinite(d(v, u)) && d(v, u) > 0.0) {
+          pcl[v * d.cols() + u] = c->image2camera({u, v}, d(v, u));
+        } else {
+          pcl[v * d.cols() + u] = Eigen::Vector3d::Zero();
+        }
+      }
+    }
+    return pcl;
+  };
+  for (size_t i = 0; i < nLevels(); i++) {
+    _pcl[i] = depth2pcl(depth(i), camera(i));
+  }
+}
+
+void Frame::computePyramid(size_t nLevels, double s)
+{
+  _intensity.resize(nLevels);
+  _cam.resize(nLevels);
+
+  // TODO(unknown): replace using custom implementation
+  cv::Mat mat;
+  cv::eigen2cv(_intensity[0], mat);
+  std::vector<cv::Mat> mats;
+  cv::buildPyramid(mat, mats, nLevels - 1);
+  for (size_t i = 0; i < mats.size(); i++) {
+    cv::cv2eigen(mats[i], _intensity[i]);
+    _cam[i] = Camera::resize(_cam[0], std::pow(s, i));
+  }
+  _depth.resize(nLevels);
+  for (size_t i = 1; i < nLevels; i++) {
+    DepthMap depthBlur =
+      algorithm::medianBlur<double>(_depth[i - 1], 3, 3, [](double v) { return v <= 0.0; });
+    _depth[i] = algorithm::resize(depthBlur, s);
+  }
 }
 
 }  // namespace pd::vslam

@@ -25,8 +25,10 @@
 #include <random>
 #include <vector>
 
+#include "Frame.h"
 #include "Kernel2d.h"
 #include "types.h"
+
 namespace pd::vslam
 {
 namespace algorithm
@@ -167,8 +169,8 @@ Eigen::Matrix<Derived, Eigen::Dynamic, Eigen::Dynamic> medianBlur(
     for (Idx j = kX_2; j < res.cols() - kX_2; j++) {
       std::vector<double> values;
       values.reserve(sizeX * sizeY);
-      for (Idx ki = i - kY_2; ki <= i - kY_2 + sizeY; ki++) {
-        for (Idx kj = j - kX_2; kj <= j - kX_2 + sizeX; kj++) {
+      for (Idx ki = i - kY_2; ki < i - kY_2 + sizeY; ki++) {
+        for (Idx kj = j - kX_2; kj < j - kX_2 + sizeX; kj++) {
           auto v = static_cast<double>(mat(ki, kj));
           if (!mask(v)) {
             values.push_back(v);
@@ -197,6 +199,10 @@ Eigen::MatrixXd normalize(const Eigen::MatrixXd & mat, double min, double max);
 
 /// Computes T01 from T0 and T1
 Sophus::SE3d computeRelativeTransform(const Sophus::SE3d & t0, const Sophus::SE3d & t1);
+
+MatXd computeF(const Mat3d & Kref, const Sophus::SE3d & Rtref2cur, const Mat3d & Kcur);
+MatXd computeF(Frame::ConstShPtr frameRef, Frame::ConstShPtr frameCur);
+
 }  // namespace algorithm
 
 namespace transforms

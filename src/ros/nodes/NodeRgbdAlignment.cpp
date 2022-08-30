@@ -18,7 +18,6 @@
 //
 
 #include "NodeRgbdAlignment.h"
-
 #include "vslam_ros/converters.h"
 using namespace pd::vslam;
 using namespace std::chrono_literals;
@@ -94,7 +93,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   _keyFrameSelection =
     std::make_shared<KeyFrameSelectionIdx>(get_parameter("keyframe_selection.idx.period").as_int());
   _tracking = std::make_shared<FeatureTracking>();
-  _mapOptimization = std::make_shared<mapping::MapOptimization>();
+  _ba = std::make_shared<mapping::BundleAdjustment>();
   // _cameraName = this->declare_parameter<std::string>("camera","/camera/rgb");
   //sync.registerDropCallback(std::bind(&StereoAlignmentROS::dropCallback, this,std::placeholders::_1, std::placeholders::_2));
 
@@ -105,14 +104,14 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   for (const auto & name : Log::registeredLogsImage()) {
     declare_parameter("log.image." + name + ".show", false);
     declare_parameter("log.image." + name + ".block", false);
-    LOG_IMG(name)->_show = get_parameter("log.image." + name + ".show").as_bool();
-    LOG_IMG(name)->_block = get_parameter("log.image." + name + ".block").as_bool();
+    LOG_IMG(name)->show() = get_parameter("log.image." + name + ".show").as_bool();
+    LOG_IMG(name)->block() = get_parameter("log.image." + name + ".block").as_bool();
   }
   for (const auto & name : Log::registeredLogsPlot()) {
     declare_parameter("log.image." + name + ".show", false);
     declare_parameter("log.image." + name + ".block", false);
-    LOG_PLT(name)->_show = get_parameter("log.image." + name + ".show").as_bool();
-    LOG_PLT(name)->_block = get_parameter("log.image." + name + ".block").as_bool();
+    LOG_PLT(name)->show() = get_parameter("log.image." + name + ".show").as_bool();
+    LOG_PLT(name)->block() = get_parameter("log.image." + name + ".block").as_bool();
   }
   RCLCPP_INFO(get_logger(), "Ready.");
 }
@@ -175,7 +174,7 @@ void NodeRgbdAlignment::signalReplayer()
   }
 }
 
-FrameRgbd::ShPtr NodeRgbdAlignment::createFrame(
+Frame::ShPtr NodeRgbdAlignment::createFrame(
   sensor_msgs::msg::Image::ConstSharedPtr msgImg,
   sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
 {
@@ -192,8 +191,11 @@ FrameRgbd::ShPtr NodeRgbdAlignment::createFrame(
   const Timestamp t =
     rclcpp::Time(msgImg->header.stamp.sec, msgImg->header.stamp.nanosec).nanoseconds();
 
-  return std::make_shared<FrameRgbd>(
-    img, depth, _camera, get_parameter("pyramid.levels").as_double_array().size(), t);
+  auto f = std::make_shared<Frame>(img, depth, _camera, t);
+  f->computePyramid(get_parameter("pyramid.levels").as_double_array().size());
+  f->computeDerivatives();
+  f->computePcl();
+  return f;
 }
 void NodeRgbdAlignment::publish(sensor_msgs::msg::Image::ConstSharedPtr msgImg)
 {

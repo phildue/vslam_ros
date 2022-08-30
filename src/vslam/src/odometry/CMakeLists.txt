@@ -9,9 +9,9 @@ set( sources
   src/iterative_closest_point/IterativeClosestPointOcv.cpp
   src/direct_image_alignment/SE3Alignment.cpp
   src/direct_image_alignment/RgbdAlignmentOpenCv.cpp
-  src/FeatureTracking.cpp
+  src/feature_tracking/FeatureTracking.cpp
+  src/feature_tracking/Matcher.cpp
   src/mapping/BundleAdjustment.cpp
-  src/mapping/MapOptimization.cpp
   src/mapping/Map.cpp )
 
 set( headers
@@ -22,9 +22,9 @@ set( headers
   src/iterative_closest_point/IterativeClosestPointOcv.h
   src/direct_image_alignment/SE3Alignment.h
   src/direct_image_alignment/RgbdAlignmentOpenCv.h
-  src/FeatureTracking.h
+  src/feature_tracking/FeatureTracking.h
+  src/feature_tracking/Matcher.h
   src/mapping/BundleAdjustment.h
-  src/mapping/MapOptimization.h
   src/mapping/Map.h
   include/odometry/odometry.h )
 
@@ -65,9 +65,7 @@ if(VSLAM_ODOMETRY_BUILD_TESTS)
     set(TEST_VISUALIZE false)
   endif()
 
-  # pd_add_test(frame ${PROJECT_NAME} 
-  # TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  # TEST_VISUALIZE=${TEST_VISUALIZE})
+
 
   pd_add_test(alignment_se3 ${PROJECT_NAME} 
   TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
@@ -97,9 +95,12 @@ if(VSLAM_ODOMETRY_BUILD_TESTS)
   TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
   TEST_VISUALIZE=${TEST_VISUALIZE})
 
-  pd_add_test(descriptor_vo ${PROJECT_NAME} 
+  pd_add_test(ba ${PROJECT_NAME} 
   TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
   TEST_VISUALIZE=${TEST_VISUALIZE})
 
+  pd_add_test(ceres_ba ${PROJECT_NAME} 
+  TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
+  TEST_VISUALIZE=${TEST_VISUALIZE})
 
 endif()

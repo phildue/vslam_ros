@@ -21,26 +21,30 @@
 #include "Feature2D.h"
 #include "Kernel2d.h"
 #include "PoseWithCovariance.h"
-#include "algorithm.h"
 #include "types.h"
 namespace pd::vslam
 {
-class FrameRgb
+class Frame
 {
 public:
-  typedef std::shared_ptr<FrameRgb> ShPtr;
-  typedef std::shared_ptr<const FrameRgb> ConstShPtr;
-  typedef std::unique_ptr<FrameRgb> UnPtr;
-  typedef std::unique_ptr<const FrameRgb> ConstUnPtr;
+  typedef std::shared_ptr<Frame> ShPtr;
+  typedef std::shared_ptr<const Frame> ConstShPtr;
+  typedef std::unique_ptr<Frame> UnPtr;
+  typedef std::unique_ptr<const Frame> ConstUnPtr;
 
-  FrameRgb(
-    const Image & intensity, Camera::ConstShPtr cam, size_t nLevels = 1, const Timestamp & t = 0U,
+  Frame(
+    const Image & rgb, const DepthMap & depth, Camera::ConstShPtr cam, const Timestamp & t = 0U,
     const PoseWithCovariance & pose = {});
+
+  Frame(
+    const Image & intensity, Camera::ConstShPtr cam, const Timestamp & t = 0U,
+    const PoseWithCovariance & pose = {});
+
   std::uint64_t id() const { return _id; }
 
   const Image & intensity(size_t level = 0) const { return _intensity.at(level); }
-  const MatXd & dIx(size_t level = 0) const { return _dIx.at(level); }
-  const MatXd & dIy(size_t level = 0) const { return _dIy.at(level); }
+  const MatXd & dIx(size_t level = 0) const;
+  const MatXd & dIy(size_t level = 0) const;
 
   const PoseWithCovariance & pose() const { return _pose; }
 
@@ -49,9 +53,12 @@ public:
   size_t width(size_t level = 0) const { return _intensity.at(level).cols(); }
   size_t height(size_t level = 0) const { return _intensity.at(level).rows(); }
   size_t nLevels() const { return _intensity.size(); }
+  bool withinImage(const Vec2d & pImage, double border = 7, size_t level = 0) const;
 
   std::vector<Feature2D::ConstShPtr> features() const;
+  std::vector<Feature2D::ConstShPtr> featuresWithPoints() const;
   std::vector<Feature2D::ShPtr> features() { return _features; };
+  std::vector<Feature2D::ShPtr> featuresWithPoints();
   Feature2D::ConstShPtr observationOf(std::uint64_t pointId) const;
 
   Eigen::Vector2d camera2image(const Eigen::Vector3d & pCamera, size_t level = 0) const;
@@ -66,8 +73,17 @@ public:
   void addFeatures(const std::vector<Feature2D::ShPtr> & ft);
   void removeFeatures();
   void removeFeature(Feature2D::ShPtr f);
+  void computeDerivatives();
+  void computePcl();
+  void computePyramid(size_t nLevels, double scale = 0.5);
 
-  virtual ~FrameRgb();
+  const DepthMap & depth(size_t level = 0) const { return _depth.at(level); }
+  const Vec3d & p3d(int v, int u, size_t level = 0) const;
+  Vec3d p3dWorld(int v, int u, size_t level = 0) const;
+  std::vector<Vec3d> pcl(size_t level = 0, bool removeInvalid = false) const;
+  std::vector<Vec3d> pclWorld(size_t level = 0, bool removeInvalid = false) const;
+
+  virtual ~Frame();
 
 private:
   const std::uint64_t _id;
@@ -77,40 +93,11 @@ private:
   Timestamp _t;
   PoseWithCovariance _pose;  //<< Pf = pose * Pw
   std::vector<Feature2D::ShPtr> _features;
-
+  DepthMapVec _depth;
+  std::vector<std::vector<Vec3d>> _pcl;
   static std::uint64_t _idCtr;
 };
 
-class FrameRgbd : public FrameRgb
-{
-public:
-  typedef std::shared_ptr<FrameRgbd> ShPtr;
-  typedef std::shared_ptr<const FrameRgbd> ConstShPtr;
-  typedef std::unique_ptr<FrameRgbd> UnPtr;
-  typedef std::unique_ptr<const FrameRgbd> ConstUnPtr;
-
-  FrameRgbd(
-    const Image & rgb, const DepthMap & depth, Camera::ConstShPtr cam, size_t nLevels = 1,
-    const Timestamp & t = 0U, const PoseWithCovariance & pose = {});
-
-  const DepthMap & depth(size_t level = 0) const { return _depth.at(level); }
-  const Vec3d & p3d(int v, int u, size_t level = 0) const
-  {
-    return _pcl.at(level)[v * width(level) + u];
-  }
-  Vec3d p3dWorld(int v, int u, size_t level = 0) const
-  {
-    return pose().pose().inverse() * _pcl.at(level)[v * width() + u];
-  }
-  std::vector<Vec3d> pcl(size_t level = 0, bool removeInvalid = false) const;
-  std::vector<Vec3d> pclWorld(size_t level = 0, bool removeInvalid = false) const;
-
-  virtual ~FrameRgbd(){};
-
-private:
-  DepthMapVec _depth;
-  std::vector<std::vector<Vec3d>> _pcl;
-};
 }  // namespace pd::vslam
 
 #endif
