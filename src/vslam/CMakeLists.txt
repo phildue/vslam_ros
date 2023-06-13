@@ -59,6 +59,8 @@ $<INSTALL_INTERFACE:include/vslam>)
 
 if(UNIX)
   target_link_libraries(${PROJECT_NAME} stdc++fs)
+  target_link_libraries(${PROJECT_NAME} pthread)
+
 endif()
 
 find_package(Eigen3 REQUIRED)

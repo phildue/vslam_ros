@@ -65,7 +65,7 @@ public:
     double minGradientDepth = INFd, double maxGradientDepth = 0.3, double maxZ = 5.0,
     double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1,
     int maxPoints = INFi);
-  Pose computeEgomotion(const Frame & frame0, const Frame & frame1, const Pose & guess);
+  Pose computeEgomotion(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose & guess);
 
   Pose computeEgomotion(
     Camera::ConstShPtr cam, const cv::Mat & intensity0, const cv::Mat & depth0,
@@ -82,10 +82,10 @@ private:
   int _level, _iteration;
 
   std::vector<Constraint::ShPtr> selectConstraintsAndPrecompute(
-    const Frame & frame, const SE3f & motion) const;
+    Frame::ConstShPtr, const SE3f & motion) const;
 
   std::vector<Constraint::ShPtr> computeResidualsAndJacobian(
-    const std::vector<Constraint::ShPtr> & features, const Frame & f1, const SE3f & motion) const;
+    const std::vector<Constraint::ShPtr> & features, Frame::ConstShPtr, const SE3f & motion) const;
 
   NormalEquations computeNormalEquations(
     const std::vector<Constraint::ShPtr> & constraints, const SE3f & motion,

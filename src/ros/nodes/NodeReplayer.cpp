@@ -12,28 +12,25 @@ namespace vslam_ros
 {
 NodeReplayer::NodeReplayer(const rclcpp::NodeOptions & options)
 : rclcpp::Node("NodeReplayer", options),
-  _srvReady(create_service<std_srvs::srv::SetBool>(
-    "set_ready",
-    std::bind(&NodeReplayer::serviceReadyCb, this, std::placeholders::_1, std::placeholders::_2))),
-  _nodeReady(true)
+  _servicePlay(create_service<std_srvs::srv::SetBool>(
+    "togglePlay",
+    std::bind(
+      &NodeReplayer::servicePlayCallback, this, std::placeholders::_1, std::placeholders::_2))),
+  _play(true)
 {
-  declare_parameter(
+  _syncTopic = declare_parameter("sync_topic", "/camera/depth/image");
+  _bagName = declare_parameter(
     "bag_file",
     "/mnt/dataset/tum_rgbd/rgbd_dataset_freiburg1_desk2/rgbd_dataset_freiburg1_desk2.db3");
-  _bagName = get_parameter("bag_file").as_string();
+  _sequenceId = _bagName.substr(_bagName.find_last_of('/') + 1).c_str();
   RCLCPP_INFO(get_logger(), "Opening: %s", _bagName.c_str());
   _reader = open(_bagName);
   _meta = _reader->get_metadata();
 
   declare_parameter("timeout", 1.0);
-  declare_parameter("sync_topic", "/camera/depth/image");
-  declare_parameter("start_random", false);
-  declare_parameter("delay", 0.0);
-  declare_parameter("duration", 100.0);
 
   RCLCPP_INFO(get_logger(), "Opened: %s", _bagName.c_str());
 
-  _syncTopic = get_parameter("sync_topic").as_string();
   auto meta = _reader->get_metadata();
   _duration = static_cast<double>(meta.duration.count()) / 1e9;
   RCLCPP_INFO(
@@ -84,7 +81,8 @@ NodeReplayer::NodeReplayer(const rclcpp::NodeOptions & options)
       vslam::time::to_time_point(_tStart), vslam::time::to_time_point(_tEnd), _duration)
       .c_str());
   _period = 100;
-  _tWaitingForNode = 0;
+  _tWaiting = 0;
+  _tReplay0 = std::chrono::high_resolution_clock::now();
   _periodicTimer = create_wall_timer(
     std::chrono::nanoseconds(_period), std::bind(&NodeReplayer::replayNext, this));
 }
@@ -117,9 +115,6 @@ void NodeReplayer::publish(rosbag2_storage::SerializedBagMessageSharedPtr msg)
     rclcpp::Serialization<sensor_msgs::msg::Image> serialization;
     serialization.deserialize_message(&extracted_serialized_msg, img.get());
     _pubImg[msg->topic_name]->publish(*img);
-    //RCLCPP_INFO(
-    //  get_logger(), "Topic [%s], replayed [%ld/%ld] messages.", msg->topic_name.c_str(),
-    //  _msgCtr[msg->topic_name], _nMessages[msg->topic_name]);
   }
 
   if (
@@ -139,9 +134,6 @@ void NodeReplayer::publish(rosbag2_storage::SerializedBagMessageSharedPtr msg)
     rclcpp::Serialization<sensor_msgs::msg::Image> serialization;
     serialization.deserialize_message(&extracted_serialized_msg, depth.get());
     _pubDepth->publish(*depth);
-    //RCLCPP_INFO(
-    //  get_logger(), "Topic [%s], replayed [%ld/%ld] messages.", msg->topic_name.c_str(),
-    //  _msgCtr[msg->topic_name], _nMessages[msg->topic_name]);
   }
   if (msg->topic_name == "/tf") {
     auto tf = std::make_shared<tf2_msgs::msg::TFMessage>();
@@ -155,32 +147,45 @@ void NodeReplayer::publish(rosbag2_storage::SerializedBagMessageSharedPtr msg)
 void NodeReplayer::replayNext()
 {
   if (!_reader->has_next() || _tLast > _tEnd) {
-    RCLCPP_INFO(get_logger(), "Replay has ended. Will shutdown in 10 seconds..");
     _reader->close();
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    rclcpp::shutdown();
+    _tWaiting = 10;
+    _periodicTimer = create_wall_timer(std::chrono::seconds(1), [&]() {
+      RCLCPP_INFO(
+        get_logger(), "Replay of [%s] has ended. Will shutdown in %ld seconds..",
+        _bagName.substr(_bagName.find_last_of('/') + 1).c_str(), _tWaiting);
+      if (_play) {
+        _tWaiting--;
+      }
+      if (_tWaiting <= 0) {
+        rclcpp::shutdown();
+      }
+    });
     return;
   }
-  if (!_nodeReady) {
-    const rcl_time_point_value_t timeout = get_parameter("timeout").as_double() * 1e9;
-    _tWaitingForNode += _period;
-    if (_tWaitingForNode < timeout) {
-      return;
-    } else {
-      RCLCPP_WARN(get_logger(), "Timed out during waiting for node to be ready. Continuing..");
-      _tWaitingForNode = 0;
-      std::unique_lock<std::mutex> lk(_mutex);
-      _nodeReady = true;
-    }
+
+  if (!_play) {
+    _periodicTimer = create_wall_timer(
+      std::chrono::nanoseconds(static_cast<int64_t>(get_parameter("timeout").as_double() * 1e9)),
+      [&]() {
+        RCLCPP_WARN(get_logger(), "Timed out during waiting for node to be ready. Continuing..");
+        std::unique_lock<std::mutex> lk(_mutex);
+        _play = true;
+        _periodicTimer = create_wall_timer(
+          std::chrono::milliseconds(_period), std::bind(&NodeReplayer::replayNext, this));
+      });
+    return;
   }
 
   auto msg = _reader->read_next();
   _msgCtr[msg->topic_name]++;
 
   if (msg->topic_name == _syncTopic) {
+    const int64_t tReplay = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::high_resolution_clock::now() - _tReplay0)
+                              .count();
     if (_msgCtr[_syncTopic] % (_nMessages[_syncTopic] / 100) == 0) {
       RCLCPP_INFO(
-        get_logger(), "Replayed [%d]%s, [%ld/%ld] msgs, [%.3f/%.3f]s of [%s] t=[%ld]",
+        get_logger(), "Replayed [%d]%s, [%ld/%ld] msgs, [%.3f/%.3f]s of [%s] in [%f]s t=[%ld]",
         static_cast<int>(
           static_cast<float>(_msgCtr[_syncTopic]) / static_cast<float>(_nMessages[_syncTopic]) *
           100),
@@ -188,11 +193,8 @@ void NodeReplayer::replayNext()
         static_cast<double>(
           static_cast<double>(msg->time_stamp - _meta.starting_time.time_since_epoch().count()) /
           1e9),
-        _meta.duration.count() / 1e9, _bagName.substr(_bagName.find_last_of('/') + 1).c_str(),
-        msg->time_stamp);
+        _meta.duration.count() / 1e9, _sequenceId.c_str(), tReplay / 1000.0, msg->time_stamp);
     }
-    std::unique_lock<std::mutex> lk(_mutex);
-    _nodeReady = false;
   }
   publish(msg);
   _tLast = msg->time_stamp;
@@ -217,35 +219,34 @@ rcl_time_point_value_t NodeReplayer::seek(rcl_time_point_value_t t)
   return 0L;
 }
 
-void NodeReplayer::serviceReadyCb(
+void NodeReplayer::servicePlayCallback(
   const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
   std::shared_ptr<std_srvs::srv::SetBool::Response> response)
 {
   {
     std::unique_lock<std::mutex> lk(_mutex);
-    _nodeReady = request->data;
+    _play = request->data;
   }
 
   _cond.notify_all();
   response->success = true;
 }
 
-rcl_time_point_value_t NodeReplayer::getStartingTime(
-  const rosbag2_storage::BagMetadata & meta) const
+rcl_time_point_value_t NodeReplayer::getStartingTime(const rosbag2_storage::BagMetadata & meta)
 {
-  if (get_parameter("start_random").as_bool()) {
+  if (declare_parameter<bool>("start_random", false)) {
     return vslam::random::U(
       static_cast<uint64_t>(meta.starting_time.time_since_epoch().count()),
       static_cast<uint64_t>((meta.starting_time + meta.duration).time_since_epoch().count()));
   } else
     return meta.starting_time.time_since_epoch().count() +
-           static_cast<uint64_t>(get_parameter("delay").as_double() * 1e9);
+           static_cast<uint64_t>(declare_parameter<double>("delay", 0.0) * 1e9);
 }
 rcl_time_point_value_t NodeReplayer::getEndTime(
-  rcl_time_point_value_t tStart, const rosbag2_storage::BagMetadata & meta) const
+  rcl_time_point_value_t tStart, const rosbag2_storage::BagMetadata & meta)
 {
   rcl_time_point_value_t duration =
-    get_parameter("duration").as_double() > 0.0
+    declare_parameter<double>("duration", -1.0) > 0.0
       ? static_cast<rcl_time_point_value_t>(get_parameter("duration").as_double() * 1e9)
       : meta.duration.count() - (tStart - meta.starting_time.time_since_epoch().count());
   return (tStart + duration);

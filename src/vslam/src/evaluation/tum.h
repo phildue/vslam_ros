@@ -61,6 +61,10 @@ public:
   const std::vector<std::string> & pathsImage() const { return _imgFilenames; }
   const std::vector<std::string> & pathsDepth() const { return _depthFilenames; }
   const std::vector<Timestamp> & timestamps() const { return _timestamps; }
+  const std::vector<Timestamp> & timestampsImage() const { return _timestampsImage; }
+  const std::vector<Timestamp> & timestampsDepth() const { return _timestampsDepth; }
+
+  double duration(int from = 0, int to = std::numeric_limits<int>::max()) const;
 
 private:
   std::string _datasetRoot;
@@ -71,7 +75,7 @@ private:
   std::string _pathGt;
   Trajectory::ShPtr _trajectoryGt;
   std::vector<std::string> _imgFilenames, _depthFilenames;
-  std::vector<Timestamp> _timestamps;
+  std::vector<Timestamp> _timestamps, _timestampsImage, _timestampsDepth;
   void readAssocTextfile(std::string filename);
 };
 

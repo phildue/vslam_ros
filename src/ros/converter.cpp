@@ -49,6 +49,14 @@ vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo & msg)
   return std::make_shared<vslam::Camera>(fx, fy, cx, cy, std::ceil(cx * 2.0), std::ceil(cy * 2.0));
 }
 
+void convert(vslam::Camera::ConstShPtr cam, sensor_msgs::msg::CameraInfo & msg)
+{
+  msg.k[0 * 3 + 0] = cam->fx();
+  msg.k[1 * 3 + 1] = cam->fy();
+  msg.k[0 * 3 + 2] = cam->cx();
+  msg.k[1 * 3 + 2] = cam->cy();
+}
+
 geometry_msgs::msg::Pose convert(const Sophus::SE3d & se3)
 {
   geometry_msgs::msg::Pose pose;

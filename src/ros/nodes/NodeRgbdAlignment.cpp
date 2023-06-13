@@ -29,6 +29,9 @@ namespace vslam_ros
 {
 NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
 : rclcpp::Node("NodeRgbdAlignment", options),
+  _queueSizeMin(declare_parameter("sync.queue_size_min", 10)),
+  _queueSizeMax(declare_parameter("sync.queue_size_max", 50)),
+  _replay(declare_parameter("replayMode", false)),
   _fNo(0),
   _pubOdom(create_publisher<nav_msgs::msg::Odometry>("/odom", 10)),
   _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10)),
@@ -39,16 +42,13 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
     "/camera/rgb/camera_info", 10,
     std::bind(&NodeRgbdAlignment::cameraCallback, this, std::placeholders::_1))),
   _tfAvailable(false),
+  _frameId(declare_parameter("tf.frame_id", _frameId)),
+  _fixedFrameId(declare_parameter("tf.base_link_id", _fixedFrameId)),
   _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock())),
   _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer))
 {
-  declare_parameter("replayMode", true);
-  declare_parameter("tf.base_link_id", _fixedFrameId);
-  declare_parameter("tf.frame_id", _frameId);
-  _fixedFrameId = get_parameter("tf.base_link_id").as_string();
-  _frameId = get_parameter("tf.frame_id").as_string();
-  if (get_parameter("replayMode").as_bool()) {
-    _cliReplayer = create_client<std_srvs::srv::SetBool>("set_ready");
+  if (_replay) {
+    _cliReplayer = create_client<std_srvs::srv::SetBool>("togglePlay");
   }
 
   for (auto name_value : DirectIcp::defaultParameters()) {
@@ -56,9 +56,6 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
       declare_parameter(format("direct_icp.{}", name_value.first), name_value.second);
   }
   _directIcp = std::make_shared<DirectIcp>(_paramsIcp);
-
-  const int queue_size = declare_parameter("sync.queue_size", 5);
-  const double max_interval = declare_parameter("sync.max_interval", 0.2);
 
 #ifdef USE_ROS2_SYNC
 
@@ -68,39 +65,42 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   _subImage.subscribe(this, "/camera/rgb/image_color", hints.getTransport(), image_sub_rmw_qos);
   _subDepth.subscribe(this, "/camera/depth/image", hints.getTransport(), image_sub_rmw_qos);
 
-  if (max_interval > 0.0) {
+  if (declare_parameter("sync.max_interval", 0.2) > 0.0) {
     _approximateSync.reset(
       new ApproximateSync(ApproximatePolicy(queue_size), _subImage, _subDepth));
-    _approximateSync->setMaxIntervalDuration(rclcpp::Duration::from_seconds(max_interval));
+    _approximateSync->setMaxIntervalDuration(
+      rclcpp::Duration::from_seconds(get_parameter("sync.max_interval").as_double));
     _approximateSync->registerCallback(&NodeRgbdAlignment::imageCallback, this);
   } else {
     _exactSync.reset(new ExactSync(ExactPolicy(queue_size), _subImage, _subDepth));
     _exactSync->registerCallback(&NodeRgbdAlignment::imageCallback, this);
   }
 #else
-  _queue = std::make_unique<vslam_ros::Queue>(queue_size, max_interval * 1e9);
+  _queue = std::make_unique<vslam_ros::Associator>(
+    _queueSizeMax, declare_parameter("sync.max_interval", 0.02) * 1e9);
   _subImage = create_subscription<sensor_msgs::msg::Image>(
     "/camera/rgb/image_color", 10,
-    [this](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushImage(msg); });
+    [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushImage(msg); });
   _subDepth = create_subscription<sensor_msgs::msg::Image>(
-    "/camera/depth/image", 10, [this](sensor_msgs::msg::Image::ConstSharedPtr msg) {
-      _queue->pushDepth(msg);
+    "/camera/depth/image", 10,
+    [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushDepth(msg); });
 
-      if (_queue->size() >= 1 && _camera) {
-        sensor_msgs::msg::Image::ConstSharedPtr img, depth;
-        try {
-          img = _queue->popClosestImg();
-          depth = _queue->popClosestDepth(
-            rclcpp::Time(img->header.stamp.sec, img->header.stamp.nanosec).nanoseconds());
-          this->imageCallback(img, depth);
+  _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() {
+    /*Check periodically if there are enough frames and process if so.
+    */
+    if (_camera && std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
+      auto const [_, depth, img] = _queue->pop();
+      RCLCPP_DEBUG(
+        get_logger(), "fNo: %d Processing Z: %d.%d I: %d.%d %f", _fNo, depth->header.stamp.sec,
+        depth->header.stamp.nanosec, img->header.stamp.sec, img->header.stamp.nanosec,
+        (rclcpp::Time(depth->header.stamp).nanoseconds() -
+         rclcpp::Time(img->header.stamp).nanoseconds()) /
+          1e9);
+      this->imageCallback(img, depth);
 
-        } catch (const std::runtime_error & e) {
-          RCLCPP_WARN(get_logger(), "%s", e.what());
-
-          triggerReplayer();
-        }
-      }
-    });
+      _fNo++;
+    }
+  });
 #endif
 
   RCLCPP_INFO(get_logger(), "Ready.");
@@ -126,58 +126,58 @@ void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstShared
     RCLCPP_ERROR(
       get_logger(), "Invalid camera calibration received: %s \n.", camera->toString().c_str());
   }
-  triggerReplayer();
 }
 
 void NodeRgbdAlignment::imageCallback(
   sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
 {
-  if (!_camera) {
-    RCLCPP_WARN(get_logger(), "Camera parameters are not available yet");
-    triggerReplayer();
+  TIMED_SCOPE(timerF, "processFrame");
+  Frame::ShPtr f = createFrame(msgImg, msgDepth);
+  f->computePyramid(_directIcp->nLevels());
+  if (!_frame0) {
+    _frame0 = f;
+    _trajectory.append(f->t(), _pose);
     return;
   }
+  _frame0->computeDerivatives();
+  _frame0->computePcl();
+  _motion = _directIcp->computeEgomotion(_frame0, f, _motion);
+  _frame0 = f;
 
-  try {
-    TIMED_SCOPE(timerF, "processFrame");
+  _pose = _motion * _pose;
+  _trajectory.append(f->t(), _pose);
+  publish(msgImg->header.stamp);
+}
 
-    namespace enc = sensor_msgs::image_encodings;
-    auto cv_ptr = cv_bridge::toCvShare(msgImg);
-    if (enc::isColor(msgImg->encoding)) {
-      cv_ptr = cv_bridge::cvtColor(cv_ptr, "mono8");
-    }
-    Timestamp t;
-    convert(msgImg->header.stamp, t);
-    cv::Mat depth;
-    cv_bridge::toCvShare(msgDepth)->image.convertTo(depth, CV_32FC1);
-
-    auto f = std::make_shared<Frame>(cv_ptr->image, depth, _camera, t);
-    f->computePyramid(_directIcp->nLevels());
-    if (!_frame0) {
-      _frame0 = f;
-      _trajectory.append(t, _pose);
-      return;
-    }
-    _frame0->computeDerivatives();
-    _frame0->computePcl();
-
-    _motion = _directIcp->computeEgomotion(*_frame0, *f, _motion);
-    _frame0 = f;
-
-    _pose = _motion * _pose;
-    _trajectory.append(t, _pose);
-
-    publish(msgImg->header.stamp);
-
-    _fNo++;
-  } catch (const std::runtime_error & e) {
-    RCLCPP_WARN(get_logger(), "%s", e.what());
+Frame::UnPtr NodeRgbdAlignment::createFrame(
+  sensor_msgs::msg::Image::ConstSharedPtr msgImg,
+  sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
+{
+  namespace enc = sensor_msgs::image_encodings;
+  auto cv_ptr = cv_bridge::toCvShare(msgImg);
+  if (enc::isColor(msgImg->encoding)) {
+    cv_ptr = cv_bridge::cvtColor(cv_ptr, "mono8");
   }
-  triggerReplayer();
+  Timestamp t;
+  convert(msgImg->header.stamp, t);
+  cv::Mat depth;
+  cv_bridge::toCvShare(msgDepth)->image.convertTo(depth, CV_32FC1);
+  return std::make_unique<Frame>(cv_ptr->image.clone(), depth.clone(), _camera, t);
 }
 
 void NodeRgbdAlignment::timerCallback()
 {
+  const int maxQueue = static_cast<int>(0.75 * _queueSizeMax);
+  const bool queueAlmostFull = std::max(_queue->nDepth(), _queue->nImages()) > maxQueue;
+  if (_replay) {
+    setReplay(!queueAlmostFull);
+  }
+  if (queueAlmostFull) {
+    RCLCPP_WARN(
+      get_logger(), "Warning input queue exceeds threshold: [%d]/[%d]. Cannot process all frames.",
+      _queue->nDepth(), maxQueue);
+  }
+
   if (!_tfAvailable) {
     lookupTf();
   }
@@ -198,11 +198,8 @@ void NodeRgbdAlignment::lookupTf()
     RCLCPP_WARN(get_logger(), "%s", ex.what());
   }
 }
-void NodeRgbdAlignment::triggerReplayer()
+void NodeRgbdAlignment::setReplay(bool ready)
 {
-  if (!get_parameter("replayMode").as_bool()) {
-    return;
-  }
   while (!_cliReplayer->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
       throw std::runtime_error("Interrupted while waiting for the service. Exiting.");
@@ -210,7 +207,7 @@ void NodeRgbdAlignment::triggerReplayer()
     RCLCPP_INFO(get_logger(), "Replayer Service not available, waiting again...");
   }
   auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-  request->data = true;
+  request->data = ready;
   using ServiceResponseFuture = rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture;
   auto response_received_callback = [this](ServiceResponseFuture future) {
     if (!future.get()->success) {

@@ -7,7 +7,7 @@
 #include "core/random.h"
 #include "utils/log.h"
 
-#define PERFORMANCE_RGBD_ALIGNMENT true
+#define PERFORMANCE_RGBD_ALIGNMENT false
 namespace vslam
 {
 std::map<std::string, double> DirectIcp::defaultParameters()
@@ -48,17 +48,18 @@ Pose DirectIcp::computeEgomotion(
   Camera::ConstShPtr cam, const cv::Mat & intensity0, const cv::Mat & depth0,
   const cv::Mat & intensity1, const cv::Mat & depth1, const Pose & guess)
 {
-  Frame f0(intensity0, depth0, cam);
-  f0.computePyramid(_nLevels);
-  f0.computeDerivatives();
-  f0.computePcl();
-  Frame f1(intensity1, depth1, cam);
-  f1.computePyramid(_nLevels);
+  auto f0 = std::make_shared<Frame>(intensity0, depth0, cam);
+  f0->computePyramid(_nLevels);
+  f0->computeDerivatives();
+  f0->computePcl();
+  auto f1 = std::make_shared<Frame>(intensity1, depth1, cam);
+  f1->computePyramid(_nLevels);
 
   return computeEgomotion(f0, f1, guess);
 }
 
-Pose DirectIcp::computeEgomotion(const Frame & frame0, const Frame & frame1, const Pose & guess)
+Pose DirectIcp::computeEgomotion(
+  Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose & guess)
 {
   TIMED_SCOPE(timer, "computeEgomotion");
 
@@ -67,9 +68,7 @@ Pose DirectIcp::computeEgomotion(const Frame & frame0, const Frame & frame1, con
   Mat6f covariance;
   for (_level = _nLevels - 1; _level >= 0; _level--) {
     TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
-    const Frame f0 = frame0.level(_level);
-    const Frame f1 = frame1.level(_level);
-    const auto constraintsAll = selectConstraintsAndPrecompute(f0, motion);
+    const auto constraintsAll = selectConstraintsAndPrecompute(frame0, motion);
 
     std::string reason = "Max iterations exceeded";
     double error = INFd;
@@ -77,7 +76,7 @@ Pose DirectIcp::computeEgomotion(const Frame & frame0, const Frame & frame1, con
     for (_iteration = 0; _iteration < _maxIterations; _iteration++) {
       TIMED_SCOPE_IF(timerIter, format("computeIteration{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
 
-      auto constraintsValid = computeResidualsAndJacobian(constraintsAll, f1, motion);
+      auto constraintsValid = computeResidualsAndJacobian(constraintsAll, frame1, motion);
 
       if (constraintsValid.size() < 6) {
         reason = format("Not enough constraints: {}", constraintsValid.size());
@@ -113,14 +112,14 @@ Pose DirectIcp::computeEgomotion(const Frame & frame0, const Frame & frame1, con
 }
 
 std::vector<DirectIcp::Constraint::ShPtr> DirectIcp::selectConstraintsAndPrecompute(
-  const Frame & frame, const SE3f & motion) const
+  Frame::ConstShPtr frame, const SE3f & motion) const
 {
   TIMED_SCOPE_IF(
     timer2, format("selectConstraintsAndPrecompute{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
-  const cv::Mat & intensity = frame.intensity();
-  const cv::Mat & depth = frame.depth();
-  const cv::Mat & dI = frame.dI();
-  const cv::Mat & dZ = frame.dZ();
+  const cv::Mat & intensity = frame->intensity(_level);
+  const cv::Mat & depth = frame->depth(_level);
+  const cv::Mat & dI = frame->dI(_level);
+  const cv::Mat & dZ = frame->dZ(_level);
 
   std::vector<int> vs(intensity.rows);
   for (int v = 0; v < intensity.rows; v++) {
@@ -149,8 +148,8 @@ std::vector<DirectIcp::Constraint::ShPtr> DirectIcp::selectConstraintsAndPrecomp
         c->uv0 = Vec2f(u, v);
         c->iz0 = Vec2f(iv[u], zv[u]);
 
-        c->p0 = frame.p3d(v, u).cast<float>();
-        Mat<float, 2, 6> Jw = computeJacobianWarp(motion * c->p0, frame.camera());
+        c->p0 = frame->p3d(v, u, _level).cast<float>();
+        Mat<float, 2, 6> Jw = computeJacobianWarp(motion * c->p0, frame->camera(_level));
         c->J.row(0) = dIv[u][0] * Jw.row(0) + dIv[u][1] * Jw.row(1);
         c->JZJw = dZv[u][0] * Jw.row(0) + dZv[u][1] * Jw.row(1);
         constraints.push_back(c);
@@ -162,7 +161,7 @@ std::vector<DirectIcp::Constraint::ShPtr> DirectIcp::selectConstraintsAndPrecomp
   std::for_each(cs.begin(), cs.end(), [&](auto c) {
     constraints.insert(constraints.end(), c.begin(), c.end());
   });
-  return uniformSubselection(frame.camera(), constraints);
+  return uniformSubselection(frame->camera(_level), constraints);
 }
 Matf<2, 6> DirectIcp::computeJacobianWarp(const Vec3f & p, Camera::ConstShPtr cam) const
 {
@@ -191,7 +190,7 @@ Matf<2, 6> DirectIcp::computeJacobianWarp(const Vec3f & p, Camera::ConstShPtr ca
 }
 
 std::vector<DirectIcp::Constraint::ShPtr> DirectIcp::computeResidualsAndJacobian(
-  const std::vector<DirectIcp::Constraint::ShPtr> & constraints, const Frame & f1,
+  const std::vector<DirectIcp::Constraint::ShPtr> & constraints, Frame::ConstShPtr f1,
   const SE3f & motion) const
 {
   TIMED_SCOPE_IF(
@@ -199,17 +198,17 @@ std::vector<DirectIcp::Constraint::ShPtr> DirectIcp::computeResidualsAndJacobian
 
   /*Cache some constants for faster loop*/
   const SE3f motionInv = motion.inverse();
-  const Camera::ConstShPtr cam = f1.camera();
+  const Camera::ConstShPtr cam = f1->camera(_level);
   const Mat3f K = cam->K().cast<float>();
   const Mat3f R = motion.rotationMatrix();
   const Vec3f t = motion.translation();
   const Mat3f Kinv = cam->Kinv().cast<float>();
   const Mat3f Rinv = motionInv.rotationMatrix();
   const Vec3f tinv = motionInv.translation();
-  const cv::Mat & I1 = f1.I();
-  const cv::Mat & Z1 = f1.Z();
-  const float h = f1.height();
-  const float w = f1.width();
+  const cv::Mat & I1 = f1->I(_level);
+  const cv::Mat & Z1 = f1->Z(_level);
+  const float h = f1->height(_level);
+  const float w = f1->width(_level);
   const int bh = std::max<int>(1, (int)(0.01f * h));
   const int bw = std::max<int>(1, (int)(0.01f * w));
 
