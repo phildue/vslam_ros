@@ -43,7 +43,7 @@
 #include <stereo_msgs/msg/disparity_image.hpp>
 
 #include "vslam/vslam.h"
-#include "vslam_ros/Queue.h"
+#include "vslam_ros/Associator.h"
 #include "vslam_ros/visibility_control.h"
 
 namespace vslam_ros
@@ -55,8 +55,10 @@ public:
   NodeRgbdAlignment(const rclcpp::NodeOptions & options);
 
 private:
-  int _fNo;
+  const int _queueSizeMin, _queueSizeMax;
+  const bool _replay;
 
+  int _fNo;
   // Publications
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPath;
@@ -70,7 +72,7 @@ private:
   image_transport::SubscriberFilter _subImage, _subDepth;
 #else
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _subImage, _subDepth;
-  std::shared_ptr<vslam_ros::Queue> _queue;
+  std::shared_ptr<vslam_ros::Associator> _queue;
 #endif
   // Tf
   bool _tfAvailable;
@@ -84,7 +86,7 @@ private:
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr _cliReplayer;
 
   // Timers
-  rclcpp::TimerBase::SharedPtr _periodicTimer;
+  rclcpp::TimerBase::SharedPtr _periodicTimer, _processFrameTimer;
 
   // Synchronization
   using ExactPolicy =
@@ -108,15 +110,21 @@ private:
   geometry_msgs::msg::TransformStamped
     _world2origin;  //transforms from fixed frame to initial pose of optical frame
 
+  vslam::evaluation::tum::DataLoader::ConstShPtr _dl;
+
   void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
   void imageCallback(
     sensor_msgs::msg::Image::ConstSharedPtr msgImg,
     sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
+  vslam::Frame::UnPtr createFrame(
+    sensor_msgs::msg::Image::ConstSharedPtr msgImg,
+    sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
+
   void timerCallback();
   void publish(const rclcpp::Time & t);
   void lookupTf();
-  void triggerReplayer();
+  void setReplay(bool pause);
 };
 }  // namespace vslam_ros
 

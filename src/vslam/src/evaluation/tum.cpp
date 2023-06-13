@@ -211,6 +211,12 @@ void DataLoader::readAssocTextfile(std::string filename)
         buf.erase(std::remove(buf.begin(), buf.end(), ' '), buf.end());
         const long td = std::stol(format("{}000", buf));
         _timestamps.push_back(td);
+        _timestampsImage.push_back(td);
+      } else if (c == 1) {
+        buf.erase(std::remove(buf.begin(), buf.end(), '.'), buf.end());
+        buf.erase(std::remove(buf.begin(), buf.end(), ' '), buf.end());
+        const long td = std::stol(format("{}000", buf));
+        _timestampsDepth.push_back(td);
       } else if (c == 2) {
         _depthFilenames.push_back(buf);
       } else if (c == 4) {
@@ -219,6 +225,14 @@ void DataLoader::readAssocTextfile(std::string filename)
     }
   }
   in_stream.close();
+}
+
+double DataLoader::duration(int from, int to) const
+{
+  return static_cast<double>(
+           timestamps()[std::min<int>(to, timestamps().size() - 1)] -
+           timestamps()[std::max<int>(from, 0)]) /
+         1e9;
 }
 
 }  // namespace vslam::evaluation::tum

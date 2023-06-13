@@ -1,6 +1,7 @@
 
 
 #include <opencv2/highgui.hpp>
+#include <thread>
 
 #include "vslam/core.h"
 #include "vslam/direct_icp.h"
@@ -18,7 +19,8 @@ int main(int UNUSED(argc), char ** UNUSED(argv))
   const std::string outPath = format("{}/algorithm_results/{}", dl->sequencePath(), experimentId);
   const std::string trajectoryAlgoPath = format("{}/{}-algo.txt", outPath, dl->sequenceId());
   const int tRmse = 200;
-  log::initialize(outPath);
+  std::thread thread;
+  log::initialize(outPath, true);
 
   auto directIcp = std::make_shared<DirectIcp>(DirectIcp::defaultParameters());
 
@@ -51,10 +53,19 @@ int main(int UNUSED(argc), char ** UNUSED(argv))
     } catch (const std::runtime_error & e) {
       std::cerr << e.what() << std::endl;
     }
+
     if (fId > tRmse && fId % tRmse == 0) {
-      evaluation::tum::writeTrajectory(*traj, trajectoryAlgoPath);
-      evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
+      if (thread.joinable()) {
+        thread.join();
+      }
+      thread = std::thread([&]() {
+        evaluation::tum::writeTrajectory(*traj, trajectoryAlgoPath);
+        evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
+      });
     };
+  }
+  if (thread.joinable()) {
+    thread.join();
   }
   evaluation::tum::writeTrajectory(*traj, trajectoryAlgoPath);
   evaluation::computeKPIs(dl->sequenceId(), experimentId, false);

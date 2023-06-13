@@ -20,11 +20,16 @@ test:
   script:
     - docker run phildue/vslam:builder /bin/bash -c "colcon test --event-handler console_direct+ ; colcon test-result"
 
-evaluate:
+evaluate sequence:
   stage: test
   script: 
-    - docker run -v/home/phil/dataset:/mnt/dataset phildue/vslam:runtime python3 script/evaluate.py --experiment_name ci_$CI_COMMIT_REF_NAME --sequence_id rgbd_dataset_freiburg2_desk --workspace_dir /app/vslam/ --commit_hash $CI_COMMIT_SHA
+    - docker run -v/home/phil/dataset:/mnt/dataset phildue/vslam:runtime python3 script/evaluate.py --experiment_name ci_$CI_COMMIT_REF_NAME --sequence_id rgbd_dataset_freiburg1_desk --workspace_dir /app/vslam/ --commit_hash $CI_COMMIT_SHA
 
+evaluate set:
+  stage: test
+  script: 
+    - docker run -v/home/phil/dataset:/mnt/dataset phildue/vslam:runtime python3 script/evaluate_set.py --experiment_name ci_$CI_COMMIT_REF_NAME --workspace_dir /app/vslam/ --commit_hash $CI_COMMIT_SHA --override
+  when: manual
 #lint:
 #  stage: test
 #  only: [master,development]

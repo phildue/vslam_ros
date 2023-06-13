@@ -14,10 +14,8 @@ NodeEvaluation::NodeEvaluation(const rclcpp::NodeOptions & options)
     "/odom", 10, std::bind(&NodeEvaluation::callback, this, std::placeholders::_1))),
   _pub(create_publisher<nav_msgs::msg::Path>("/path/gt", 10))
 {
-  _outputDirectory = declare_parameter(
-    "outputDirectory", "/media/data/dataset/rgbd_dataset_freiburg2_desk/test.txt");
-  _algoFileName =
-    declare_parameter("algoOutputFile", "/media/data/dataset/rgbd_dataset_freiburg2_desk/test.txt");
+  _outputDirectory = declare_parameter("outputDirectory", "/tmp/");
+  _algoFileName = declare_parameter("algoOutputFile", "/tmp/trajectory.txt");
   log::initialize(_outputDirectory);
   RCLCPP_INFO(get_logger(), "Creating output at [%s]", _outputDirectory.c_str());
   _trajAlgo = std::make_shared<Trajectory>();

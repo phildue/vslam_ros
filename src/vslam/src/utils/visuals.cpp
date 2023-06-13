@@ -2,7 +2,6 @@
 #include <opencv2/imgproc.hpp>
 
 #include "visuals.h"
-
 namespace vslam
 {
 cv::Mat colorizedDepth(const cv::Mat & depth, double zMax)
@@ -33,5 +32,21 @@ cv::Mat colorizedRgbd(const cv::Mat & intensity, const cv::Mat & depth, double z
   cv::Mat intensityColor;
   cv::cvtColor(intensity, intensityColor, cv::COLOR_GRAY2BGR);
   return blend(intensityColor, depthColor, 0.7);
+}
+
+cv::Mat visualizeFrame(Frame::ConstShPtr frame)
+{
+  cv::Mat img = colorizedRgbd(frame->I(), frame->depth());
+  cv::putText(
+    img, format("{} | {}", frame->id(), frame->t()), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX,
+    1.0, cv::Scalar(255, 255, 255));
+  return img;
+}
+
+cv::Mat visualizeFramePair(Frame::ConstShPtr f0, Frame::ConstShPtr f1)
+{
+  cv::Mat overlay;
+  cv::hconcat(std::vector<cv::Mat>({visualizeFrame(f0), visualizeFrame(f1)}), overlay);
+  return overlay;
 }
 }  // namespace vslam

@@ -36,7 +36,7 @@ add_subdirectory(src/vslam)
 
 add_library(${PROJECT_NAME} STATIC
     src/ros/converter.cpp
-    src/ros/Queue.cpp)
+    src/ros/Associator.cpp)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -52,7 +52,9 @@ add_library(vslam_ros_nodes SHARED
   src/ros/nodes/NodeStereoDepth.cpp
   src/ros/nodes/NodeRgbdAlignment.cpp
   src/ros/nodes/NodeEvaluation.cpp
-  src/ros/nodes/NodeReplayer.cpp)
+  src/ros/nodes/NodeReplayer.cpp
+  src/ros/nodes/NodeReplayerExtracted.cpp)
+
 target_link_libraries(vslam_ros_nodes ${PROJECT_NAME})
 set_property(TARGET vslam_ros_nodes PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -61,6 +63,13 @@ rclcpp_components_register_nodes(
     PLUGIN "vslam_ros::NodeReplayer"
     EXECUTABLE node_replayer
 )
+
+rclcpp_components_register_nodes(
+    vslam_ros_nodes
+    PLUGIN "vslam_ros::NodeReplayerExtracted"
+    EXECUTABLE node_replayer_extracted
+)
+
 rclcpp_components_register_node(
     vslam_ros_nodes
     PLUGIN "vslam_ros::NodeRgbdAlignment"
