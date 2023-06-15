@@ -198,7 +198,7 @@ void NodeReplayer::replayNext()
   }
   publish(msg);
   _tLast = msg->time_stamp;
-}  // namespace vslam_ros
+}
 
 rcl_time_point_value_t NodeReplayer::seek(rcl_time_point_value_t t)
 {

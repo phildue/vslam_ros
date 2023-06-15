@@ -12,28 +12,32 @@ namespace vslam
 {
 std::map<std::string, double> DirectIcp::defaultParameters()
 {
-  return {{"nLevels", 4.0},           {"weightPrior", 0.0},         {"minGradientIntensity", 5},
-          {"minGradientDepth", 0.01}, {"maxGradientDepth", 0.3},    {"maxDepth", 5.0},
-          {"maxIterations", 100},     {"minParameterUpdate", 1e-4}, {"maxErrorIncrease", 1.1},
-          {"maxPoints", 640 * 480}};
+  return {
+    {"nLevels", 4.0},
+    {"minGradientIntensity", 5},
+    {"minGradientDepth", 0.01},
+    {"maxGradientDepth", 0.3},
+    {"maxDepth", 5.0},
+    {"maxIterations", 100},
+    {"minParameterUpdate", 1e-4},
+    {"maxErrorIncrease", 1.5},
+    {"maxPoints", 640 * 480}};
 }
 
 DirectIcp::DirectIcp(const std::map<std::string, double> params)
 : DirectIcp(
-    params.at("nLevels"), params.at("weightPrior"), params.at("minGradientIntensity"),
-    params.at("minGradientDepth"), params.at("maxGradientDepth"), params.at("maxDepth"),
-    params.at("maxIterations"), params.at("minParameterUpdate"), params.at("maxErrorIncrease"),
-    params.at("maxPoints"))
+    params.at("nLevels"), params.at("minGradientIntensity"), params.at("minGradientDepth"),
+    params.at("maxGradientDepth"), params.at("maxDepth"), params.at("maxIterations"),
+    params.at("minParameterUpdate"), params.at("maxErrorIncrease"), params.at("maxPoints"))
 {
 }
 DirectIcp::DirectIcp(
-  int nLevels, double weightPrior, double minGradientIntensity, double minGradientDepth,
-  double maxGradientDepth, double maxZ, double maxIterations, double minParameterUpdate,
-  double maxErrorIncrease, int maxPoints)
+  int nLevels, double minGradientIntensity, double minGradientDepth, double maxGradientDepth,
+  double maxZ, double maxIterations, double minParameterUpdate, double maxErrorIncrease,
+  int maxPoints)
 : _weightFunction(std::make_shared<TDistributionBivariate>(5.0, 1e-3, 10)),
   _nLevels(nLevels),
   _maxPoints(maxPoints),
-  _weightPrior(weightPrior),
   _minGradientIntensity(minGradientIntensity),
   _minGradientDepth(minGradientDepth),
   _maxGradientDepth(maxGradientDepth),
@@ -45,8 +49,15 @@ DirectIcp::DirectIcp(
 }
 
 Pose DirectIcp::computeEgomotion(
+  Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const SE3d & guess)
+{
+  return computeEgomotion(frame0, frame1, Pose(guess, Mat6d::Identity() * INFd));
+}
+
+Pose DirectIcp::computeEgomotion(
   Camera::ConstShPtr cam, const cv::Mat & intensity0, const cv::Mat & depth0,
-  const cv::Mat & intensity1, const cv::Mat & depth1, const Pose & guess)
+  const cv::Mat & intensity1, const cv::Mat & depth1, const SE3d & guess,
+  const Mat6d & guessCovariance)
 {
   auto f0 = std::make_shared<Frame>(intensity0, depth0, cam);
   f0->computePyramid(_nLevels);
@@ -55,16 +66,15 @@ Pose DirectIcp::computeEgomotion(
   auto f1 = std::make_shared<Frame>(intensity1, depth1, cam);
   f1->computePyramid(_nLevels);
 
-  return computeEgomotion(f0, f1, guess);
+  return computeEgomotion(f0, f1, Pose(guess, guessCovariance));
 }
 
 Pose DirectIcp::computeEgomotion(
-  Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose & guess)
+  Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose & prior)
 {
   TIMED_SCOPE(timer, "computeEgomotion");
 
-  SE3f prior = guess.SE3().cast<float>();
-  SE3f motion = prior;
+  SE3f motion = prior.SE3().cast<float>();
   Mat6f covariance;
   for (_level = _nLevels - 1; _level >= 0; _level--) {
     TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
@@ -88,7 +98,11 @@ Pose DirectIcp::computeEgomotion(
         _weightFunction->computeWeights(constraintsValid);
       }
 
-      const NormalEquations ne = computeNormalEquations(constraintsValid, motion, prior);
+      NormalEquations ne = computeNormalEquations(constraintsValid);
+
+      if (prior.cov().allFinite()) {
+        ne += computeNormalEquations(prior, motion);
+      }
 
       if (ne.error / error > _maxErrorIncrease) {
         reason = format("Error increased: {:.2f}/{:.2f}", ne.error, error);
@@ -242,19 +256,28 @@ std::vector<DirectIcp::Constraint::ShPtr> DirectIcp::computeResidualsAndJacobian
 }
 
 DirectIcp::NormalEquations DirectIcp::computeNormalEquations(
-  const std::vector<DirectIcp::Constraint::ShPtr> & constraints, const SE3f & motion,
-  const SE3f & prior) const
+  const std::vector<DirectIcp::Constraint::ShPtr> & constraints) const
 {
   TIMED_SCOPE_IF(timer2, format("computeNormalEquations{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
-  const Vec6f diffPrior = (motion * prior.inverse()).log().cast<float>();
-  return std::transform_reduce(
+  NormalEquations ne = std::transform_reduce(
     std::execution::par_unseq, constraints.begin(), constraints.end(),
-    NormalEquations({_weightPrior * Mat6f::Identity(), _weightPrior * diffPrior, diffPrior.norm()}),
-    std::plus<NormalEquations>{}, [](auto c) {
+    NormalEquations({Mat6f::Zero(), Vec6f::Zero(), 0.0, 0}), std::plus<NormalEquations>{},
+    [](auto c) {
       return NormalEquations(
         {c->J.transpose() * c->weight * c->J, c->J.transpose() * c->weight * c->residual,
-         c->residual.transpose() * c->weight * c->residual});
+         c->residual.transpose() * c->weight * c->residual, 1});
     });
+
+  return ne;
+}
+
+DirectIcp::NormalEquations DirectIcp::computeNormalEquations(
+  const Pose & prior, const SE3f & motion)
+{
+  const Mat6f priorInformation = prior.cov().inverse().cast<float>();
+  const Vec6f priorError =
+    priorInformation * ((motion * prior.SE3().inverse().cast<float>()).log());
+  return {priorInformation, priorError, priorError.norm(), 1};
 }
 
 Vec6f DirectIcp::computeJacobianSE3z(const Vec3f & p) const
@@ -351,9 +374,10 @@ void DirectIcp::TDistributionBivariate::computeWeights(
 
     const double diff = (_scale - scale_i).norm();
     _scale = scale_i;
+    const double norm = _scale.norm();
     for (size_t n = 0; n < features.size(); n++) {
       weights(n) = computeWeight(features[n]->residual);
-      features[n]->weight = weights(n) * _scale;
+      features[n]->weight = weights(n) * _scale / norm;
     }
 
     if (diff < _precision) {

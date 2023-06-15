@@ -50,8 +50,8 @@ sequences = [
             "rgbd_dataset_freiburg2_desk",
             # "rgbd_dataset_freiburg2_desk_validation",
             # "rgbd_dataset_freiburg2_pioneer_360",
-            # "rgbd_dataset_freiburg2_pioneer_slam",
-            # "rgbd_dataset_freiburg3_long_office_household",
+            "rgbd_dataset_freiburg3_long_office_household",
+            "rgbd_dataset_freiburg2_pioneer_slam",
 ]
 
 failed_sequences = []

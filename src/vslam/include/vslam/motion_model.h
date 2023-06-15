@@ -13,12 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_H__
-#define VSLAM_H__
-#include "vslam/core.h"
-#include "vslam/direct_icp.h"
-#include "vslam/motion_model.h"
-#include "vslam/evaluation.h"
-#include "vslam/utils.h"
+#ifndef VSLAM_MOTION_MODEL_PACKAGE_H__
+#define VSLAM_MOTION_MODEL_PACKAGE_H__
+#include "motion_model/ConstantVelocityModel.h"
 
-#endif
+#endif  // VSLAM_MOTION_MODEL_PACKAGE_H__

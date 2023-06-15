@@ -43,7 +43,7 @@ int main(int UNUSED(argc), char ** UNUSED(argv))
       cv::waitKey(1);
       {
         TIMED_SCOPE(timer, "computeFrame");
-        motion = directIcp->computeEgomotion(dl->cam(), img0, depth0, img, depth, motion);
+        motion = directIcp->computeEgomotion(dl->cam(), img0, depth0, img, depth, motion.SE3());
       }
       pose = motion * pose;
       traj->append(dl->timestamps()[fId], pose.inverse());
