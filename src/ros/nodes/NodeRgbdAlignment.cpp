@@ -51,11 +51,16 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
     _cliReplayer = create_client<std_srvs::srv::SetBool>("togglePlay");
   }
 
-  for (auto name_value : DirectIcp::defaultParameters()) {
-    _paramsIcp[name_value.first] =
-      declare_parameter(format("direct_icp.{}", name_value.first), name_value.second);
+  for (const auto & [name, value] : DirectIcp::defaultParameters()) {
+    _paramsIcp[name] = declare_parameter(format("direct_icp.{}", name), value);
   }
   _directIcp = std::make_shared<DirectIcp>(_paramsIcp);
+
+  std::map<std::string, double> paramsModel;
+  for (const auto & [name, value] : ConstantVelocityModel::defaultParameters()) {
+    paramsModel[name] = declare_parameter(format("motion_model.{}", name), value);
+  }
+  _motionModel = std::make_shared<ConstantVelocityModel>(paramsModel);
 
 #ifdef USE_ROS2_SYNC
 
@@ -141,10 +146,14 @@ void NodeRgbdAlignment::imageCallback(
   }
   _frame0->computeDerivatives();
   _frame0->computePcl();
-  _motion = _directIcp->computeEgomotion(_frame0, f, _motion);
-  _frame0 = f;
+  const Pose prior = _motionModel->predict(_frame0->t(), f->t());
+  _motion = _directIcp->computeEgomotion(_frame0, f, prior);
 
-  _pose = _motion * _pose;
+  _pose.SE3() = _motion.SE3() * _pose.SE3();
+  _pose.cov() = _motion.cov();
+  f->pose() = _pose;
+  _motionModel->update(f->pose(), f->t());
+  _frame0 = f;
   _trajectory.append(f->t(), _pose);
   publish(msgImg->header.stamp);
 }
@@ -183,7 +192,9 @@ void NodeRgbdAlignment::timerCallback()
   }
   RCLCPP_INFO(
     get_logger(),
-    format("Egomotion: {} m {}°", _motion.translation().transpose(), _motion.totalRotationDegrees())
+    format(
+      "Egomotion: {} m/s {:.2f}°/s", _motionModel->velocity().translation().transpose(),
+      _motionModel->velocity().totalRotationDegrees())
       .c_str());
 }
 

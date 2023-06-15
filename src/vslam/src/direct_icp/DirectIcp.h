@@ -37,9 +37,18 @@ public:
     Mat6f A;
     Vec6f b;
     float error;
+    int nConstraints;
     NormalEquations operator+(const NormalEquations & that) const
     {
-      return NormalEquations({A + that.A, b + that.b, error + that.error});
+      return NormalEquations(
+        {A + that.A, b + that.b, error + that.error, nConstraints + that.nConstraints});
+    }
+    void operator+=(const NormalEquations & that)
+    {
+      A += that.A;
+      b += that.b;
+      error += that.error;
+      nConstraints += that.nConstraints;
     }
   };
 
@@ -50,6 +59,7 @@ public:
     TDistributionBivariate(double dof, double precision = 1e-3, int maxIterations = 50);
     void computeWeights(const std::vector<Constraint::ShPtr> & r);
     double computeWeight(const Vec2f & r) const;
+    const Mat2f & scale() const { return _scale; };
 
   private:
     const double _dof, _precision;
@@ -61,22 +71,24 @@ public:
 
   DirectIcp(const std::map<std::string, double> params);
   DirectIcp(
-    int nLevels = 4, double weightPrior = 0.0, double minGradientIntensity = 5,
-    double minGradientDepth = INFd, double maxGradientDepth = 0.3, double maxZ = 5.0,
-    double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1,
-    int maxPoints = INFi);
-  Pose computeEgomotion(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose & guess);
+    int nLevels = 4, double minGradientIntensity = 5, double minGradientDepth = INFd,
+    double maxGradientDepth = 0.3, double maxZ = 5.0, double maxIterations = 100,
+    double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1, int maxPoints = INFi);
 
   Pose computeEgomotion(
     Camera::ConstShPtr cam, const cv::Mat & intensity0, const cv::Mat & depth0,
-    const cv::Mat & intensity1, const cv::Mat & depth1, const Pose & guess);
+    const cv::Mat & intensity1, const cv::Mat & depth1, const SE3d & guess,
+    const Mat6d & guessCovariance = Mat6d::Identity() * INFd);
+
+  Pose computeEgomotion(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const SE3d & guess);
+  Pose computeEgomotion(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose & guess);
 
   int nLevels() { return _nLevels; }
 
 private:
   const TDistributionBivariate::ShPtr _weightFunction;
   const int _nLevels, _maxPoints;
-  const double _weightPrior, _minGradientIntensity, _minGradientDepth, _maxGradientDepth, _maxDepth,
+  const double _minGradientIntensity, _minGradientDepth, _maxGradientDepth, _maxDepth,
     _maxIterations, _minParameterUpdate, _maxErrorIncrease;
 
   int _level, _iteration;
@@ -87,9 +99,9 @@ private:
   std::vector<Constraint::ShPtr> computeResidualsAndJacobian(
     const std::vector<Constraint::ShPtr> & features, Frame::ConstShPtr, const SE3f & motion) const;
 
-  NormalEquations computeNormalEquations(
-    const std::vector<Constraint::ShPtr> & constraints, const SE3f & motion,
-    const SE3f & prior) const;
+  NormalEquations computeNormalEquations(const std::vector<Constraint::ShPtr> & constraints) const;
+
+  NormalEquations computeNormalEquations(const Pose & prior, const SE3f & motion);
 
   Matf<2, 6> computeJacobianWarp(const Vec3f & p, Camera::ConstShPtr cam) const;
 

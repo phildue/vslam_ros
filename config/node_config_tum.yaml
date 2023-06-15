@@ -9,9 +9,12 @@
       nLevels: 4.0
       maxIterations: 100.0
       minParameterUpdate: 0.0001
-      maxErrorIncrease: 1.5
-      weightPrior: 0.0000
+      maxErrorIncrease: 10.5
       maxPoints: 307200.0
+    motion_model:
+      variance: 0.03
+      maxTranslationalVelocity: 1000.0
+      maxAngularVelocity: 1000.0
     sync:
       queue_size_max: 50
       queue_size_min: 10

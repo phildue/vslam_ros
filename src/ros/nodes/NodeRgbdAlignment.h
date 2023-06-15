@@ -100,6 +100,7 @@ private:
 
   // Algorithm
   vslam::DirectIcp::ShPtr _directIcp;
+  vslam::ConstantVelocityModel::ShPtr _motionModel;
   vslam::Camera::ShPtr _camera;
   vslam::Pose _motion, _pose;
   vslam::Trajectory _trajectory;
