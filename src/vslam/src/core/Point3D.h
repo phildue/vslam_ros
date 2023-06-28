@@ -24,6 +24,7 @@
 #include <memory>
 #include <vector>
 
+#include "types.h"
 namespace vslam
 {
 class Feature2D;

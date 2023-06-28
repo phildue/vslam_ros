@@ -383,15 +383,19 @@
             "type": "pickString",
             "description": "vslam unit test",
             "options":[
-                "frame2Test",
-                "rgbd_alignmentTest",
-                "rpeTest",
-                "motion_modelTest",
-                "ekf_se3Test",
-                "trackingTest",
-              "trajectoryTest",
-              "mapTest",
-              "frameTest",
+                "test_descriptor_matching",
+                "test_frame2",
+                "test_rgbd_alignment",
+                "test_rpe",
+                "test_motion_model",
+                "test_ekf_se3",
+                "test_tracking",
+                "test_direct_icp",
+                "test_track_and_optimize",
+                "test_trajectory",
+                "test_map",
+                "test_frame",
+                "test_ba"
             ]
           },
     ]

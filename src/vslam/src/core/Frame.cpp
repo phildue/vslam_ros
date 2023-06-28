@@ -45,7 +45,7 @@ Frame::Frame(
 }
 Frame::Frame(
   const cv::Mat & intensity, Camera::ConstShPtr cam, const Timestamp & t, const Pose & pose)
-: Frame(intensity, -1 * cv::Mat(cv::Size(intensity.rows, intensity.cols), CV_32F), cam, t, pose)
+: Frame(intensity, -1 * cv::Mat(cv::Size(intensity.cols, intensity.rows), CV_32F), cam, t, pose)
 {
 }
 

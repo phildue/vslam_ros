@@ -4,5 +4,6 @@ install/
 __pycache__
 *.log
 .venv
+.vscode-server
 *.egg-info
 wandb

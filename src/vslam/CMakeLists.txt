@@ -22,7 +22,11 @@ set( sources
     src/evaluation/tum.cpp
     src/direct_icp/DirectIcp.cpp
     src/motion_model/ConstantVelocityModel.cpp
-    #src/mapping/KeyFrameSelection.cpp
+    src/bundle_adjustment/BundleAdjustment.cpp
+    src/descriptor_matching/overlays.cpp
+    src/descriptor_matching/FeatureTracking.cpp
+    src/descriptor_matching/FeatureTrackingOcv.cpp
+    src/descriptor_matching/Matcher.cpp
     #src/mapping/Map.cpp
     /usr/local/include/easylogging++.cc
    )
@@ -44,6 +48,12 @@ set( headers
     src/evaluation/tum.h
     src/direct_icp/DirectIcp.h
     src/motion_model/ConstantVelocityModel.h
+    src/bundle_adjustment/BundleAdjustment.h
+    src/descriptor_matching/overlays.h
+    src/descriptor_matching/FeatureTracking.h
+    src/descriptor_matching/FeatureTrackingOcv.h
+    src/descriptor_matching/Matcher.h
+
    # src/mapping/KeyFrameSelection.h
    # src/mapping/Map.h
     /usr/local/include/easylogging++.h 
@@ -51,13 +61,10 @@ set( headers
     include/vslam/direct_icp.h 
     include/vslam/evaluation.h 
     include/vslam/utils.h 
+    include/vslam/descriptor_matching.h
   )
 pd_setup_lib(${PROJECT_NAME} ${PROJECT_VERSION} "${sources}" "${headers}" pd)
 add_library(pd::vslam ALIAS vslam)
-#target_link_libraries(${PROJECT_NAME} INTERFACE core lukas_kanade least_squares utils odometry mapping evaluation)
-target_include_directories(${PROJECT_NAME} INTERFACE
-$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/>
-$<INSTALL_INTERFACE:include/vslam>)
 
 if(UNIX)
   target_link_libraries(${PROJECT_NAME} stdc++fs)
@@ -91,6 +98,10 @@ target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES})
 find_package(TBB REQUIRED)
 target_link_libraries(${PROJECT_NAME} TBB::tbb)
 
+find_package(Ceres REQUIRED)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CERES_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${CERES_LIBRARIES})
+
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_FEATURE_PERFORMANCE_TRACKING)
 target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_PERFORMANCE_MICROSECONDS)
@@ -103,13 +114,9 @@ if(VSLAM_LOG_MINIMAL)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_PERFORMANCE_TRACKING)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_DEBUG_LOGS)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ELPP_DISABLE_INFO_LOGS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC LOG_DISABLE_IMAGE_LOGS)
+
 endif()
-
-
-add_executable(evaluate_tum test/main_tum.cpp)
-target_compile_definitions(evaluate_tum PUBLIC "CONFIG_DIR=\"${VSLAM_CONFIG_DIR}\"")
-target_link_libraries(evaluate_tum vslam)
-
 
 
 # Add tests
@@ -123,6 +130,15 @@ if(VSLAM_BUILD_TESTS)
   else()
       set(TEST_VISUALIZE false)
   endif()
+  
+  pd_add_test(direct_icp ${CMAKE_CURRENT_LIST_DIR}/test/direct_icp/test_direct_icp.cpp)
+  pd_add_test(ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ba.cpp)
+  pd_add_test(ceres_ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ceres_ba.cpp)
+  
+  pd_add_test(matching ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_matching.cpp)
+  pd_add_test(descriptor_odometry ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_odometry.cpp)
+  pd_add_test(match_and_optimize ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_match_and_optimize.cpp)
+
 
   #pd_add_test(frame2 ${PROJECT_NAME} 
   #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
@@ -161,13 +177,9 @@ if(VSLAM_BUILD_TESTS)
   #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
   #TEST_VISUALIZE=${TEST_VISUALIZE})
 
-  #pd_add_test(tracking ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
+  
 
-  #pd_add_test(track_and_optimize ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
+
 
   #pd_add_test(ba ${PROJECT_NAME} 
   #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"

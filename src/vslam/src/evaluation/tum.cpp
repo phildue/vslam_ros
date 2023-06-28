@@ -140,6 +140,31 @@ cv::Mat convertDepthMat(const cv::Mat & depth_, float factor)
   return depth;
 }
 
+cv::Mat loadDepth(const std::string & path)
+{
+  // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
+  cv::Mat depth = cv::imread(path, cv::IMREAD_ANYDEPTH);
+  if (depth.empty()) {
+    throw std::runtime_error(format("Could not load depth from [{}]", path));
+  }
+  if (depth.type() != CV_16U) {
+    throw std::runtime_error(format("Depth image loaded incorrectly from [{}].", path));
+  }
+
+  depth = convertDepthMat(depth, 0.0002);
+
+  return depth;
+}
+cv::Mat loadIntensity(const std::string & path)
+{
+  cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+
+  if (img.empty()) {
+    throw std::runtime_error(format("Could not load image from [{}]", path));
+  }
+  return img;
+}
+
 DataLoader::DataLoader(const std::string & datasetRoot, const std::string & sequenceId)
 : _datasetRoot(datasetRoot),
   _sequenceId(sequenceId),
@@ -161,31 +186,14 @@ Frame::UnPtr DataLoader::loadFrame(std::uint64_t fNo) const
     _timestamps.at(fNo));
 }
 */
+
 cv::Mat DataLoader::loadDepth(std::uint64_t fNo) const
 {
-  // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
-  const std::string path = format("{}/{}", extracteDataPath(), pathsDepth()[fNo]);
-  cv::Mat depth = cv::imread(path, cv::IMREAD_ANYDEPTH);
-  if (depth.empty()) {
-    throw std::runtime_error(format("Could not load depth from [{}]", path));
-  }
-  if (depth.type() != CV_16U) {
-    throw std::runtime_error(format("Depth image loaded incorrectly from [{}].", path));
-  }
-
-  depth = convertDepthMat(depth, 0.0002);
-
-  return depth;
+  return tum::loadDepth(format("{}/{}", extracteDataPath(), pathsDepth()[fNo]));
 }
 cv::Mat DataLoader::loadIntensity(std::uint64_t fNo) const
 {
-  const std::string path = format("{}/{}", extracteDataPath(), pathsImage()[fNo]);
-  cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
-
-  if (img.empty()) {
-    throw std::runtime_error(format("Could not load image from [{}]", path));
-  }
-  return img;
+  return tum::loadIntensity(format("{}/{}", extracteDataPath(), pathsImage()[fNo]));
 }
 
 void DataLoader::readAssocTextfile(std::string filename)

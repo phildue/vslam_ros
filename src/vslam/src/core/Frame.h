@@ -16,6 +16,7 @@
 #ifndef VSLAM_FRAME_H__
 #define VSLAM_FRAME_H__
 #include <memory>
+#include <opencv2/core.hpp>
 
 #include "Camera.h"
 #include "Feature2D.h"

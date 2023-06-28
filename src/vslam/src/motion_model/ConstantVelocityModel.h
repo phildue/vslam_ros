@@ -32,7 +32,7 @@ public:
 
   static std::map<std::string, double> defaultParameters()
   {
-    return {{"variance", 0.05}, {"maxTranslationalVelocity", 0.2}, {"maxAngularVelocity", 1.5}};
+    return {{"variance", 0.05}, {"maxTranslationalVelocity", 10.0}, {"maxAngularVelocity", 180.0}};
   }
 
   ConstantVelocityModel(const std::map<std::string, double> & params);
