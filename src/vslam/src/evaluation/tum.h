@@ -30,6 +30,8 @@ void writeTrajectory(
 void computeRPE(const std::string & pathAlgo, const std::string & pathGt);
 
 cv::Mat convertDepthMat(const cv::Mat & depth, float factor = 0.0002);
+cv::Mat loadDepth(const std::string & path);
+cv::Mat loadIntensity(const std::string & path);
 
 vslam::Camera::ShPtr Camera();
 

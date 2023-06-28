@@ -105,44 +105,6 @@
         }
       ]
     },
-    {
-        "name": "(gdb) Launch App",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/vslam_ros/src/vslam/evaluate_tum",
-        "args": [],
-        "preLaunchTask": "build_app",
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ]
-      },
-      {
-        "name": "(gdb) Launch App DVO",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/vslam_ros/src/vslam/src/app/compare_dvo",
-        "preLaunchTask": "build_app_dvo",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ]
-      },
     // Example launch of a python file
     {
       "name": "Python: Current File",
@@ -246,15 +208,19 @@
         "type": "pickString",
         "description": "vslam unit test",
         "options":[
-            "frame2Test",
-            "rgbd_alignmentTest",
-            "rpeTest",
-            "motion_modelTest",
-            "ekf_se3Test",
-            "trackingTest",
-          "trajectoryTest",
-          "mapTest",
-          "frameTest",
+        "test_descriptor_matching",
+        "test_frame2",
+        "test_rgbd_alignment",
+        "test_rpe",
+        "test_motion_model",
+        "test_ekf_se3",
+        "test_tracking",
+        "test_direct_icp",
+        "test_track_and_optimize",
+        "test_trajectory",
+        "test_map",
+        "test_frame",
+        "test_ba"
         ]
       },
       {

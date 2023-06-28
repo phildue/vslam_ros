@@ -54,9 +54,9 @@ rm build -r
 
 
 # Ceres
-#RUN apt-get install libatlas-base-dev libsuitesparse-dev && git clone https://ceres-solver.googlesource.com/ceres-solver &&\
-#cd ceres-solver && git checkout $(git describe --tags) && mkdir build && cd build && \
-#cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF && make -j2 && make install && cd .. && rm build -r
+RUN apt-get install libatlas-base-dev libsuitesparse-dev && git clone https://ceres-solver.googlesource.com/ceres-solver &&\
+cd ceres-solver && git checkout $(git describe --tags) && mkdir build && cd build && \
+cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF && make -j2 && make install && cd .. && rm build -r
 #RUN git clone https://github.com/phildue/manif-geom-cpp.git && cd manif-geom-cpp && mkdir build && cd build && cmake .. -DBUILD_TESTS=Off && make -j && make install
 #RUN git clone https://github.com/goromal/ceres-factors.git && cd ceres-factors && mkdir build && cd build && cmake .. && make && make install
 

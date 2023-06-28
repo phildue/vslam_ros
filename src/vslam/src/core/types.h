@@ -25,7 +25,6 @@
 
 #include <Eigen/Dense>
 #include <limits>
-#include <opencv2/core.hpp>
 #include <sophus/se3.hpp>
 
 #define INFd std::numeric_limits<double>::infinity()
@@ -87,6 +86,7 @@ typedef Eigen::Vector3d Vec3d;
 typedef Eigen::Vector4d Vec4d;
 typedef Eigen::Matrix<double, 2, 2> Mat2d;
 typedef Eigen::Matrix<double, 3, 3> Mat3d;
+typedef Eigen::Matrix<double, 3, 3> Mat4d;
 typedef Eigen::Matrix<double, 6, 1> Vec6d;
 typedef Eigen::Matrix<double, 6, 6> Mat6d;
 typedef Eigen::Matrix<double, 12, 1> Vec12d;

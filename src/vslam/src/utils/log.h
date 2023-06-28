@@ -1,60 +1,48 @@
 #ifndef VSLAM_LOG_H__
 #define VSLAM_LOG_H__
 #include <Eigen/Dense>
-#include <filesystem>
+#include <opencv2/highgui.hpp>
 
 #include "easylogging++.h"
 namespace vslam::log
 {
+struct Config
+{
+  typedef std::shared_ptr<Config> ShPtr;
+  bool show = false;
+  int delay = 0;
+  bool save = false;
+  int throttle = 1;
+};
+
 void initialize(const std::string & logfile, bool clean = false);
 
 void create(const std::string & name);
 
-/**
-   * @brief Load eigen matrix from csv
-   *
-   * Usage:
-   * Matrix3d A = load_csv<MatrixXd>("A.csv");
-   * Matrix3d B = load_csv<Matrix3d>("B.csv");
-   * Source: https://stackoverflow.com/questions/34247057/how-to-read-csv-file-and-assign-to-eigen-matrix
-   *
-   * @param path to csv
-   * @return Matrix
-   */
-template <typename M>
-M loadMatCsv(const std::filesystem::path & path, char delim = ',')
+void show(const std::string & name, const cv::Mat & mat, int delay = 0);
+
+Config::ShPtr config(const std::string & name);
+
+template <typename Drawable>
+void show(const std::string & name, const Drawable & drawable, int delay = 0)
 {
-  std::ifstream indata;
-  indata.open(path);
-  std::string line;
-  std::vector<double> values;
-  uint rows = 0;
-  while (std::getline(indata, line)) {
-    std::stringstream lineStream(line);
-    std::string cell;
-    while (std::getline(lineStream, cell, delim)) {
-      values.push_back(std::stod(cell));
-    }
-    ++rows;
-  }
-  return Eigen::Map<const Eigen::Matrix<
-    typename M::Scalar, M::RowsAtCompileTime, M::ColsAtCompileTime, Eigen::RowMajor>>(
-    values.data(), rows, values.size() / rows);
+  cv::imshow(name, drawable());
+  cv::waitKey(delay);
 }
-template <typename Derived>
-std::string toCsv(const Eigen::DenseBase<Derived> & mat, const std::string & delim = ",")
+
+#ifndef LOG_DISABLE_IMAGE_LOGS
+template <typename Drawable>
+void append(const std::string & name, const Drawable & drawable)
 {
-  std::stringstream ss;
-  for (int i = 0; i < mat.rows(); i++) {
-    for (int j = 0; j < mat.cols(); j++) {
-      if (i > 0 || j > 0) {
-        ss << delim;
-      }
-      ss << mat(i, j);
-    }
-  }
-  return ss.str();
+  auto _config = config(name);
+  if (_config->show) show(name, drawable, _config->delay);
 }
+#else
+template <typename Drawable>
+void append(const std::string & name, const Drawable & drawable)
+{
+}
+#endif
 
 }  // namespace vslam::log
 #endif
