@@ -62,6 +62,8 @@ set( headers
     include/vslam/evaluation.h 
     include/vslam/utils.h 
     include/vslam/descriptor_matching.h
+    include/vslam/keypoint_selection.h 
+
   )
 pd_setup_lib(${PROJECT_NAME} ${PROJECT_VERSION} "${sources}" "${headers}" pd)
 add_library(pd::vslam ALIAS vslam)
