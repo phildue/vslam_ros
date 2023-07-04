@@ -81,7 +81,7 @@ find_package(Sophus REQUIRED)
 target_link_libraries(${PROJECT_NAME} Sophus::Sophus)
 
 # While format is not implemented in gcc we use this thirdparty
-find_package(fmt)
+find_package(fmt 9.0.0 REQUIRED)
 target_link_libraries(${PROJECT_NAME} fmt::fmt)
 
 

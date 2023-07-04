@@ -117,7 +117,7 @@ Pose DirectIcp::computeEgomotion(
       covariance = ne.A.inverse();
 
       if (dx.norm() < _minParameterUpdate) {
-        reason = format("Minimum step size reached: {:5.f}/{:5.f}", dx.norm(), _minParameterUpdate);
+        reason = format("Minimum step size reached: {:.5f}/{:.5f}", dx.norm(), _minParameterUpdate);
         break;
       }
     }

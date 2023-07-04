@@ -22,10 +22,17 @@
 
 #include <fmt/chrono.h>
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 
 #include <Eigen/Dense>
 #include <limits>
 #include <sophus/se3.hpp>
+
+template <typename T> requires std::is_base_of_v<Eigen::DenseBase<T>, T> struct fmt::formatter<T> : ostream_formatter {};
+template <typename T> struct fmt::formatter<Eigen::WithFormat<T>> : ostream_formatter {};
+
+using fmt::format;
+using fmt::print;
 
 #define INFd std::numeric_limits<double>::infinity()
 #define INFf std::numeric_limits<float>::infinity()
@@ -39,13 +46,6 @@ namespace Eigen
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 }
 
-using fmt::format;
-using fmt::print;
-template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of_v<Eigen::DenseBase<T>, T>, char>>
-: ostream_formatter
-{
-};
 
 namespace vslam
 {

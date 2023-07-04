@@ -15,7 +15,7 @@
 
 #ifndef VSLAM_ROS2_CONVERTER_H__
 #define VSLAM_ROS2_CONVERTER_H__
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <vslam/vslam.h>
 
 #include <geometry_msgs/msg/pose.hpp>
