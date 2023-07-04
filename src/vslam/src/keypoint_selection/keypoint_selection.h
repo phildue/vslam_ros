@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <execution>
+#include <numeric>
 #include <vector>
 
 #include "core/Frame.h"
@@ -16,24 +17,24 @@ std::vector<Vec2d> select(Frame::ConstShPtr f, int level, Criterion criterion)
   for (size_t v = 0; v < f->height(level); v++) {
     vs[v] = v;
   }
-  //TODO this could be a transform_reduce:
-  // ( transform: (uv) -> (vector<vector<KeyPoint>>) | accumulate: vector<vector<KeyPoint>> -> (vector<KeyPoint>))
-  std::vector<std::vector<Vec2d>> keypoints(f->height(level));
-  std::transform(vs.begin(), vs.end(), keypoints.begin(), [&](int v) {
-    std::vector<Vec2d> kps;
-    kps.reserve(f->width(level));
-    for (size_t u = 0; u < f->width(level); u++) {
-      if (criterion(Vec2d(u, v))) {
-        kps.push_back(Vec2d(u, v));
+
+  std::vector<Vec2d> keypoints = std::transform_reduce(
+    std::execution::par_unseq, vs.begin(), vs.end(), std::vector<Vec2d>(),
+    [](auto v0, auto v1) {
+      v0.insert(v0.end(), v1.begin(), v1.end());
+      return v0;
+    },
+    [&](int v) {
+      std::vector<Vec2d> kps;
+      kps.reserve(f->width(level));
+      for (size_t u = 0; u < f->width(level); u++) {
+        if (criterion(Vec2d(u, v))) {
+          kps.push_back(Vec2d(u, v));
+        }
       }
-    }
-    return kps;
-  });
-  std::vector<Vec2d> keypoints_;
-  std::for_each(keypoints.begin(), keypoints.end(), [&](auto c) {
-    keypoints_.insert(keypoints_.end(), c.begin(), c.end());
-  });
-  return keypoints_;
+      return kps;
+    });
+  return keypoints;
 }
 namespace subsampling
 {
@@ -72,7 +73,7 @@ std::vector<KeyPoint> grid(
   std::vector<size_t> grid(nRows * nCols, keypoints.size());
   for (size_t idx = 0U; idx < keypoints.size(); idx++) {
     const auto & kp = keypoints[idx];
-    const Vec2f & pos = getPosition(kp);
+    const auto & pos = getPosition(kp);
     const size_t r = static_cast<size_t>(pos.y() / cellSize);
     const size_t c = static_cast<size_t>(pos.x() / cellSize);
     if (
@@ -94,7 +95,7 @@ template <typename KeyPoint, typename Score, typename Position>
 std::vector<KeyPoint> grid(
   const std::vector<KeyPoint> & keypoints, int height, int width, int cellSize, Score betterScore)
 {
-  return grid(keypoints, height, width, betterScore, [](auto kp) { return kp; });
+  return grid(keypoints, height, width, cellSize, betterScore, [](auto kp) { return kp; });
 }
 
 }  // namespace subsampling
