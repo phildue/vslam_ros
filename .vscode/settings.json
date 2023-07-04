@@ -105,7 +105,12 @@
         "cstdbool": "cpp",
         "execution": "cpp",
         "numericaldiff": "cpp",
-        "*.txx": "cpp"
+        "*.txx": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp"
     },
     "python.analysis.extraPaths": [
         "/opt/ros/galactic/lib/python3.8/site-packages/"
@@ -140,7 +145,6 @@
     },
     "editor.formatOnSave": true,
     "clang-format.executable": "/usr/bin/clang-format",
-    "clang-format.assumeFilename": "/opt/ros/galactic/lib/python3.8/site-packages/ament_clang_format/configuration/.clang-format",
     "cSpell.words": [
         "athackst",
         "autopep",
@@ -178,7 +182,7 @@
         ".vscode-insiders",
         ".devcontainer/devcontainer.json"
     ],
-    "ros.distro": "galactic",
+    "ros.distro": "humble",
 "editor.defaultFormatter": "xaver.clang-format",
 "editor.detectIndentation": false,
 "python.linting.flake8Enabled": true,

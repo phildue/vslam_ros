@@ -162,7 +162,7 @@ std::vector<Point3D::ShPtr> FeatureTracking::track(
     Point3D::VecShPtr strongPoints;
     for (const auto & ft : featuresCur) {
       if (ft->point()) {
-        mask(ft->position().y() / _gridCellSize, ft->position().x() / _gridCellSize) = 0;
+        mask((int)(ft->position().y() / _gridCellSize), (int)(ft->position().x() / _gridCellSize)) = 0;
         frameCur->addFeature(ft);
         if (ft->point()->features().size() >= framesRef.size() + 1) {
           strongPoints.push_back(ft->point());

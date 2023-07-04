@@ -1,7 +1,7 @@
-FROM althack/ros2:galactic-full AS developer
+ARG ROS2_VERSION=humble
+FROM althack/ros2:humble-full AS developer
 # The development environment add build dependencies here
-#RUN pip3 install conan && export PATH=$PATH:~/.local/bin/conan
-RUN apt update && apt install -y --no-install-recommends libgtk2.0-dev libva-dev libvdpau-dev libboost-python1.71-dev libopencv-dev valgrind kcachegrind libboost-program-options-dev \
+RUN apt update && apt install -y --no-install-recommends libgtk2.0-dev libva-dev libvdpau-dev libopencv-dev valgrind kcachegrind libboost-program-options-dev \
     libboost-filesystem-dev \
     libboost-graph-dev \
     libboost-system-dev \
@@ -16,10 +16,10 @@ RUN apt update && apt install -y --no-install-recommends libgtk2.0-dev libva-dev
     libcgal-dev \
     git-lfs \
     clang-format \
-    clang-tidy-6.0 \
-    ros-galactic-ament-cmake-clang-format \
-    ros-galactic-ament-cmake-clang-tidy \
+    clang-tidy \
     libfmt-dev
+RUN apt install -y --no-install-recommends ros-humble-ament-cmake-clang-format \
+ros-humble-ament-cmake-clang-tidy
 RUN pip3 install opencv-python GitPython sophuspy scipy pandas wandb sympy symforce
 
 WORKDIR /opt
@@ -36,15 +36,9 @@ RUN git clone https://github.com/strasdat/Sophus.git && cd Sophus && mkdir build
 
 # fmt
 RUN git clone https://github.com/fmtlib/fmt.git && \
-cd fmt && \
-echo "set_property(TARGET fmt PROPERTY POSITION_INDEPENDENT_CODE ON)" >> CMakeLists.txt && \
-mkdir build && \
-cd build && \
-cmake .. && \
-make -j4 && \
-make install && \
-cd .. && \
-rm build -r
+cd fmt && git checkout 9.0.0 && mkdir build && cd build && \
+cmake -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE -DFMT_TEST=OFF .. && \
+make -j4 && make install && cd .. && rm build -r
 
 # Matplotlib
 #RUN git clone https://github.com/lava/matplotlib-cpp.git && cd matplotlib-cpp && mkdir build && cd build && cmake .. && make -j && make install
@@ -64,11 +58,12 @@ cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF && make -j2 && make install &&
 # RUN git clone https://github.com/artivis/manif && cd manif && mkdir build && cd build && cmake .. && make -j2 && make install && cd .. && rm build -r
 
 # ROS Dependencies
+# TODO make we can install all this from binary packages by now
 RUN mkdir -p ros_deps_ws/src && cd ros_deps_ws/src && \
-git clone https://github.com/ros-perception/image_pipeline.git && cd image_pipeline && git checkout 457c0c70d9 && \
-git clone https://github.com/ros-perception/vision_opencv.git && cd vision_opencv && git checkout 7bbc5ecc232e8 && \
+git clone https://github.com/ros-perception/image_pipeline.git && cd image_pipeline && git checkout humble && \
+git clone https://github.com/ros-perception/vision_opencv.git && cd vision_opencv && git checkout humble && \
 cd /opt/ros_deps_ws/ && colcon build --packages-up-to stereo_image_proc && echo "source /opt/ros_deps_ws/install/setup.bash" >> /home/ros/.bashrc
-
+RUN apt install --no-install-recommends -y ros-humble-depthai-ros
 USER ros
 RUN echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ros/vslam_ros/install/vslam_ros/lib" >> /home/ros/.bashrc
 RUN echo "PYTHON_PATH=$PYTHON_PATH:/home/ros/vslam_ros/script" >> /home/ros/.bashrc

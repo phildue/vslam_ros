@@ -181,7 +181,7 @@ void convert(const geometry_msgs::msg::TwistWithCovariance & twistRos, vslam::Po
 void convert(const vslam::Trajectory & traj, nav_msgs::msg::Path & trajRos)
 {
   trajRos.poses.reserve(traj.poses().size());
-  for (const auto t_p : traj.poses()) {
+  for (const auto& t_p : traj.poses()) {
     auto pose = t_p.second->SE3();
     auto t = t_p.first;
 

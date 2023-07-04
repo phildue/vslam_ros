@@ -86,7 +86,7 @@ void MatchCandidates::drawFeature(
 cv::Mat CorrespondingPoints::draw() const
 {
   std::vector<cv::Mat> mats;
-  for (const auto f : _frames) {
+  for (const auto& f : _frames) {
     cv::Mat mat;
     cv::cvtColor(f->intensity(), mat, cv::COLOR_GRAY2BGR);
     cv::rectangle(mat, cv::Point(0, 0), cv::Point(20, 20), cv::Scalar(0, 0, 0), -1);
@@ -168,7 +168,7 @@ cv::Mat Matches::draw() const
 cv::Mat FeatureDisplacement::draw() const
 {
   std::vector<cv::Mat> mats;
-  for (const auto f : _frames) {
+  for (const auto& f : _frames) {
     cv::Mat mat;
     cv::cvtColor(f->intensity(), mat, cv::COLOR_GRAY2BGR);
     cv::rectangle(mat, cv::Point(0, 0), cv::Point(40, 20), cv::Scalar(0, 0, 0), -1);

@@ -39,6 +39,7 @@ add_library(${PROJECT_NAME} STATIC
     src/ros/Associator.cpp)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 target_link_libraries(${PROJECT_NAME} pd::vslam)
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -57,6 +58,7 @@ add_library(vslam_ros_nodes SHARED
 
 target_link_libraries(vslam_ros_nodes ${PROJECT_NAME})
 set_property(TARGET vslam_ros_nodes PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_compile_features(vslam_ros_nodes PUBLIC cxx_std_20)
 
 rclcpp_components_register_nodes(
     vslam_ros_nodes

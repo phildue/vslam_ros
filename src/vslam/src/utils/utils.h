@@ -2,7 +2,7 @@
 #define VSLAM_TIME_H__
 #include <chrono>
 #include <filesystem>
-
+#include <fstream>
 #include "core/types.h"
 
 namespace vslam::time
