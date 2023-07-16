@@ -46,13 +46,11 @@
 #include "vslam_ros/Associator.h"
 #include "vslam_ros/visibility_control.h"
 
-namespace vslam_ros
-{
-class NodeRgbdAlignment : public rclcpp::Node
-{
+namespace vslam_ros {
+class NodeRgbdAlignment : public rclcpp::Node {
 public:
   COMPOSITION_PUBLIC
-  NodeRgbdAlignment(const rclcpp::NodeOptions & options);
+  NodeRgbdAlignment(const rclcpp::NodeOptions &options);
 
 private:
   const int _queueSizeMin, _queueSizeMax;
@@ -89,44 +87,40 @@ private:
   rclcpp::TimerBase::SharedPtr _periodicTimer, _processFrameTimer;
 
   // Synchronization
-  using ExactPolicy =
-    message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
-  using ApproximatePolicy = message_filters::sync_policies::ApproximateTime<
-    sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
+  using ExactPolicy = message_filters::sync_policies::ExactTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
+  using ApproximatePolicy = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
   using ExactSync = message_filters::Synchronizer<ExactPolicy>;
   using ApproximateSync = message_filters::Synchronizer<ApproximatePolicy>;
   std::shared_ptr<ExactSync> _exactSync;
   std::shared_ptr<ApproximateSync> _approximateSync;
 
   // Algorithm
-  vslam::DirectIcp::ShPtr _directIcp;
+  vslam::FeatureSelection::UnPtr _featureSelection;
+  vslam::AlignmentRgbd::ShPtr _alignmentRgbd;
   vslam::ConstantVelocityModel::ShPtr _motionModel;
   vslam::Camera::ShPtr _camera;
-  vslam::Pose _motion, _pose;
+  vslam::Pose _motion;
   vslam::Trajectory _trajectory;
-  vslam::Frame::ShPtr _frame0;
-  std::map<std::string, double> _paramsIcp;
+  vslam::Frame::ShPtr _kf, _lf, _cf;
+  double _entropyRef, _maxEntropyReduction;
+  void initialize();
+  void process();
 
   // Buffers
-  geometry_msgs::msg::TransformStamped
-    _world2origin;  //transforms from fixed frame to initial pose of optical frame
+  geometry_msgs::msg::TransformStamped _world2origin;  // transforms from fixed frame to initial pose of optical frame
 
   vslam::evaluation::tum::DataLoader::ConstShPtr _dl;
 
   void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
-  void imageCallback(
-    sensor_msgs::msg::Image::ConstSharedPtr msgImg,
-    sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
+  void imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);
 
-  vslam::Frame::UnPtr createFrame(
-    sensor_msgs::msg::Image::ConstSharedPtr msgImg,
-    sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
+  vslam::Frame::UnPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
 
   void timerCallback();
-  void publish(const rclcpp::Time & t);
+  void publish(const rclcpp::Time &t);
   void lookupTf();
   void setReplay(bool pause);
 };
 }  // namespace vslam_ros
 
-#endif  //VSLAM_ROS2_NODE_MAPPING_H__
+#endif  // VSLAM_ROS2_NODE_MAPPING_H__

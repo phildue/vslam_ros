@@ -2,10 +2,8 @@
 #include <opencv2/imgproc.hpp>
 
 #include "visuals.h"
-namespace vslam
-{
-cv::Mat colorizedDepth(const cv::Mat & depth, double zMax)
-{
+namespace vslam {
+cv::Mat colorizedDepth(const cv::Mat &depth, double zMax) {
   double Min, zMax_ = zMax;
   if (zMax < 0) {
     cv::minMaxLoc(depth, &Min, &zMax_);
@@ -17,8 +15,7 @@ cv::Mat colorizedDepth(const cv::Mat & depth, double zMax)
   return depthBgr;
 }
 
-cv::Mat blend(const cv::Mat & mat1, const cv::Mat & mat2, double weight1)
-{
+cv::Mat blend(const cv::Mat &mat1, const cv::Mat &mat2, double weight1) {
   cv::Mat joint;
   cv::Mat weightsI(cv::Size(mat1.cols, mat1.rows), CV_32FC1, weight1);
   cv::Mat weightsZ(cv::Size(mat1.cols, mat1.rows), CV_32FC1, 1.0 - weight1);
@@ -26,27 +23,33 @@ cv::Mat blend(const cv::Mat & mat1, const cv::Mat & mat2, double weight1)
   return joint;
 }
 
-cv::Mat colorizedRgbd(const cv::Mat & intensity, const cv::Mat & depth, double zMax)
-{
+cv::Mat colorizedRgbd(const cv::Mat &intensity, const cv::Mat &depth, double zMax) {
   cv::Mat depthColor = colorizedDepth(depth, zMax);
   cv::Mat intensityColor;
   cv::cvtColor(intensity, intensityColor, cv::COLOR_GRAY2BGR);
   return blend(intensityColor, depthColor, 0.7);
 }
 
-cv::Mat visualizeFrame(Frame::ConstShPtr frame)
-{
-  cv::Mat img = colorizedRgbd(frame->I(), frame->depth());
-  cv::putText(
-    img, format("{} | {}", frame->id(), frame->t()), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX,
-    1.0, cv::Scalar(255, 255, 255));
+cv::Mat visualizeFrame(Frame::ConstShPtr frame, int level) {
+  cv::Mat img = colorizedRgbd(frame->I(level), frame->depth(level));
+  cv::putText(img, format("{} | {}", frame->id(), frame->t()), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 1.0, cv::Scalar(255, 255, 255));
   return img;
 }
 
-cv::Mat visualizeFramePair(Frame::ConstShPtr f0, Frame::ConstShPtr f1)
-{
+cv::Mat visualizeFramePair(Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
   cv::Mat overlay;
   cv::hconcat(std::vector<cv::Mat>({visualizeFrame(f0), visualizeFrame(f1)}), overlay);
   return overlay;
 }
+namespace overlay {
+cv::Mat frames(Frame::VecConstShPtr frames) {
+  cv::Mat overlay;
+  std::vector<cv::Mat> mats(frames.size());
+  std::transform(frames.begin(), frames.end(), mats.begin(), [](auto f) { return visualizeFrame(f); });
+  cv::hconcat(mats, overlay);
+  return overlay;
+}
+
+}  // namespace overlay
+
 }  // namespace vslam

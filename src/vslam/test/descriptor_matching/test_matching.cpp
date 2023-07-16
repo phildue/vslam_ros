@@ -31,9 +31,8 @@ using namespace testing;
 using namespace vslam;
 using namespace vslam::evaluation;
 
-TEST(TrackingTest, SelectVisible)
-{
-  log::config("default")->show = TEST_VISUALIZE;
+TEST(TrackingTest, SelectVisible) {
+  log::config("default")->show = TEST_VISUALIZE ? 1 : -1;
   cv::Mat depth = tum::loadDepth(TEST_RESOURCE "/depth.png");
   cv::Mat img = tum::loadIntensity(TEST_RESOURCE "/rgb.png");
 
@@ -49,9 +48,8 @@ TEST(TrackingTest, SelectVisible)
   EXPECT_EQ(f0->features().size(), featuresCandidate.size());
 }
 
-TEST(TrackingTest, GridSubsampling)
-{
-  log::config("default")->show = TEST_VISUALIZE;
+TEST(TrackingTest, GridSubsampling) {
+  log::config("default")->show = TEST_VISUALIZE ? 1 : -1;
   cv::Mat depth = tum::loadDepth(TEST_RESOURCE "/depth.png");
   cv::Mat img = tum::loadIntensity(TEST_RESOURCE "/rgb.png");
 
@@ -68,9 +66,8 @@ TEST(TrackingTest, GridSubsampling)
   log::append("AfterGridSubsampling", overlay::Features({f0}, 30));
 }
 
-TEST(TrackingTest, FeatureConversion)
-{
-  log::config("default")->show = TEST_VISUALIZE;
+TEST(TrackingTest, FeatureConversion) {
+  log::config("default")->show = TEST_VISUALIZE ? 1 : -1;
   cv::Mat depth = tum::loadDepth(TEST_RESOURCE "/depth.png");
   cv::Mat img = tum::loadIntensity(TEST_RESOURCE "/rgb.png");
 
@@ -92,25 +89,28 @@ TEST(TrackingTest, FeatureConversion)
     EXPECT_NEAR((descriptor - features[i]->descriptor()).norm(), 0.0, 0.001);
   }
 
-  auto descBack = FeatureTracking::createDescriptorMatrix(
-    std::vector<Feature2D::ConstShPtr>(features.begin(), features.end()), desc.type());
+  auto descBack =
+    FeatureTracking::createDescriptorMatrix(std::vector<Feature2D::ConstShPtr>(features.begin(), features.end()), desc.type());
 
   cv::Mat diff;
   cv::subtract(desc, descBack, diff);
   EXPECT_NEAR(cv::norm(diff), 0, 0.001);
 }
 
-TEST(TrackingTest, DISABLED_MatcherWithCombinedError)
-{
-  log::config("default")->show = TEST_VISUALIZE;
+TEST(TrackingTest, DISABLED_MatcherWithCombinedError) {
+  log::config("default")->show = TEST_VISUALIZE ? 1 : -1;
   const size_t nFeatures = 5;
   auto f0 = std::make_shared<Frame>(
     tum::loadIntensity(TEST_RESOURCE "/1311868164.363181.png"),
-    tum::loadDepth(TEST_RESOURCE "/1311868164.338541.png"), tum::Camera(), 1311868164363181000U);
+    tum::loadDepth(TEST_RESOURCE "/1311868164.338541.png"),
+    tum::Camera(),
+    1311868164363181000U);
 
   auto f1 = std::make_shared<Frame>(
     tum::loadIntensity(TEST_RESOURCE "/1311868165.499179.png"),
-    tum::loadDepth(TEST_RESOURCE "/1311868165.409979.png"), tum::Camera(), 1311868165499179000U);
+    tum::loadDepth(TEST_RESOURCE "/1311868165.409979.png"),
+    tum::Camera(),
+    1311868165499179000U);
 
   auto trajectoryGt = tum::loadTrajectory(TEST_RESOURCE "/trajectory.txt");
   f0->pose() = *trajectoryGt->poseAt(f0->t());
@@ -120,15 +120,17 @@ TEST(TrackingTest, DISABLED_MatcherWithCombinedError)
   f0->addFeatures(tracking->extractFeatures(f0, true));
   f1->addFeatures(tracking->extractFeatures(f1));
 
-  MatXd reprojectionError = vslam::Matcher::computeDistanceMat(
-    Frame::ConstShPtr(f0)->features(), Frame::ConstShPtr(f1)->features(),
-    [](auto ft1, auto ft2) { return vslam::Matcher::reprojectionError(ft1, ft2); });
+  MatXd reprojectionError =
+    vslam::Matcher::computeDistanceMat(Frame::ConstShPtr(f0)->features(), Frame::ConstShPtr(f1)->features(), [](auto ft1, auto ft2) {
+      return vslam::Matcher::reprojectionError(ft1, ft2);
+    });
 
   EXPECT_NE(reprojectionError.norm(), 0.0);
 
-  MatXd descriptorDistance = vslam::Matcher::computeDistanceMat(
-    Frame::ConstShPtr(f0)->features(), Frame::ConstShPtr(f1)->features(),
-    [](auto ft1, auto ft2) { return vslam::Matcher::descriptorHamming(ft1, ft2); });
+  MatXd descriptorDistance =
+    vslam::Matcher::computeDistanceMat(Frame::ConstShPtr(f0)->features(), Frame::ConstShPtr(f1)->features(), [](auto ft1, auto ft2) {
+      return vslam::Matcher::descriptorHamming(ft1, ft2);
+    });
 
   EXPECT_NE(descriptorDistance.norm(), 0.0);
 
@@ -152,26 +154,21 @@ TEST(TrackingTest, DISABLED_MatcherWithCombinedError)
 
     log::append(
       "FeatureCandidatesReprojection",
-      overlay::MatchCandidates(
-        f0, f1, reprojectionError / reprojectionError.row(idx0).minCoeff(), 1.5, idx0));
+      overlay::MatchCandidates(f0, f1, reprojectionError / reprojectionError.row(idx0).minCoeff(), 1.5, idx0));
 
     std::cout << "Descriptor Distance Min:" << descriptorDistance.row(idx0).minCoeff()
-              << " Descriptor Distance Max:" << descriptorDistance.row(idx0).maxCoeff()
-              << std::endl;
+              << " Descriptor Distance Max:" << descriptorDistance.row(idx0).maxCoeff() << std::endl;
 
     log::append(
       "FeatureCandidatesDescriptorDistance",
-      overlay::MatchCandidates(
-        f0, f1, descriptorDistance / descriptorDistance.row(idx0).minCoeff(), 1.5, idx0));
+      overlay::MatchCandidates(f0, f1, descriptorDistance / descriptorDistance.row(idx0).minCoeff(), 1.5, idx0));
 
     std::cout << "Combined Error Min:" << combinedDistance.row(idx0).minCoeff()
               << " Combined Error Max:" << combinedDistance.row(idx0).maxCoeff() << std::endl;
 
-    log::append(
-      "FeatureCandidatesCombined", overlay::MatchCandidates(f0, f1, combinedDistance, 1.5, idx0));
+    log::append("FeatureCandidatesCombined", overlay::MatchCandidates(f0, f1, combinedDistance, 1.5, idx0));
   }
   auto matcher = std::make_shared<vslam::Matcher>(vslam::Matcher::reprojectionHamming, 4.0, 0.8);
-  const std::vector<vslam::Matcher::Match> matches =
-    matcher->match(featureSubset, Frame::ConstShPtr(f1)->features());
+  const std::vector<vslam::Matcher::Match> matches = matcher->match(featureSubset, Frame::ConstShPtr(f1)->features());
   EXPECT_EQ(matches.size(), 3);
 }

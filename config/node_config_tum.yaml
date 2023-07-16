@@ -1,20 +1,23 @@
 
 /NodeRgbdAlignment:
   ros__parameters:
-    direct_icp:
-      minGradientIntensity: 5.0
-      minGradientDepth: 0.01
-      maxGradientDepth: 0.3
-      maxDepth: 5.0
-      nLevels: 4.0
-      maxIterations: 100.0
-      minParameterUpdate: 0.0001
-      maxErrorIncrease: 10.5
-      maxPoints: 307200.0
+    features:
+      intensity_gradient_min: 5
+      depth_gradient_min: 0.01
+      depth_gradient_max: 0.3
+      depth_min: 0
+      depth_max: 8.0
+      grid_size: 10.0
+      n_levels: 4
+    odometry:
+      n_levels: 4
+      max_iterations: 100
+      min_parameter_update: 0.0001
+      max_error_increase: 10
     motion_model:
-      variance: 0.03
-      maxTranslationalVelocity: 1000.0
-      maxAngularVelocity: 1000.0
+      information: 10.0
+    keyframe_selection:
+      max_entropy_reduction: 0.05
     sync:
       queue_size_max: 50
       queue_size_min: 10

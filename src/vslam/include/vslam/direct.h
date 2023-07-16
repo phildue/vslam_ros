@@ -13,8 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
-#define VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
-#include "keypoint_selection/keypoint_selection.h"
+#ifndef VSLAM_DIRECT_PACKAGE_H__
+#define VSLAM_DIRECT_PACKAGE_H__
+#include "direct/AlignmentRgb.h"
+#include "direct/AlignmentRgbPoseGraph.h"
+#include "direct/AlignmentRgbd.h"
 
-#endif  // VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
+#endif  // VSLAM_DIRECT_ICP_PACKAGE_H__

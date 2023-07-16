@@ -25,43 +25,47 @@
 using namespace vslam;
 using namespace std::chrono_literals;
 
-namespace vslam_ros
-{
-NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
-: rclcpp::Node("NodeRgbdAlignment", options),
-  _queueSizeMin(declare_parameter("sync.queue_size_min", 10)),
-  _queueSizeMax(declare_parameter("sync.queue_size_max", 50)),
-  _replay(declare_parameter("replayMode", false)),
-  _fNo(0),
-  _pubOdom(create_publisher<nav_msgs::msg::Odometry>("/odom", 10)),
-  _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10)),
-  _pubPoseGraph(create_publisher<nav_msgs::msg::Path>("/path/pose_graph", 10)),
-  _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this)),
-  _pubPclMap(create_publisher<sensor_msgs::msg::PointCloud2>("/pcl/map", 10)),
-  _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>(
-    "/camera/rgb/camera_info", 10,
-    std::bind(&NodeRgbdAlignment::cameraCallback, this, std::placeholders::_1))),
-  _tfAvailable(false),
-  _frameId(declare_parameter("tf.frame_id", _frameId)),
-  _fixedFrameId(declare_parameter("tf.base_link_id", _fixedFrameId)),
-  _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock())),
-  _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer))
-{
+namespace vslam_ros {
+NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
+    rclcpp::Node("NodeRgbdAlignment", options),
+    _queueSizeMin(declare_parameter("sync.queue_size_min", 10)),
+    _queueSizeMax(declare_parameter("sync.queue_size_max", 50)),
+    _replay(declare_parameter("replayMode", false)),
+    _fNo(0),
+    _pubOdom(create_publisher<nav_msgs::msg::Odometry>("/odom", 10)),
+    _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10)),
+    _pubPoseGraph(create_publisher<nav_msgs::msg::Path>("/path/pose_graph", 10)),
+    _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this)),
+    _pubPclMap(create_publisher<sensor_msgs::msg::PointCloud2>("/pcl/map", 10)),
+    _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>(
+      "/camera/rgb/camera_info", 10, std::bind(&NodeRgbdAlignment::cameraCallback, this, std::placeholders::_1))),
+    _tfAvailable(false),
+    _frameId(declare_parameter("tf.frame_id", _frameId)),
+    _fixedFrameId(declare_parameter("tf.base_link_id", _fixedFrameId)),
+    _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock())),
+    _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer)) {
   if (_replay) {
     _cliReplayer = create_client<std_srvs::srv::SetBool>("togglePlay");
   }
+  _featureSelection = std::make_unique<FeatureSelection>(
+    declare_parameter("features.intensity_gradient_min", 5),
+    declare_parameter("features.depth_gradient_min", 0.01),
+    declare_parameter("features.depth_gradient_max", 0.3),
+    declare_parameter("features.depth_min", 0),
+    declare_parameter("features.depth_max", 8.0),
+    declare_parameter("features.grid_size", 10.0),
+    declare_parameter("features.n_levels", 4));
 
-  for (const auto & [name, value] : DirectIcp::defaultParameters()) {
-    _paramsIcp[name] = declare_parameter(format("direct_icp.{}", name), value);
-  }
-  _directIcp = std::make_shared<DirectIcp>(_paramsIcp);
+  _alignmentRgbd = std::make_shared<AlignmentRgbd>(
+    declare_parameter("odometry.n_levels", 4),
+    declare_parameter("odometry.max_iterations", 50),
+    declare_parameter("odometry.min_parameter_update", 0.0001),
+    declare_parameter("odometry.max_error_increase", 10));
 
-  std::map<std::string, double> paramsModel;
-  for (const auto & [name, value] : ConstantVelocityModel::defaultParameters()) {
-    paramsModel[name] = declare_parameter(format("motion_model.{}", name), value);
-  }
-  _motionModel = std::make_shared<ConstantVelocityModel>(paramsModel);
+  _motionModel = std::make_shared<ConstantVelocityModel>(declare_parameter("motion_model.information", 10.0), INFd, INFd);
 
+  _maxEntropyReduction = declare_parameter("keyframe_selection.max_entropy_reduction", 0.05);
+  vslam::log::configure(declare_parameter("log.config_directory", "/home/ros/vslam_ros/config/log/"));
 #ifdef USE_ROS2_SYNC
 
   image_transport::TransportHints hints(this, "raw");
@@ -71,36 +75,34 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   _subDepth.subscribe(this, "/camera/depth/image", hints.getTransport(), image_sub_rmw_qos);
 
   if (declare_parameter("sync.max_interval", 0.2) > 0.0) {
-    _approximateSync.reset(
-      new ApproximateSync(ApproximatePolicy(queue_size), _subImage, _subDepth));
-    _approximateSync->setMaxIntervalDuration(
-      rclcpp::Duration::from_seconds(get_parameter("sync.max_interval").as_double));
+    _approximateSync.reset(new ApproximateSync(ApproximatePolicy(queue_size), _subImage, _subDepth));
+    _approximateSync->setMaxIntervalDuration(rclcpp::Duration::from_seconds(get_parameter("sync.max_interval").as_double));
     _approximateSync->registerCallback(&NodeRgbdAlignment::imageCallback, this);
   } else {
     _exactSync.reset(new ExactSync(ExactPolicy(queue_size), _subImage, _subDepth));
     _exactSync->registerCallback(&NodeRgbdAlignment::imageCallback, this);
   }
 #else
-  _queue = std::make_unique<vslam_ros::Associator>(
-    _queueSizeMax, declare_parameter("sync.max_interval", 0.02) * 1e9);
+  _queue = std::make_unique<vslam_ros::Associator>(_queueSizeMax, declare_parameter("sync.max_interval", 0.02) * 1e9);
   _subImage = create_subscription<sensor_msgs::msg::Image>(
-    "/camera/rgb/image_color", 10,
-    [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushImage(msg); });
+    "/camera/rgb/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushImage(msg); });
   _subDepth = create_subscription<sensor_msgs::msg::Image>(
-    "/camera/depth/image", 10,
-    [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushDepth(msg); });
+    "/camera/depth/image", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushDepth(msg); });
 
   _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() {
     /*Check periodically if there are enough frames and process if so.
-    */
+     */
     if (_camera && std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
       auto const [_, depth, img] = _queue->pop();
       RCLCPP_DEBUG(
-        get_logger(), "fNo: %d Processing Z: %d.%d I: %d.%d %f", _fNo, depth->header.stamp.sec,
-        depth->header.stamp.nanosec, img->header.stamp.sec, img->header.stamp.nanosec,
-        (rclcpp::Time(depth->header.stamp).nanoseconds() -
-         rclcpp::Time(img->header.stamp).nanoseconds()) /
-          1e9);
+        get_logger(),
+        "fNo: %d Processing Z: %d.%d I: %d.%d %f",
+        _fNo,
+        depth->header.stamp.sec,
+        depth->header.stamp.nanosec,
+        img->header.stamp.sec,
+        img->header.stamp.nanosec,
+        (rclcpp::Time(depth->header.stamp).nanoseconds() - rclcpp::Time(img->header.stamp).nanoseconds()) / 1e9);
       this->imageCallback(img, depth);
 
       _fNo++;
@@ -111,57 +113,74 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "Ready.");
 }
 
-void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg)
-{
+void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) {
   auto camera = vslam_ros::convert(*msg);
 
   if (camera->fx() > 0.0 && camera->cx() > 0.0) {
     _subCamInfo.reset();
     _camera = camera;
 
-    _periodicTimer =
-      create_wall_timer(std::chrono::seconds(1), [this, msg]() { this->timerCallback(); });
+    _periodicTimer = create_wall_timer(std::chrono::seconds(1), [this, msg]() { this->timerCallback(); });
 
     _cameraFrameId = msg->header.frame_id;
-    RCLCPP_INFO(
-      get_logger(), "Valid camera calibration received: %s \n. Node Ready.",
-      camera->toString().c_str());
+    RCLCPP_INFO(get_logger(), "Valid camera calibration received: %s \n. Node Ready.", camera->toString().c_str());
 
   } else {
-    RCLCPP_ERROR(
-      get_logger(), "Invalid camera calibration received: %s \n.", camera->toString().c_str());
+    RCLCPP_ERROR(get_logger(), "Invalid camera calibration received: %s \n.", camera->toString().c_str());
   }
 }
 
-void NodeRgbdAlignment::imageCallback(
-  sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth)
-{
+void NodeRgbdAlignment::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) {
   TIMED_SCOPE(timerF, "processFrame");
-  Frame::ShPtr f = createFrame(msgImg, msgDepth);
-  f->computePyramid(_directIcp->nLevels());
-  if (!_frame0) {
-    _frame0 = f;
-    _trajectory.append(f->t(), _pose);
-    return;
-  }
-  _frame0->computeDerivatives();
-  _frame0->computePcl();
-  const Pose prior = _motionModel->predict(_frame0->t(), f->t());
-  _motion = _directIcp->computeEgomotion(_frame0, f, prior);
+  _lf = _cf;
+  _cf = createFrame(msgImg, msgDepth);
 
-  _pose.SE3() = _motion.SE3() * _pose.SE3();
-  _pose.cov() = _motion.cov();
-  f->pose() = _pose;
-  _motionModel->update(f->pose(), f->t());
-  _frame0 = f;
-  _trajectory.append(f->t(), _pose);
+  if (_kf) {
+    process();
+  } else {
+    initialize();
+  }
+
   publish(msgImg->header.stamp);
 }
+void NodeRgbdAlignment::initialize() {
+  _cf->computePyramid(_alignmentRgbd->nLevels());
 
-Frame::UnPtr NodeRgbdAlignment::createFrame(
-  sensor_msgs::msg::Image::ConstSharedPtr msgImg,
-  sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const
-{
+  _kf = _cf;
+  _lf = _cf;
+  _kf->computeDerivatives();
+  _kf->computePcl();
+  _featureSelection->select(_kf, true);
+  _motionModel->update(_cf->pose(), _cf->t());
+  _motion = _cf->pose() * _lf->pose().inverse();
+
+  _trajectory.append(_cf->t(), _cf->pose());
+}
+void NodeRgbdAlignment::process() {
+  _cf->computePyramid(_alignmentRgbd->nLevels());
+
+  _cf->pose() = _motionModel->predict(_cf->t());
+
+  auto results = _alignmentRgbd->align(_kf, _cf);
+  _cf->pose() = results->pose;
+  if (1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction) {
+    _kf->removeFeatures();
+    _kf = _lf;
+    _kf->computeDerivatives();
+    _kf->computePcl();
+    _featureSelection->select(_kf, true);
+    _cf->pose() = _motionModel->predict(_cf->t());
+    _cf->pose() = _alignmentRgbd->align(_kf, _cf)->pose;
+    _entropyRef = std::log(_cf->pose().cov().determinant());
+  }
+  _motionModel->update(_cf->pose(), _cf->t());
+  _motion = _cf->pose() * _lf->pose().inverse();
+
+  _trajectory.append(_cf->t(), _cf->pose());
+}
+
+Frame::UnPtr
+NodeRgbdAlignment::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const {
   namespace enc = sensor_msgs::image_encodings;
   auto cv_ptr = cv_bridge::toCvShare(msgImg);
   if (enc::isColor(msgImg->encoding)) {
@@ -174,17 +193,14 @@ Frame::UnPtr NodeRgbdAlignment::createFrame(
   return std::make_unique<Frame>(cv_ptr->image.clone(), depth.clone(), _camera, t);
 }
 
-void NodeRgbdAlignment::timerCallback()
-{
+void NodeRgbdAlignment::timerCallback() {
   const int maxQueue = static_cast<int>(0.75 * _queueSizeMax);
   const bool queueAlmostFull = std::max(_queue->nDepth(), _queue->nImages()) > maxQueue;
   if (_replay) {
     setReplay(!queueAlmostFull);
   }
   if (queueAlmostFull) {
-    RCLCPP_WARN(
-      get_logger(), "Warning input queue exceeds threshold: [%d]/[%d]. Cannot process all frames.",
-      _queue->nDepth(), maxQueue);
+    RCLCPP_WARN(get_logger(), "Warning input queue exceeds threshold: [%d]/[%d]. Cannot process all frames.", _queue->nDepth(), maxQueue);
   }
 
   if (!_tfAvailable) {
@@ -193,24 +209,20 @@ void NodeRgbdAlignment::timerCallback()
   RCLCPP_INFO(
     get_logger(),
     format(
-      "Egomotion: {} m/s {:.2f}°/s", _motionModel->velocity().translation().transpose(),
-      _motionModel->velocity().totalRotationDegrees())
+      "Egomotion: {} m/s {:.2f}°/s", _motionModel->velocity().translation().transpose(), _motionModel->velocity().totalRotationDegrees())
       .c_str());
 }
 
-void NodeRgbdAlignment::lookupTf()
-{
+void NodeRgbdAlignment::lookupTf() {
   try {
-    _world2origin =
-      _tfBuffer->lookupTransform(_fixedFrameId, _cameraFrameId.substr(1), tf2::TimePointZero);
+    _world2origin = _tfBuffer->lookupTransform(_fixedFrameId, _cameraFrameId.substr(1), tf2::TimePointZero);
     _tfAvailable = true;
 
-  } catch (tf2::TransformException & ex) {
+  } catch (tf2::TransformException &ex) {
     RCLCPP_WARN(get_logger(), "%s", ex.what());
   }
 }
-void NodeRgbdAlignment::setReplay(bool ready)
-{
+void NodeRgbdAlignment::setReplay(bool ready) {
   while (!_cliReplayer->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
       throw std::runtime_error("Interrupted while waiting for the service. Exiting.");
@@ -228,8 +240,7 @@ void NodeRgbdAlignment::setReplay(bool ready)
   _cliReplayer->async_send_request(request, response_received_callback);
 }
 
-void NodeRgbdAlignment::publish(const rclcpp::Time & t)
-{
+void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
   // tf from origin (odom) to another fixed frame (world)
   geometry_msgs::msg::TransformStamped tfOrigin = _world2origin;
   tfOrigin.header.stamp = t;
@@ -240,15 +251,15 @@ void NodeRgbdAlignment::publish(const rclcpp::Time & t)
   geometry_msgs::msg::TransformStamped tf;
   tf.header.stamp = t;
   tf.header.frame_id = _frameId;
-  tf.child_frame_id = "camera";  //camera name?
-  vslam_ros::convert(_pose.SE3().inverse(), tf);
+  tf.child_frame_id = "camera";  // camera name?
+  vslam_ros::convert(_cf->pose().SE3().inverse(), tf);
   _pubTf->sendTransform({tf, tfOrigin});
 
   // Send pose, twist and path in optical frame
   nav_msgs::msg::Odometry odom;
   odom.header.stamp = t;
   odom.header.frame_id = _frameId;
-  vslam_ros::convert(_pose.inverse(), odom.pose);
+  vslam_ros::convert(_cf->pose().inverse(), odom.pose);
   vslam_ros::convert(_motion.inverse(), odom.twist);
   _pubOdom->publish(odom);
 

@@ -1,22 +1,34 @@
 
+#include "core/Frame.h"
+#include "tum.h"
 #include <experimental/filesystem>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <opencv2/highgui.hpp>
-
-#include "tum.h"
 namespace fs = std::experimental::filesystem;
 
-namespace vslam::evaluation::tum
-{
-vslam::Camera::ShPtr Camera()
-{
-  return std::make_shared<vslam::Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
+namespace vslam::evaluation::tum {
+vslam::Camera::ShPtr Camera() { return std::make_shared<vslam::Camera>(525.0, 525.0, 319.5, 239.5, 640, 480); }
+std::vector<std::string> sequencesTraining() {
+  return {
+    "rgbd_dataset_freiburg1_desk",
+    "rgbd_dataset_freiburg1_desk2",
+    "rgbd_dataset_freiburg1_floor",
+    "rgbd_dataset_freiburg1_room",
+    // "rgbd_dataset_freiburg1_rpy",
+    "rgbd_dataset_freiburg1_teddy",
+    //"rgbd_dataset_freiburg1_xyz",
+    //"rgbd_dataset_freiburg1_360",
+    "rgbd_dataset_freiburg2_desk",
+    //"rgbd_dataset_freiburg2_pioneer_360",
+    //"rgbd_dataset_freiburg2_pioneer_slam",
+    "rgbd_dataset_freiburg3_long_office_household"};
 }
-
-Trajectory::UnPtr loadTrajectory(const std::string & path, bool invertPoses)
-{
+std::vector<std::string> sequencesValidation() {
+  return {"rgbd_dataset_freiburg1_desk_validation", "rgbd_dataset_freiburg1_desk2_validation", "rgbd_dataset_freiburg2_desk_validation"};
+}
+Trajectory::UnPtr loadTrajectory(const std::string &path, bool invertPoses) {
   if (!fs::exists(fs::path(path))) {
     throw std::runtime_error(format("Could not find [{}]", path));
   }
@@ -27,7 +39,7 @@ Trajectory::UnPtr loadTrajectory(const std::string & path, bool invertPoses)
     throw std::runtime_error("Could not open file at: " + path);
   }
 
-  //TODO shouldn't this better be objects or unique ptrs
+  // TODO shouldn't this better be objects or unique ptrs
   std::map<Timestamp, Pose::ConstShPtr> poses;
 
   std::string line;
@@ -41,17 +53,15 @@ Trajectory::UnPtr loadTrajectory(const std::string & path, bool invertPoses)
 
     if (elements[0] == "#") {
       continue;
-    }  //Skip comments
+    }  // Skip comments
 
-    //Pose
+    // Pose
     Eigen::Vector3d trans;
     trans << std::stod(elements[1]), std::stod(elements[2]), std::stod(elements[3]);
-    Eigen::Quaterniond q(
-      std::stod(elements[7]), std::stod(elements[4]), std::stod(elements[5]),
-      std::stod(elements[6]));
+    Eigen::Quaterniond q(std::stod(elements[7]), std::stod(elements[4]), std::stod(elements[5]), std::stod(elements[6]));
     auto se3 = invertPoses ? SE3d(q, trans) : SE3d(q, trans).inverse();
 
-    //Covariance
+    // Covariance
     Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Identity();
     if (elements.size() >= 8 + 36) {
       for (int i = 0; i < 6; i++) {
@@ -61,7 +71,7 @@ Trajectory::UnPtr loadTrajectory(const std::string & path, bool invertPoses)
       }
     }
 
-    //Timestamp
+    // Timestamp
     std::vector<std::string> tElements;
     std::string st;
     std::istringstream tLine(elements[0]);
@@ -76,8 +86,7 @@ Trajectory::UnPtr loadTrajectory(const std::string & path, bool invertPoses)
   return std::make_unique<Trajectory>(poses);
 }
 
-void writeTrajectory(const Trajectory & traj, const std::string & path, bool writeCovariance)
-{
+void writeTrajectory(const Trajectory &traj, const std::string &path, bool writeCovariance) {
   if (!fs::is_directory(fs::path(path).parent_path())) {
     fs::create_directories(fs::path(path).parent_path());
   }
@@ -90,7 +99,7 @@ void writeTrajectory(const Trajectory & traj, const std::string & path, bool wri
     std::runtime_error("Could not open file at: " + path);
   }
 
-  for (const auto & pose : traj.poses()) {
+  for (const auto &pose : traj.poses()) {
     std::string ts = format("{}", pose.first);
     ts = format("{}.{}", ts.substr(0, 10), ts.substr(10));
 
@@ -98,8 +107,7 @@ void writeTrajectory(const Trajectory & traj, const std::string & path, bool wri
 
     const auto t = pose.second->pose().translation();
     const auto q = pose.second->pose().unit_quaternion();
-    algoFile << ts << " " << t.x() << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y()
-             << " " << q.z() << " " << q.w();
+    algoFile << ts << " " << t.x() << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w();
     if (writeCovariance) {
       for (int i = 0; i < 6; i++) {
         for (int j = 0; j < 6; j++) {
@@ -112,36 +120,32 @@ void writeTrajectory(const Trajectory & traj, const std::string & path, bool wri
   }
 }
 
-void computeRPE(const std::string & pathAlgo, const std::string & pathGt)
-{
-  const int ret =
-    system(format(
-             "python3 /home/ros/vslam_ros/src/vslam/script/vslampy/evaluation/_tum/evaluate_rpe.py "
-             "--verbose "
-             "--fixed_delta "
-             "{} {}",
-             pathGt, pathAlgo)
-             .c_str());
+void computeRPE(const std::string &pathAlgo, const std::string &pathGt) {
+  const int ret = system(format(
+                           "python3 /home/ros/vslam_ros/src/vslam/script/vslampy/evaluation/_tum/evaluate_rpe.py "
+                           "--verbose "
+                           "--fixed_delta "
+                           "{} {}",
+                           pathGt,
+                           pathAlgo)
+                           .c_str());
   if (ret != 0) {
     throw std::runtime_error("Running evaluation script failed!");
   }
 }
 
-cv::Mat convertDepthMat(const cv::Mat & depth_, float factor)
-{
+cv::Mat convertDepthMat(const cv::Mat &depth_, float factor) {
   cv::Mat depth(cv::Size(depth_.cols, depth_.rows), CV_32FC1);
   for (int u = 0; u < depth_.cols; u++) {
     for (int v = 0; v < depth_.rows; v++) {
       const ushort d = depth_.at<ushort>(v, u);
-      depth.at<float>(v, u) =
-        factor * static_cast<float>(d > 0 ? d : std::numeric_limits<ushort>::quiet_NaN());
+      depth.at<float>(v, u) = factor * static_cast<float>(d > 0 ? d : std::numeric_limits<ushort>::quiet_NaN());
     }
   }
   return depth;
 }
 
-cv::Mat loadDepth(const std::string & path)
-{
+cv::Mat loadDepth(const std::string &path) {
   // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
   cv::Mat depth = cv::imread(path, cv::IMREAD_ANYDEPTH);
   if (depth.empty()) {
@@ -155,8 +159,7 @@ cv::Mat loadDepth(const std::string & path)
 
   return depth;
 }
-cv::Mat loadIntensity(const std::string & path)
-{
+cv::Mat loadIntensity(const std::string &path) {
   cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
 
   if (img.empty()) {
@@ -165,39 +168,27 @@ cv::Mat loadIntensity(const std::string & path)
   return img;
 }
 
-DataLoader::DataLoader(const std::string & datasetRoot, const std::string & sequenceId)
-: _datasetRoot(datasetRoot),
-  _sequenceId(sequenceId),
-  _extractedDataPath(format("{}/{}/{}", datasetRoot, sequenceId, sequenceId)),
-  _sequencePath(format("{}/{}", datasetRoot, sequenceId)),
-  _cam(tum::Camera()),
-  _pathGt(_extractedDataPath + "/groundtruth.txt")
-{
+DataLoader::DataLoader(const std::string &datasetRoot, const std::string &sequenceId) :
+    _datasetRoot(datasetRoot),
+    _sequenceId(sequenceId),
+    _extractedDataPath(format("{}/{}/{}", datasetRoot, sequenceId, sequenceId)),
+    _sequencePath(format("{}/{}", datasetRoot, sequenceId)),
+    _cam(tum::Camera()),
+    _pathGt(_extractedDataPath + "/groundtruth.txt") {
   readAssocTextfile(_extractedDataPath + "/assoc.txt");
   _trajectoryGt = loadTrajectory(_pathGt, true);
 }
-/*
-Frame::UnPtr DataLoader::loadFrame(std::uint64_t fNo) const
-{
-  // tum depth format: https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
-  return std::make_unique<Frame>(
-    utils::loadImage(_datasetPath + "/" + _imgFilenames.at(fNo)),
-    utils::loadDepth(_datasetPath + "/" + _depthFilenames.at(fNo)) / 5000.0, _cam,
-    _timestamps.at(fNo));
-}
-*/
 
-cv::Mat DataLoader::loadDepth(std::uint64_t fNo) const
-{
-  return tum::loadDepth(format("{}/{}", extracteDataPath(), pathsDepth()[fNo]));
+Frame::UnPtr DataLoader::loadFrame(std::uint64_t fNo) const {
+  return std::make_unique<Frame>(loadIntensity(fNo), loadDepth(fNo), cam(), timestamps()[fNo]);
 }
-cv::Mat DataLoader::loadIntensity(std::uint64_t fNo) const
-{
+
+cv::Mat DataLoader::loadDepth(std::uint64_t fNo) const { return tum::loadDepth(format("{}/{}", extracteDataPath(), pathsDepth()[fNo])); }
+cv::Mat DataLoader::loadIntensity(std::uint64_t fNo) const {
   return tum::loadIntensity(format("{}/{}", extracteDataPath(), pathsImage()[fNo]));
 }
 
-void DataLoader::readAssocTextfile(std::string filename)
-{
+void DataLoader::readAssocTextfile(std::string filename) {
   if (!fs::exists(filename)) {
     throw std::runtime_error("Could not find file [" + filename + "]");
   }
@@ -235,12 +226,8 @@ void DataLoader::readAssocTextfile(std::string filename)
   in_stream.close();
 }
 
-double DataLoader::duration(int from, int to) const
-{
-  return static_cast<double>(
-           timestamps()[std::min<int>(to, timestamps().size() - 1)] -
-           timestamps()[std::max<int>(from, 0)]) /
-         1e9;
+double DataLoader::duration(int from, int to) const {
+  return static_cast<double>(timestamps()[std::min<int>(to, timestamps().size() - 1)] - timestamps()[std::max<int>(from, 0)]) / 1e9;
 }
 
 }  // namespace vslam::evaluation::tum
