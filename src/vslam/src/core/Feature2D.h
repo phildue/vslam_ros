@@ -24,17 +24,17 @@
 #include <memory>
 
 #include "types.h"
-namespace vslam
-{
+namespace vslam {
 class Point3D;
 class Frame;
 
 enum class DescriptorType { ORB = 0, BRISK, NONE };
-class Descriptor
-{
+class Descriptor {
 public:
-  Descriptor(const VecXd & vec, DescriptorType type) : _vec(vec), _type(type) {}
-  const VecXd & vec() const { return _vec; }
+  Descriptor(const VecXd &vec, DescriptorType type) :
+      _vec(vec),
+      _type(type) {}
+  const VecXd &vec() const { return _vec; }
   DescriptorType type() const { return _type; }
 
 private:
@@ -42,8 +42,7 @@ private:
   const DescriptorType _type;
 };
 
-class Feature2D
-{
+class Feature2D {
 public:
   typedef std::shared_ptr<Feature2D> ShPtr;
   typedef std::shared_ptr<const Feature2D> ConstShPtr;
@@ -53,25 +52,32 @@ public:
   typedef std::vector<ShPtr> VecShPtr;
 
   Feature2D(
-    const Vec2d & position, std::shared_ptr<Frame> frame = nullptr, size_t level = 0U,
+    const Vec2d &position,
+    std::shared_ptr<Frame> frame = nullptr,
+    size_t level = 0U,
     double response = 0.0,
-    const Descriptor & descriptor = Descriptor(VecXd::Zero(2), DescriptorType::NONE),
+    const Descriptor &descriptor = Descriptor(VecXd::Zero(2), DescriptorType::NONE),
     std::shared_ptr<Point3D> p3d = nullptr);
 
   std::shared_ptr<const Point3D> point() const { return _point; }
-  std::shared_ptr<Point3D> & point() { return _point; }
-  const Vec2d & position() const { return _position; }
-  std::shared_ptr<Frame> & frame() { return _frame; }
+  std::shared_ptr<Point3D> &point() { return _point; }
+
+  const double &u() const { return _position.x(); }
+  const double &v() const { return _position.y(); }
+
+  const Vec2d &position() const { return _position; }
+  Vec2d &position() { return _position; }
+  std::shared_ptr<Frame> &frame() { return _frame; }
   std::shared_ptr<const Frame> frame() const { return _frame; }
-  const VecXd & descriptor() const { return _descriptor.vec(); }
+  const VecXd &descriptor() const { return _descriptor.vec(); }
   DescriptorType descriptorType() const { return _descriptor.type(); }
 
   size_t level() const { return _level; }
   double response() const { return _response; }
-  const std::uint64_t & id() const { return _id; }
+  const std::uint64_t &id() const { return _id; }
 
 private:
-  const Vec2d _position;
+  Vec2d _position;
   std::shared_ptr<Frame> _frame;
   const size_t _level;
   const double _response;
@@ -83,4 +89,4 @@ private:
 
 }  // namespace vslam
 
-#endif  //VSLAM_FEATURE2D_H
+#endif  // VSLAM_FEATURE2D_H

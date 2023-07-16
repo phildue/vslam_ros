@@ -13,8 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_DIRECT_ICP_PACKAGE_H__
-#define VSLAM_DIRECT_ICP_PACKAGE_H__
-#include "direct_icp/DirectIcp.h"
+#ifndef VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
+#define VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
+#include "features/FeatureSelection.h"
+#include "features/keypoint_selection.h"
 
-#endif  // VSLAM_DIRECT_ICP_PACKAGE_H__
+#endif  // VSLAM_KEYPOINT_SELECTION_PACKAGE_H__

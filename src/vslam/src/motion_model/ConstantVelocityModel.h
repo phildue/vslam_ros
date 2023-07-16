@@ -20,27 +20,22 @@
 
 #include "core/Pose.h"
 #include "core/types.h"
-namespace vslam
-{
-class ConstantVelocityModel
-{
+namespace vslam {
+class ConstantVelocityModel {
 public:
   typedef std::shared_ptr<ConstantVelocityModel> ShPtr;
   typedef std::unique_ptr<ConstantVelocityModel> UnPtr;
   typedef std::shared_ptr<const ConstantVelocityModel> ConstShPtr;
   typedef std::unique_ptr<const ConstantVelocityModel> ConstUnPtr;
 
-  static std::map<std::string, double> defaultParameters()
-  {
-    return {{"variance", 0.05}, {"maxTranslationalVelocity", 10.0}, {"maxAngularVelocity", 180.0}};
+  static std::map<std::string, double> defaultParameters() {
+    return {{"information", 0.05}, {"maxTranslationalVelocity", 10.0}, {"maxAngularVelocity", 180.0}};
   }
 
-  ConstantVelocityModel(const std::map<std::string, double> & params);
-  ConstantVelocityModel(double variance);
+  ConstantVelocityModel(const std::map<std::string, double> &params);
 
-  ConstantVelocityModel(
-    double covariance, double maxTranslationalVelocity, double maxAngularVelocity);
-  void update(const Pose & pose, Timestamp t);
+  ConstantVelocityModel(double information, double maxTranslationalVelocity, double maxAngularVelocity);
+  void update(const Pose &pose, Timestamp t);
   Pose predict(Timestamp timestamp) const;
   Pose predict(Timestamp from, Timestamp to) const;
 
@@ -52,7 +47,7 @@ private:
   Vec6d _velocity = Vec6d::Zero();
   SE3d _lastPose;
   Timestamp _lastT;
-  bool exceedsThresholds(const Vec6d & speed) const;
+  bool exceedsThresholds(const Vec6d &speed) const;
 };
 
 }  // namespace vslam

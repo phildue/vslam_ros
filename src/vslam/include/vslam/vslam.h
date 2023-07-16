@@ -16,9 +16,10 @@
 #ifndef VSLAM_H__
 #define VSLAM_H__
 #include "vslam/core.h"
-#include "vslam/direct_icp.h"
-#include "vslam/motion_model.h"
+#include "vslam/direct.h"
 #include "vslam/evaluation.h"
+#include "vslam/features.h"
+#include "vslam/motion_model.h"
 #include "vslam/utils.h"
 
 #endif

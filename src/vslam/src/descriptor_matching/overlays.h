@@ -15,50 +15,50 @@
 
 #ifndef VSLAM_OVERLAY_FEATURES_H__
 #define VSLAM_OVERLAY_FEATURES_H__
-#include <opencv2/highgui/highgui.hpp>
-
 #include "core/Frame.h"
 #include "core/Point3D.h"
 #include "utils/utils.h"
-namespace vslam::overlay
-{
-class Features
-{
+#include <map>
+#include <opencv2/highgui/highgui.hpp>
+namespace vslam::overlay {
+class Features {
 public:
-  Features(Frame::ConstShPtr frame, double cellSize) : _frame(frame), _gridCellSize(cellSize) {}
+  Features(Frame::ConstShPtr frame, double cellSize, bool annotate = false) :
+      _frame(frame),
+      _gridCellSize(cellSize),
+      _annotate(annotate) {}
   cv::Mat draw() const;
   cv::Mat operator()() const { return draw(); }
 
 private:
   const Frame::ConstShPtr _frame;
   const double _gridCellSize;
+  const bool _annotate;
 };
 
-class MatchCandidates
-{
+class MatchCandidates {
 public:
-  MatchCandidates(
-    Frame::ConstShPtr f0, Frame::ConstShPtr f1, const MatXd & mask, double maxMask, int idx)
-  : _f0(f0), _f1(f1), _mask(mask), _maxMask(maxMask), _idx(idx)
-  {
-  }
+  MatchCandidates(Frame::ConstShPtr f0, Frame::ConstShPtr f1, const MatXd &mask, double maxMask, int idx) :
+      _f0(f0),
+      _f1(f1),
+      _mask(mask),
+      _maxMask(maxMask),
+      _idx(idx) {}
   cv::Mat draw() const;
   cv::Mat operator()() const { return draw(); }
 
 private:
-  void drawFeature(
-    cv::Mat & mat, Feature2D::ConstShPtr ft, const std::string & annotation = "",
-    double radius = 5) const;
+  void drawFeature(cv::Mat &mat, Feature2D::ConstShPtr ft, const std::string &annotation = "", double radius = 5) const;
   const Frame::ConstShPtr _f0, _f1;
   const MatXd _mask;
   const double _maxMask;
   const int _idx;
 };
 
-class CorrespondingPoints
-{
+class CorrespondingPoints {
 public:
-  CorrespondingPoints(const std::vector<Frame::ConstShPtr> & frames) : _frames(frames) {}
+  CorrespondingPoints(const std::vector<Frame::ConstShPtr> &frames) :
+      _frames(frames) {}
 
   cv::Mat draw() const;
   cv::Mat operator()() const { return draw(); }
@@ -67,15 +67,19 @@ private:
   std::vector<Frame::ConstShPtr> _frames;
 };
 
-class Matches
-{
+class Matches {
 public:
   Matches(
-    Frame::ConstShPtr f0, Frame::ConstShPtr f1, const std::vector<cv::Point> & pts0,
-    const std::vector<cv::Point> & pts1, const cv::Mat & mask)
-  : _f0(f0), _f1(f1), _pts0(pts0), _pts1(pts1), _mask(mask)
-  {
-  }
+    Frame::ConstShPtr f0,
+    Frame::ConstShPtr f1,
+    const std::vector<cv::Point> &pts0,
+    const std::vector<cv::Point> &pts1,
+    const cv::Mat &mask) :
+      _f0(f0),
+      _f1(f1),
+      _pts0(pts0),
+      _pts1(pts1),
+      _mask(mask) {}
 
   cv::Mat draw() const;
   cv::Mat operator()() const { return draw(); }
@@ -86,14 +90,11 @@ private:
   cv::Mat _mask;
 };
 
-class FeatureDisplacement
-{
+class FeatureDisplacement {
 public:
   FeatureDisplacement(
-    const Frame::VecConstShPtr & frames, const Point3D::VecConstShPtr & points,
-    unsigned int maxWidth = 2560, unsigned int nRows = 2);
-  FeatureDisplacement(
-    const Frame::VecConstShPtr & frames, unsigned int maxWidth = 2560, unsigned int nRows = 2);
+    const Frame::VecConstShPtr &frames, const Point3D::VecConstShPtr &points, unsigned int maxWidth = 2560, unsigned int nRows = 2);
+  FeatureDisplacement(const Frame::VecConstShPtr &frames, unsigned int maxWidth = 2560, unsigned int nRows = 2);
 
   cv::Mat draw() const;
   cv::Mat operator()() const { return draw(); }
@@ -107,4 +108,4 @@ private:
 };
 
 }  // namespace vslam::overlay
-#endif  //VSLAM_OVERLAY_FEATURES_H__
+#endif  // VSLAM_OVERLAY_FEATURES_H__
