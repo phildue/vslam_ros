@@ -27,6 +27,7 @@
 
 #include <Eigen/Dense>
 #include <chrono>
+#include <functional>
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
 #include <memory>
@@ -95,13 +96,14 @@ private:
   std::shared_ptr<ApproximateSync> _approximateSync;
 
   // Algorithm
-  vslam::FeatureSelection::UnPtr _featureSelection;
-  vslam::AlignmentRgbd::ShPtr _alignmentRgbd;
+  vslam::FeatureSelection<vslam::FiniteGradient>::UnPtr _featureSelection;
+  std::function<vslam::Pose(vslam::Frame::ConstShPtr, vslam::Frame::ConstShPtr)> _odom;
   vslam::ConstantVelocityModel::ShPtr _motionModel;
   vslam::Camera::ShPtr _camera;
   vslam::Pose _motion;
   vslam::Trajectory _trajectory;
   vslam::Frame::ShPtr _kf, _lf, _cf;
+  int _nLevels;
   double _entropyRef, _maxEntropyReduction;
   void initialize();
   void process();

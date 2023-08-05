@@ -19,12 +19,15 @@
 
 #include "core/Point3D.h"
 #include "overlays.h"
+#include "utils/visuals.h"
 namespace vslam::overlay {
 std::map<uint64_t, cv::Scalar> FeatureDisplacement::_colorMap = {};
 
 cv::Mat Features::draw() const {
   cv::Mat mat;
   cv::cvtColor(_frame->intensity(), mat, cv::COLOR_GRAY2BGR);
+  cv::putText(
+    mat, format("{} | {} |", _frame->id(), _frame->t()), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 1.0, cv::Scalar(255, 255, 255));
 
   if (_gridCellSize > 1) {
     for (size_t r = 0; r < _frame->height(0); r += _gridCellSize) {
@@ -39,9 +42,8 @@ cv::Mat Features::draw() const {
   // ss << format("#{} *{}", _frame->features().size(), _frame->featuresWithPoints().size());
   // cv::putText(mat, ss.str(), cv::Point(30, 30), cv::FONT_HERSHEY_COMPLEX, 1.0, cv::Scalar(255, 255, 255));
   for (auto ft : _frame->features()) {
-    const double scale = std::pow(2, ft->level());
-    cv::Point center(ft->position().x() * scale, ft->position().y() * scale);
-    const double radius = 5;
+    cv::Point center(ft->position().x(), ft->position().y());
+    const double radius = 1 * std::pow(2.0, ft->level());
     if (ft->point()) {
       if (_annotate) {
         std::stringstream ss;
@@ -107,18 +109,18 @@ cv::Mat CorrespondingPoints::draw() const {
         auto ft = _frames[j]->observationOf(p->id());
         if (ft) {
           cv::Point center(ft->position().x(), ft->position().y());
-          const double radius = 5;
+          const double radius = 2;
           cv::circle(mats[j], center, radius, color, 2);
-          std::stringstream ss;
-          ss << ft->point()->id();
-          cv::putText(mats[j], ss.str(), center, cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 255));
+          if (_legend) {
+            std::stringstream ss;
+            ss << ft->point()->id();
+            cv::putText(mats[j], ss.str(), center, cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 255));
+          }
         }
       }
     }
   }
-  cv::Mat mat;
-  cv::hconcat(mats, mat);
-  return mat;
+  return arrangeInGrid(mats, _rows, _cols, _h, _w);
 }
 
 FeatureDisplacement::FeatureDisplacement(

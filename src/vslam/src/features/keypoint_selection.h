@@ -11,17 +11,18 @@ namespace vslam::keypoint {
 std::vector<Vec2d> selectManual(Frame::ConstShPtr f, int patchSize = 7);
 
 template <typename KeyPoint, typename Position>
-std::vector<bool> createOccupancyGrid(const std::vector<KeyPoint> &keypoints, int height, int width, float cellSize, Position getPosition) {
+std::vector<std::vector<bool>>
+createOccupancyGrid(const std::vector<KeyPoint> &keypoints, int height, int width, float cellSize, Position getPosition) {
   const size_t nRows = static_cast<size_t>(static_cast<float>(height) / cellSize);
   const size_t nCols = static_cast<size_t>(static_cast<float>(width) / cellSize);
 
-  std::vector<bool> grid(nRows * nCols, false);
+  std::vector<std::vector<bool>> grid(nRows, std::vector<bool>(nCols, false));
   for (size_t idx = 0U; idx < keypoints.size(); idx++) {
     const auto &kp = keypoints[idx];
     const auto &pos = getPosition(kp);
     const size_t r = static_cast<size_t>(pos.y() / cellSize);
     const size_t c = static_cast<size_t>(pos.x() / cellSize);
-    grid[r * nCols + c] = true;
+    grid[r][c] = true;
   }
   return grid;
 }

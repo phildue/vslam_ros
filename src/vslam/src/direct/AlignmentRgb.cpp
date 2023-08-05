@@ -9,6 +9,7 @@
 #include "core/random.h"
 #include "features/FeatureSelection.h"
 #include "interpolate.h"
+#include "jacobians.h"
 #include "utils/log.h"
 #define PERFORMANCE_RGBD_ALIGNMENT false
 #define LOG_NAME "direct_odometry"
@@ -42,8 +43,8 @@ Pose AlignmentRgb::align(
   f0->computePyramid(_nLevels);
   f0->computeDerivatives();
   f0->computePcl();
-  auto featureSelection = std::make_shared<FeatureSelection>(5, 0.01, 0.3, 0, 8.0, 20, 4);
-  featureSelection->select(f0, true);
+  auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 4);
+  featureSelection->select(f0);
   auto f1 = std::make_shared<Frame>(intensity1, cam);
   f1->computePyramid(_nLevels);
   f1->pose() = Pose(guess, guessCovariance);
@@ -64,9 +65,9 @@ Pose AlignmentRgb::align(
   f0->computePyramid(_nLevels);
   f0->computeDerivatives();
   f0->computePcl();
-  auto featureSelection = std::make_shared<FeatureSelection>(5, 0.01, 0.3, 0, 8.0, 20, 4);
+  auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 4);
 
-  featureSelection->select(f0, true);
+  featureSelection->select(f0);
   auto f1 = std::make_shared<Frame>(intensity1, depth1, cam);
   f1->computePyramid(_nLevels);
   f1->pose() = Pose(guess, guessCovariance);
@@ -74,15 +75,18 @@ Pose AlignmentRgb::align(
   f0->removeFeatures();
   return pose;
 }
-AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::ConstShPtr frame0, Frame::ShPtr frame1) {
-  return align(Frame::VecConstShPtr({frame0}), frame1);
+AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1) {
+  return align(frame0->features(), frame1);
 }
-AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::VecConstShPtr framesRef, Frame::ShPtr frame1) {
+AlignmentRgb::Results::UnPtr AlignmentRgb::align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1) {
   TIMED_SCOPE(timer, "align");
 
   const Pose &prior = frame1->pose();
   SE3f pose = prior.SE3().cast<float>();
   Mat6f covariance;
+  Frame::VecConstShPtr framesRef;
+  std::transform(features.begin(), features.end(), std::back_inserter(framesRef), [](auto ft) { return ft->frame(); });
+
   std::vector<SE3f> motions(framesRef.size());
   std::vector<Constraint::VecShPtr> constraints(_nLevels);
   std::vector<NormalEquations> normalEquations(_nLevels);
@@ -90,8 +94,7 @@ AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::VecConstShPtr framesRef,
   std::vector<double> scale(_nLevels);
   for (_level = _nLevels - 1; _level >= 0; _level--) {
     TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
-
-    auto constraintsAll = setupConstraints(framesRef, motions);
+    auto constraintsAll = setupConstraints(framesRef, features);
 
     std::string reason = "Max iterations exceeded";
     double error = INFd;
@@ -149,63 +152,43 @@ AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::VecConstShPtr framesRef,
 }
 
 AlignmentRgb::Constraint::VecShPtr
-AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &frames, const std::vector<SE3f> &motion) const {
+AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features) const {
   TIMED_SCOPE_IF(timer2, format("setupConstraints{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
 
   // TODO we could also first stack all features and then do one transform..
-  std::vector<Constraint::ShPtr> constraintsAll;
-  for (size_t fId = 0; fId < frames.size(); fId++) {
-    const auto &frame = frames[fId];
+
+  std::vector<Constraint::ShPtr> constraints(features.size());
+  std::transform(std::execution::par_unseq, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
+    const Frame::ConstShPtr frame = ft->frame();
     const cv::Mat &intensity = frame->intensity(_level);
     const cv::Mat &dI = frame->dI(_level);
     const double scale = 1.0 / std::pow(2.0, _level);
-    auto features = frame->features();
 
-    std::vector<Constraint::ShPtr> constraints(features.size());
-    std::transform(std::execution::par_unseq, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
-      const Vec2d &uv = ft->position() * scale;
-      const float i = intensity.at<uint8_t>(uv(1), uv(0));
-      const cv::Vec2f dIuv = dI.at<cv::Vec2f>(uv(1), uv(0));
+    const Vec2d uv = ft->position() * scale;
+    const float i = intensity.at<uint8_t>(uv(1), uv(0));
+    const cv::Vec2f dIuv = dI.at<cv::Vec2f>(uv(1), uv(0));
 
-      auto c = std::make_unique<Constraint>();
-      c->fId = fId;
-      c->uv0 = uv.cast<float>();
-      c->p0 = frame->p3d(uv(1), uv(0), _level).cast<float>();
-      c->i0 = i;
+    auto c = std::make_unique<Constraint>();
+    for (c->fId = 0; c->fId < framesRef.size(); c->fId++) {
+      if (framesRef[c->fId]->id() == frame->id()) {
+        break;
+      }
+    }
+    c->uv0 = uv.cast<float>();
+    c->p0 = frame->p3d(uv(1), uv(0), _level).cast<float>();
+    c->i0 = i;
 
-      Mat<float, 2, 6> Jw = computeJacobianWarp(motion[fId] * c->p0, frame->camera(_level));
-      c->J = dIuv[0] * Jw.row(0) + dIuv[1] * Jw.row(1);
-      return c;
-    });
-    constraintsAll.insert(constraintsAll.end(), constraints.begin(), constraints.end());
-  }
-  // LOG(INFO) << format("Created: {} constraints from {} frames.", constraintsAll.size(), frames.size());
+    /*TODO
+    - dont we have to recompute this each iteration? NO we always linearize and differentiate around the identity warp
+    */
+    const Mat<float, 1, 2> JI(dIuv[0], dIuv[1]);
 
-  return constraintsAll;
-}
-Matf<2, 6> AlignmentRgb::computeJacobianWarp(const Vec3f &p, Camera::ConstShPtr cam) const {
-  const double &x = p.x();
-  const double &y = p.y();
-  const double z_inv = 1. / p.z();
-  const double z_inv_2 = z_inv * z_inv;
+    c->J = JI * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
+           jacobian::transform_se3(SE3f(), c->p0);
+    return c;
+  });
 
-  Matf<2, 6> J;
-  J(0, 0) = z_inv;
-  J(0, 1) = 0.0;
-  J(0, 2) = -x * z_inv_2;
-  J(0, 3) = y * J(0, 2);
-  J(0, 4) = 1.0 - x * J(0, 2);
-  J(0, 5) = -y * z_inv;
-  J.row(0) *= cam->fx();
-  J(1, 0) = 0.0;
-  J(1, 1) = z_inv;
-  J(1, 2) = -y * z_inv_2;
-  J(1, 3) = -1.0 + y * J(1, 2);
-  J(1, 4) = -J(1, 3);
-  J(1, 5) = x * z_inv;
-  J.row(1) *= cam->fy();
-
-  return J;
+  return constraints;
 }
 
 AlignmentRgb::Constraint::VecShPtr AlignmentRgb::computeResidualsAndJacobian(
@@ -236,10 +219,17 @@ AlignmentRgb::Constraint::VecShPtr AlignmentRgb::computeResidualsAndJacobian(
 
   auto withinImage = [&](const Vec2f &uv) -> bool { return (bw < uv(0) && uv(0) < w - bw && bh < uv(1) && uv(1) < h - bh); };
 
-  std::function<float(const Vec2f &)> sample = [&](const Vec2f &uv) -> float { return interpolate<uint8_t>(I1, uv); };
-
+  std::function<float(const Vec2f &)> sample = [&](const Vec2f &uv) -> float {
+    return interpolate(uv, [&](int v, int u) { return Vec<float, 1>::Constant(I1.at<uint8_t>(v, u)); })(0);
+  };
   if (f1->hasDepth()) {
-    sample = [&](const Vec2f &uv) -> float { return interpolate<uint8_t, float>(I1, f1->Z(_level), uv)(0); };
+    sample = [&](const Vec2f &uv) -> float {
+      return interpolate(uv, [&](int v, int u) {
+        const float i1 = I1.at<uint8_t>(v, u);
+        const float z1 = f1->depth(_level).at<float>(v, u);
+        return z1 > 0 ? Vec2f(i1, z1) : Vec2f::Constant(NANf);
+      })(0);
+    };
   }
 
   std::for_each(std::execution::par_unseq, constraints.begin(), constraints.end(), [&](auto c) {

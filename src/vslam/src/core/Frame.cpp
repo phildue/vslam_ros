@@ -35,7 +35,9 @@ Frame::Frame(const cv::Mat &intensity, const cv::Mat &depth, Camera::ConstShPtr 
     _t(t),
     _pose(pose),
     _depth({depth}) {
-  if (intensity.cols != depth.cols || std::abs(intensity.cols / 2 - cam->cx()) > 50 || intensity.rows != depth.rows) {
+  if (
+    intensity.cols != depth.cols || std::abs(intensity.cols / 2.0 - cam->cx()) > 50 || std::abs(intensity.rows / 2.0 - cam->cy()) > 50 ||
+    intensity.rows != depth.rows) {
     throw std::runtime_error(format(
       "Inconsistent camera parameters / image / depth dimensions detected: I:{}x{}, Z:{}x{}, "
       "pp:{},{}",
@@ -53,7 +55,7 @@ Frame::Frame(const cv::Mat &intensity, Camera::ConstShPtr cam, const Timestamp &
     _cam({cam}),
     _t(t),
     _pose(pose) {
-  if (std::abs(intensity.cols / 2 - cam->cx()) > 50) {
+  if (std::abs(intensity.cols / 2.0 - cam->cx()) > 50 || std::abs(intensity.rows / 2.0 - cam->cy()) > 50) {
     throw std::runtime_error(format(
       "Inconsistent camera parameters / image / depth dimensions detected: I:{}x{}, "
       "pp:{},{}",

@@ -50,6 +50,34 @@ cv::Mat frames(Frame::VecConstShPtr frames) {
   return overlay;
 }
 
+cv::Mat frames(Frame::VecConstShPtr frames, int rows, int cols, int h, int w) {
+  cv::Mat overlay;
+  std::vector<cv::Mat> mats(frames.size());
+  std::transform(frames.begin(), frames.end(), mats.begin(), [](auto f) { return visualizeFrame(f); });
+  return arrangeInGrid(mats, rows, cols, h, w);
+}
+
+cv::Mat arrangeInGrid(const std::vector<cv::Mat> &mats_, int nRows, int nCols, int h, int w) {
+  auto mats = mats_;
+  for (auto &m : mats) {
+    cv::resize(m, m, cv::Size(w, h));
+  }
+  std::vector<std::vector<cv::Mat>> grid(nRows, std::vector<cv::Mat>(nCols, cv::Mat(h, w, CV_8UC3, cv::Scalar(0, 0, 0))));
+  std::vector<cv::Mat> rows(nRows);
+  for (int i = 0; i < nRows; i++) {
+    for (int j = 0; j < nCols; j++) {
+      const size_t idx = i * nCols + j;
+      if (idx < mats.size()) {
+        grid[i][j] = mats[idx];
+      }
+    }
+    cv::hconcat(grid[i], rows[i]);
+  }
+  cv::Mat mat;
+  cv::vconcat(rows, mat);
+  return mat;
+}
+
 }  // namespace overlay
 
 }  // namespace vslam

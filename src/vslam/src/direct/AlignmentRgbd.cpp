@@ -11,6 +11,7 @@
 #include "utils/log.h"
 
 #include "interpolate.h"
+#include "jacobians.h"
 #define PERFORMANCE_RGBD_ALIGNMENT false
 #define LOG_NAME "direct_odometry"
 #define MLOG(level) CLOG(level, LOG_NAME)
@@ -44,9 +45,9 @@ Pose AlignmentRgbd::align(
   f0->computePyramid(_nLevels);
   f0->computeDerivatives();
   f0->computePcl();
-  auto featureSelection = std::make_shared<FeatureSelection>(5, 0.01, 0.3, 0, 8.0, 20, 4);
+  auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 4);
 
-  featureSelection->select(f0, true);
+  featureSelection->select(f0);
   auto f1 = std::make_shared<Frame>(intensity1, depth1, cam);
   f1->computePyramid(_nLevels);
   f1->pose() = Pose(guess, guessCovariance);
@@ -54,15 +55,17 @@ Pose AlignmentRgbd::align(
   f0->removeFeatures();
   return pose;
 }
-AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::ConstShPtr frame0, Frame::ShPtr frame1) {
-  return align(Frame::VecConstShPtr({frame0}), frame1);
+AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1) {
+  return align(frame0->features(), frame1);
 }
-AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRef, Frame::ShPtr frame1) {
+AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1) {
   TIMED_SCOPE(timer, "align");
 
   const Pose &prior = frame1->pose();
   SE3f pose = prior.SE3().cast<float>();
   Mat6f covariance;
+  Frame::VecConstShPtr framesRef;
+  std::transform(features.begin(), features.end(), std::back_inserter(framesRef), [](auto ft) { return ft->frame(); });
   std::vector<SE3f> motions(framesRef.size());
   std::vector<Constraint::VecShPtr> constraints(_nLevels);
   std::vector<NormalEquations> normalEquations(_nLevels);
@@ -71,9 +74,7 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
   for (_level = _nLevels - 1; _level >= 0; _level--) {
     TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
 
-    auto constraintsAll = setupConstraints(framesRef, motions);
-    // constraintsAll = keypoint::subsampling::uniform(
-    //   constraintsAll, frame1->height(_level), frame1->width(_level), frame1->size(_level), [](auto c) { return c->uv0; });
+    auto constraintsAll = setupConstraints(framesRef, features);
 
     std::string reason = "Max iterations exceeded";
     double error = INFd;
@@ -88,7 +89,7 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
       constraints[_level] = computeResidualsAndJacobian(constraintsAll, frame1, motions);
 
       if (constraints[_level].size() < 6) {
-        reason = format("Not enough constraints: {}", constraints[_level].size());
+        reason = format("Not enough constraints: {} at {} iteration {}", constraints[_level].size(), _level, _iteration);
         MLOG(WARNING) << reason;
         pose = SE3f();
         break;
@@ -131,66 +132,49 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
 }
 
 AlignmentRgbd::Constraint::VecShPtr
-AlignmentRgbd::setupConstraints(const Frame::VecConstShPtr &frames, const std::vector<SE3f> &motion) const {
+AlignmentRgbd::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features) const {
   TIMED_SCOPE_IF(timer2, format("setupConstraints{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
 
   // TODO we could also first stack all features and then do one transform..
-  std::vector<Constraint::ShPtr> constraintsAll;
-  for (size_t fId = 0; fId < frames.size(); fId++) {
-    const auto &frame = frames[fId];
+
+  std::vector<Constraint::ShPtr> constraints(features.size());
+  std::transform(std::execution::par_unseq, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
+    const Frame::ConstShPtr frame = ft->frame();
     const cv::Mat &intensity = frame->intensity(_level);
     const cv::Mat &dI = frame->dI(_level);
     const cv::Mat &dZ = frame->dZ(_level);
     const double scale = 1.0 / std::pow(2.0, _level);
-    auto features = frame->features();
 
-    std::vector<Constraint::ShPtr> constraints(features.size());
-    std::transform(std::execution::par_unseq, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
-      const Vec2d uv = ft->position() * scale;
-      const float i = intensity.at<uint8_t>(uv(1), uv(0));
-      const cv::Vec2f dIuv = dI.at<cv::Vec2f>(uv(1), uv(0));
-      const cv::Vec2f dZuv = dZ.at<cv::Vec2f>(uv(1), uv(0));
+    const Vec2d uv = ft->position() * scale;
+    const float i = intensity.at<uint8_t>(uv(1), uv(0));
+    const cv::Vec2f dIuv = dI.at<cv::Vec2f>(uv(1), uv(0));
+    const cv::Vec2f dZuv = dZ.at<cv::Vec2f>(uv(1), uv(0));
 
-      auto c = std::make_unique<Constraint>();
-      c->fId = fId;
-      c->uv0 = uv.cast<float>();
-      c->p0 = frame->p3d(uv(1), uv(0), _level).cast<float>();
-      c->iz0 = Vec2f(i, c->p0.z());
+    auto c = std::make_unique<Constraint>();
+    for (c->fId = 0; c->fId < framesRef.size(); c->fId++) {
+      if (framesRef[c->fId]->id() == frame->id()) {
+        break;
+      }
+    }
+    c->uv0 = uv.cast<float>();
+    c->p0 = frame->p3d(uv(1), uv(0), _level).cast<float>();
+    c->iz0 = Vec2f(i, c->p0.z());
 
-      Mat<float, 2, 6> Jw = computeJacobianWarp(motion[fId] * c->p0, frame->camera(_level));
-      c->J.row(0) = dIuv[0] * Jw.row(0) + dIuv[1] * Jw.row(1);
-      c->JZJw = dZuv[0] * Jw.row(0) + dZuv[1] * Jw.row(1);
-      return c;
-    });
-    constraintsAll.insert(constraintsAll.end(), constraints.begin(), constraints.end());
-  }
-  // LOG(INFO) << format("Created: {} constraints from {} frames.", constraintsAll.size(), frames.size());
+    /*TODO
+    - combine this to single expression, so eigen can optimize
+    - dont we have to recompute this each iteration? NO we always linearize and differentiate around the identity warp
+    */
+    const Mat<float, 1, 2> JI(dIuv[0], dIuv[1]);
+    const Mat<float, 1, 2> JZ(dZuv[0], dZuv[1]);
 
-  return constraintsAll;
-}
-Matf<2, 6> AlignmentRgbd::computeJacobianWarp(const Vec3f &p, Camera::ConstShPtr cam) const {
-  const double &x = p.x();
-  const double &y = p.y();
-  const double z_inv = 1. / p.z();
-  const double z_inv_2 = z_inv * z_inv;
+    c->J.row(0) = JI * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
+                  jacobian::transform_se3(SE3f(), c->p0);
+    c->JZJw = JZ * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
+              jacobian::transform_se3(SE3f(), c->p0);
+    return c;
+  });
 
-  Matf<2, 6> J;
-  J(0, 0) = z_inv;
-  J(0, 1) = 0.0;
-  J(0, 2) = -x * z_inv_2;
-  J(0, 3) = y * J(0, 2);
-  J(0, 4) = 1.0 - x * J(0, 2);
-  J(0, 5) = -y * z_inv;
-  J.row(0) *= cam->fx();
-  J(1, 0) = 0.0;
-  J(1, 1) = z_inv;
-  J(1, 2) = -y * z_inv_2;
-  J(1, 3) = -1.0 + y * J(1, 2);
-  J(1, 4) = -J(1, 3);
-  J(1, 5) = x * z_inv;
-  J.row(1) *= cam->fy();
-
-  return J;
+  return constraints;
 }
 
 AlignmentRgbd::Constraint::VecShPtr AlignmentRgbd::computeResidualsAndJacobian(
@@ -228,13 +212,20 @@ AlignmentRgbd::Constraint::VecShPtr AlignmentRgbd::computeResidualsAndJacobian(
     const Vec3f p0t = K * ((R[i] * (c->p0)) + t[i]);
     const Vec2f uv0t = Vec2f(p0t(0), p0t(1)) / p0t(2);
     c->uv1 = uv0t;
-    const Vec2f iz1w = withinImage(uv0t) ? interpolate<uint8_t, float>(I1, Z1, uv0t) : Vec2f::Constant(NANf);
+    const Vec2f iz1w = withinImage(uv0t) ? interpolate(
+                                             uv0t,
+                                             [&](int v, int u) {
+                                               const float i1 = I1.at<uint8_t>(v, u);
+                                               const float z1 = Z1.at<float>(v, u);
+                                               return z1 > 0 ? Vec2f(i1, z1) : Vec2f::Constant(NANf);
+                                             })
+                                         : Vec2f::Constant(NANf);
 
     const Vec3f p1t = ((Rinv[i] * (iz1w(1) * (Kinv * Vec3f(uv0t(0), uv0t(1), 1.0)))) + tinv[i]);
 
     c->residual = Vec2f(iz1w(0), p1t.z()) - c->iz0;
 
-    c->J.row(1) = c->JZJw - computeJacobianSE3z(p1t);
+    c->J.row(1) = c->JZJw - jacobian::transform_se3(motion[i], c->p0).row(2);
 
     c->valid = p0t.z() > 0 && std::isfinite(iz1w.norm()) && std::isfinite(c->residual.norm()) && std::isfinite(c->J.norm());
   });
@@ -266,18 +257,6 @@ NormalEquations AlignmentRgbd::computeNormalEquations(const Pose &prior, const S
   const Mat6f priorInformation = prior.cov().inverse().cast<float>();
   const Vec6f priorError = priorInformation * ((pose * prior.SE3().inverse().cast<float>()).log());
   return {priorInformation, priorError, priorError.norm(), 1};
-}
-
-Vec6f AlignmentRgbd::computeJacobianSE3z(const Vec3f &p) const {
-  Vec6f J;
-  J(0) = 0.0;
-  J(1) = 0.0;
-  J(2) = 1.0;
-  J(3) = p(1);
-  J(4) = -p(0);
-  J(5) = 0.0;
-
-  return J;
 }
 
 }  // namespace vslam

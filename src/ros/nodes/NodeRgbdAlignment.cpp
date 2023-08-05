@@ -47,21 +47,42 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
   if (_replay) {
     _cliReplayer = create_client<std_srvs::srv::SetBool>("togglePlay");
   }
-  _featureSelection = std::make_unique<FeatureSelection>(
-    declare_parameter("features.intensity_gradient_min", 5),
-    declare_parameter("features.depth_gradient_min", 0.01),
-    declare_parameter("features.depth_gradient_max", 0.3),
-    declare_parameter("features.depth_min", 0),
-    declare_parameter("features.depth_max", 8.0),
-    declare_parameter("features.grid_size", 10.0),
+  _featureSelection = std::make_unique<FeatureSelection<FiniteGradient>>(
+    FiniteGradient{
+      declare_parameter<float>("features.intensity_gradient_min", 5.0f),
+      declare_parameter<float>("features.depth_gradient_min", 0.01f),
+      declare_parameter<float>("features.depth_gradient_max", 0.3f),
+      declare_parameter<float>("features.depth_min", 0.0f),
+      declare_parameter<float>("features.depth_max", 8.0f)},
+    declare_parameter<float>("features.grid_size", 10.0f),
     declare_parameter("features.n_levels", 4));
 
-  _alignmentRgbd = std::make_shared<AlignmentRgbd>(
-    declare_parameter("odometry.n_levels", 4),
-    declare_parameter("odometry.max_iterations", 50),
-    declare_parameter("odometry.min_parameter_update", 0.0001),
-    declare_parameter("odometry.max_error_increase", 10));
+  const std::string odometryMethod = declare_parameter("odometry.method", "rgbd");
+  if (odometryMethod == "rgb") {
+    auto aligner = std::make_shared<AlignmentRgb>(
+      declare_parameter("odometry.n_levels", 4),
+      declare_parameter("odometry.max_iterations", 50),
+      declare_parameter("odometry.min_parameter_update", 0.0001),
+      declare_parameter("odometry.max_error_increase", 10));
+    _odom = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
+      auto r = aligner->align(f0, f1);
+      return r->pose;
+    };
+  } else if (odometryMethod == "rgbd") {
+    auto aligner = std::make_shared<AlignmentRgbd>(
+      declare_parameter("odometry.n_levels", 4),
+      declare_parameter("odometry.max_iterations", 50),
+      declare_parameter("odometry.min_parameter_update", 0.0001),
+      declare_parameter("odometry.max_error_increase", 10));
+    _odom = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
+      auto r = aligner->align(f0, f1);
+      return r->pose;
+    };
+  } else {
+    throw std::runtime_error(format("Unknown odometry method: {}", odometryMethod));
+  }
 
+  _nLevels = std::max(get_parameter("features.n_levels").as_int(), get_parameter("odometry.n_levels").as_int());
   _motionModel = std::make_shared<ConstantVelocityModel>(declare_parameter("motion_model.information", 10.0), INFd, INFd);
 
   _maxEntropyReduction = declare_parameter("keyframe_selection.max_entropy_reduction", 0.05);
@@ -89,25 +110,6 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
   _subDepth = create_subscription<sensor_msgs::msg::Image>(
     "/camera/depth/image", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) { _queue->pushDepth(msg); });
 
-  _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() {
-    /*Check periodically if there are enough frames and process if so.
-     */
-    if (_camera && std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
-      auto const [_, depth, img] = _queue->pop();
-      RCLCPP_DEBUG(
-        get_logger(),
-        "fNo: %d Processing Z: %d.%d I: %d.%d %f",
-        _fNo,
-        depth->header.stamp.sec,
-        depth->header.stamp.nanosec,
-        img->header.stamp.sec,
-        img->header.stamp.nanosec,
-        (rclcpp::Time(depth->header.stamp).nanoseconds() - rclcpp::Time(img->header.stamp).nanoseconds()) / 1e9);
-      this->imageCallback(img, depth);
-
-      _fNo++;
-    }
-  });
 #endif
 
   RCLCPP_INFO(get_logger(), "Ready.");
@@ -119,6 +121,7 @@ void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstShared
   if (camera->fx() > 0.0 && camera->cx() > 0.0) {
     _subCamInfo.reset();
     _camera = camera;
+    _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() { initialize(); });
 
     _periodicTimer = create_wall_timer(std::chrono::seconds(1), [this, msg]() { this->timerCallback(); });
 
@@ -130,53 +133,62 @@ void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstShared
   }
 }
 
-void NodeRgbdAlignment::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) {
-  TIMED_SCOPE(timerF, "processFrame");
-  _lf = _cf;
-  _cf = createFrame(msgImg, msgDepth);
-
-  if (_kf) {
-    process();
-  } else {
-    initialize();
-  }
-
-  publish(msgImg->header.stamp);
-}
 void NodeRgbdAlignment::initialize() {
-  _cf->computePyramid(_alignmentRgbd->nLevels());
+  if (std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
+    TIMED_SCOPE(timerF, "initialize");
+    auto const [_, depth, img] = _queue->pop();
 
-  _kf = _cf;
-  _lf = _cf;
-  _kf->computeDerivatives();
-  _kf->computePcl();
-  _featureSelection->select(_kf, true);
-  _motionModel->update(_cf->pose(), _cf->t());
-  _motion = _cf->pose() * _lf->pose().inverse();
+    _lf = _cf;
+    _cf = createFrame(img, depth);
 
-  _trajectory.append(_cf->t(), _cf->pose());
-}
-void NodeRgbdAlignment::process() {
-  _cf->computePyramid(_alignmentRgbd->nLevels());
+    _cf->computePyramid(_nLevels);
 
-  _cf->pose() = _motionModel->predict(_cf->t());
-
-  auto results = _alignmentRgbd->align(_kf, _cf);
-  _cf->pose() = results->pose;
-  if (1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction) {
-    _kf->removeFeatures();
-    _kf = _lf;
+    _kf = _cf;
+    _lf = _cf;
     _kf->computeDerivatives();
     _kf->computePcl();
-    _featureSelection->select(_kf, true);
-    _cf->pose() = _motionModel->predict(_cf->t());
-    _cf->pose() = _alignmentRgbd->align(_kf, _cf)->pose;
-    _entropyRef = std::log(_cf->pose().cov().determinant());
-  }
-  _motionModel->update(_cf->pose(), _cf->t());
-  _motion = _cf->pose() * _lf->pose().inverse();
+    _featureSelection->select(_kf);
+    _motionModel->update(_cf->pose(), _cf->t());
+    _motion = _cf->pose() * _lf->pose().inverse();
 
-  _trajectory.append(_cf->t(), _cf->pose());
+    _trajectory.append(_cf->t(), _cf->pose());
+
+    publish(img->header.stamp);
+    _fNo++;
+    _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() { process(); });
+  }
+}
+void NodeRgbdAlignment::process() {
+  if (std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
+    TIMED_SCOPE(timerF, "processFrame");
+    auto const [_, depth, img] = _queue->pop();
+    _lf = _cf;
+    _cf = createFrame(img, depth);
+
+    _cf->computePyramid(_nLevels);
+
+    _cf->pose() = _motionModel->predict(_cf->t());
+
+    _cf->pose() = _odom(_kf, _cf);
+    if (1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction) {
+      _kf->removeFeatures();
+      _kf = _lf;
+      _kf->computeDerivatives();
+      _kf->computePcl();
+      _featureSelection->select(_kf);
+      _cf->pose() = _motionModel->predict(_cf->t());
+      _cf->pose() = _odom(_kf, _cf);
+      ;
+      _entropyRef = std::log(_cf->pose().cov().determinant());
+    }
+    _motionModel->update(_cf->pose(), _cf->t());
+    _motion = _cf->pose() * _lf->pose().inverse();
+
+    _trajectory.append(_cf->t(), _cf->pose());
+
+    publish(img->header.stamp);
+    _fNo++;
+  }
 }
 
 Frame::UnPtr

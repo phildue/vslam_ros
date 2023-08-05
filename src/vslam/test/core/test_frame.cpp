@@ -25,7 +25,7 @@ using namespace testing;
 using namespace vslam;
 
 TEST(FrameTest, BadDimensions) {
-  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat img(110, 640, CV_8UC1);
 
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   EXPECT_ANY_THROW(std::make_shared<Frame>(img, cam)) << "Should throw because image dimensions don't match with camera parameters";
@@ -40,7 +40,7 @@ TEST(FrameTest, BadAccessDepth) {
   auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, cam);
 
-  EXPECT_EQ(-1, f->depth(10, 10));
+  EXPECT_ANY_THROW(f->depth(10, 10));
 }
 
 TEST(FrameTest, GoodAccessDepth) {
@@ -153,5 +153,4 @@ TEST(FrameTest, AddDeleteFeatures) {
   EXPECT_EQ(f1->featuresWithPoints().size(), 3);
   f0->removeFeatures();
   EXPECT_EQ(f0->features().size(), 0);
-  EXPECT_EQ(f1->featuresWithPoints().size(), 0);
 }

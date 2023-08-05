@@ -96,7 +96,7 @@ TEST(DescriptorMatchingTest, DISABLED_EvaluateOnTum) {
         descriptorMatching->track(kf, kfs);
         kfs.push_back(kf);
         if (kfs.size() >= 3) {
-          log::append("Track", overlay::CorrespondingPoints({kfs.end() - 3, kfs.end()}));
+          log::append("Track", overlay::CorrespondingPoints({kfs.end() - 3, kfs.end()}, 3, 3));
         }
       } else {
         f->pose() = motion;
