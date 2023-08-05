@@ -34,21 +34,15 @@
 #define NANf std::numeric_limits<float>::quiet_NaN()
 #define NANi std::numeric_limits<int>::quiet_NaN()
 
-namespace Eigen
-{
+namespace Eigen {
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 }
 
 using fmt::format;
 using fmt::print;
-template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of_v<Eigen::DenseBase<T>, T>, char>>
-: ostream_formatter
-{
-};
+template <typename T> struct fmt::formatter<T, std::enable_if_t<std::is_base_of_v<Eigen::DenseBase<T>, T>, char>> : ostream_formatter {};
 
-namespace vslam
-{
+namespace vslam {
 typedef std::uint8_t image_value_t;
 typedef Eigen::Matrix<image_value_t, Eigen::Dynamic, Eigen::Dynamic> Image;
 typedef std::vector<Image> ImageVec;
@@ -70,14 +64,15 @@ typedef std::vector<MatXd> MatXdVec;
 
 typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> MatXf;
 
-template <typename Derived, int nRows, int nCols>
-using Mat = Eigen::Matrix<Derived, nRows, nCols>;
+template <typename Derived, int nRows, int nCols> using Mat = Eigen::Matrix<Derived, nRows, nCols>;
 
-template <int nRows, int nCols>
-using Matd = Eigen::Matrix<double, nRows, nCols>;
+template <typename Derived, int nRows> using Vec = Eigen::Matrix<Derived, nRows, 1>;
 
-template <int nRows, int nCols>
-using Matf = Eigen::Matrix<float, nRows, nCols>;
+template <int nRows, int nCols> using Matd = Eigen::Matrix<double, nRows, nCols>;
+
+template <int nRows, int nCols> using Matf = Eigen::Matrix<float, nRows, nCols>;
+
+template <typename T> using SE3 = Sophus::SE3<T>;
 
 typedef Eigen::VectorXd VecXd;
 typedef Eigen::Vector2d Vec2d;
@@ -88,6 +83,7 @@ typedef Eigen::Matrix<double, 2, 2> Mat2d;
 typedef Eigen::Matrix<double, 3, 3> Mat3d;
 typedef Eigen::Matrix<double, 3, 3> Mat4d;
 typedef Eigen::Matrix<double, 6, 1> Vec6d;
+typedef Eigen::Matrix<double, 7, 1> Vec7d;
 typedef Eigen::Matrix<double, 6, 6> Mat6d;
 typedef Eigen::Matrix<double, 12, 1> Vec12d;
 typedef Eigen::Matrix<double, 12, 12> Mat12d;
@@ -99,6 +95,8 @@ typedef Eigen::Vector4f Vec4f;
 typedef Eigen::Matrix<float, 2, 2> Mat2f;
 typedef Eigen::Matrix<float, 3, 3> Mat3f;
 typedef Eigen::Matrix<float, 6, 1> Vec6f;
+typedef Eigen::Matrix<float, 7, 1> Vec7f;
+
 typedef Eigen::Matrix<float, 6, 6> Mat6f;
 typedef Eigen::Matrix<float, 12, 1> Vec12f;
 typedef Eigen::Matrix<float, 12, 12> Mat12f;
@@ -121,4 +119,4 @@ typedef std::uint64_t Timestamp;
 
 }  // namespace vslam
 
-#endif  //VSLAM_TYPES_H
+#endif  // VSLAM_TYPES_H

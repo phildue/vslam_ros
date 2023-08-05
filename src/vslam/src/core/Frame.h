@@ -40,10 +40,19 @@ public:
   std::uint64_t id() const { return _id; }
 
   const cv::Mat &intensity(size_t level = 0) const { return _intensity.at(level); }
+  const uint8_t &intensity(int v, int u, size_t level = 0) const { return _intensity.at(level).at<uint8_t>(v, u); }
   const cv::Mat &I(size_t level = 0) const { return intensity(level); }
+  const uint8_t &I(int v, int u, size_t level = 0) const { return intensity(v, u, level); }
   const cv::Mat &dI(size_t level = 0) const;
+  const cv::Vec2f &dI(int v, int u, size_t level = 0) const { return _dI.at(level).at<cv::Vec2f>(v, u); }
+  const float &dIx(int v, int u, size_t level = 0) const { return _dI.at(level).at<cv::Vec2f>(v, u)[0]; }
+  const float &dIy(int v, int u, size_t level = 0) const { return _dI.at(level).at<cv::Vec2f>(v, u)[1]; }
+
   const cv::Mat &depth(size_t level = 0) const { return _depth.at(level); }
+  const float &depth(int v, int u, size_t level = 0) const { return _depth.at(level).at<float>(v, u); }
+
   const cv::Mat &Z(size_t level = 0) const { return depth(level); }
+  const float &Z(int v, int u, size_t level = 0) const { return depth(v, u, level); }
   const cv::Mat &dZ(size_t level = 0) const;
   Frame level(size_t level) const;
 
