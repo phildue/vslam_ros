@@ -28,4 +28,14 @@
 #define UNUSED_FUNCTION(x) UNUSED_##x
 #endif
 
+#define TYPEDEF_PTR(name) \
+  typedef std::shared_ptr<name> ShPtr; \
+  typedef std::shared_ptr<const name> ConstShPtr; \
+  typedef std::unique_ptr<name> UnPtr; \
+  typedef std::unique_ptr<const name> ConstUnPtr; \
+  typedef std::vector<ShPtr> VecShPtr; \
+  typedef std::vector<ConstShPtr> VecConstShPtr; \
+  typedef std::vector<UnPtr> VecUnPtr; \
+  typedef std::vector<ConstUnPtr> VecConstUnPtr;
+
 #endif
