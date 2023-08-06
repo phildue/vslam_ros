@@ -10,18 +10,15 @@
 #include "core/Camera.h"
 #include "core/Frame.h"
 #include "core/Pose.h"
+#include "core/macros.h"
 #include "core/types.h"
 #include "weights.h"
 namespace vslam {
 class AlignmentRgbd {
 public:
-  typedef std::shared_ptr<AlignmentRgbd> ShPtr;
-
+  TYPEDEF_PTR(AlignmentRgbd)
   struct Constraint {
-    typedef std::shared_ptr<Constraint> ShPtr;
-    typedef std::shared_ptr<Constraint> ConstShPtr;
-    typedef std::vector<ShPtr> VecShPtr;
-    typedef std::vector<ConstShPtr> VecConstShPtr;
+    TYPEDEF_PTR(Constraint)
 
     size_t fId;
     Vec2f uv0, uv1;
@@ -35,7 +32,7 @@ public:
   };
 
   struct Results {
-    typedef std::unique_ptr<Results> UnPtr;
+    TYPEDEF_PTR(Results);
     Pose pose;
     std::vector<Constraint::VecConstShPtr> constraints;
     std::vector<Mat2d> scale;
@@ -47,6 +44,7 @@ public:
 
   AlignmentRgbd(const std::map<std::string, double> params);
   AlignmentRgbd(int nLevels = 4, double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
+  AlignmentRgbd(const std::vector<int> &levels, double maxIterations, double minParameterUpdate, double maxErrorIncrease);
 
   Pose align(
     Camera::ConstShPtr cam,
@@ -57,14 +55,14 @@ public:
     const SE3d &guess,
     const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
 
-  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ShPtr frame1);
-  Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ShPtr frame1);
+  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1);
+  Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ConstShPtr frame1);
 
-  int nLevels() { return _nLevels; }
+  int nLevels() { return *std::max_element(_levels.begin(), _levels.end()) + 1; }
 
 private:
   const TDistributionBivariate<Constraint>::ShPtr _weightFunction;
-  const int _nLevels;
+  std::vector<int> _levels;
   const double _maxIterations, _minParameterUpdate, _maxErrorIncrease;
 
   int _level, _iteration;

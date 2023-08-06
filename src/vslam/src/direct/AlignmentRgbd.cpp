@@ -25,7 +25,17 @@ AlignmentRgbd::AlignmentRgbd(const std::map<std::string, double> params) :
 
 AlignmentRgbd::AlignmentRgbd(int nLevels, double maxIterations, double minParameterUpdate, double maxErrorIncrease) :
     _weightFunction(std::make_shared<TDistributionBivariate<Constraint>>(5.0, 1e-3, 10)),
-    _nLevels(nLevels),
+    _maxIterations(maxIterations),
+    _minParameterUpdate(minParameterUpdate),
+    _maxErrorIncrease(maxErrorIncrease) {
+  log::create(LOG_NAME);
+  for (int i = nLevels - 1; i >= 0; i--) {
+    _levels.push_back(i);
+  }
+}
+AlignmentRgbd::AlignmentRgbd(const std::vector<int> &levels, double maxIterations, double minParameterUpdate, double maxErrorIncrease) :
+    _weightFunction(std::make_shared<TDistributionBivariate<Constraint>>(5.0, 1e-3, 10)),
+    _levels(levels),
     _maxIterations(maxIterations),
     _minParameterUpdate(minParameterUpdate),
     _maxErrorIncrease(maxErrorIncrease) {
@@ -41,34 +51,35 @@ Pose AlignmentRgbd::align(
   const SE3d &guess,
   const Mat6d &guessCovariance) {
   auto f0 = std::make_shared<Frame>(intensity0, depth0, cam);
-  f0->computePyramid(_nLevels);
+  f0->computePyramid(*std::max_element(_levels.begin(), _levels.end()) + 1);
   f0->computeDerivatives();
   f0->computePcl();
   auto featureSelection = std::make_shared<FeatureSelection>(5, 0.01, 0.3, 0, 8.0, 20, 4);
 
   featureSelection->select(f0, true);
   auto f1 = std::make_shared<Frame>(intensity1, depth1, cam);
-  f1->computePyramid(_nLevels);
+  f1->computePyramid(*std::max_element(_levels.begin(), _levels.end()) + 1);
   f1->pose() = Pose(guess, guessCovariance);
   Pose pose = align(f0, f1)->pose;
   f0->removeFeatures();
   return pose;
 }
-AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::ConstShPtr frame0, Frame::ShPtr frame1) {
+AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1) {
   return align(Frame::VecConstShPtr({frame0}), frame1);
 }
-AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRef, Frame::ShPtr frame1) {
+AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRef, Frame::ConstShPtr frame1) {
   TIMED_SCOPE(timer, "align");
 
   const Pose &prior = frame1->pose();
   SE3f pose = prior.SE3().cast<float>();
   Mat6f covariance;
   std::vector<SE3f> motions(framesRef.size());
-  std::vector<Constraint::VecShPtr> constraints(_nLevels);
-  std::vector<NormalEquations> normalEquations(_nLevels);
-  std::vector<int> iterations(_nLevels);
-  std::vector<Mat2d> scale(_nLevels);
-  for (_level = _nLevels - 1; _level >= 0; _level--) {
+  std::vector<Constraint::VecShPtr> constraints(nLevels());
+  std::vector<NormalEquations> normalEquations(nLevels());
+  std::vector<int> iterations(nLevels());
+  std::vector<Mat2d> scale(nLevels());
+  for (const auto &l : _levels) {
+    _level = l;
     TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
 
     auto constraintsAll = setupConstraints(framesRef, motions);
