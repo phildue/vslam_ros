@@ -90,7 +90,7 @@
       "name": "(gdb) Launch Test",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/vslam_ros/src/vslam/${input:test}",
+      "program": "${workspaceFolder}/build/vslam_ros/test/${input:test}",
       "args": [],
       "preLaunchTask": "build_vslam",
       "stopAtEntry": false,
@@ -208,6 +208,8 @@
         "type": "pickString",
         "description": "vslam unit test",
         "options":[
+            "pose_graph_optimization",
+            "loop_closure_detection",
             "rgbd_odometry_simple",
             "rgb_odometry_simple",
         "multiframe_alignment",

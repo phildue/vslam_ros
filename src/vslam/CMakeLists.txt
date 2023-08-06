@@ -24,7 +24,6 @@ set( sources
     src/evaluation/evaluation.cpp
     src/evaluation/tum.cpp
     src/direct/AlignmentRgb.cpp
-    src/direct/AlignmentRgbPoseGraph.cpp
     src/direct/AlignmentRgbd.cpp
     src/direct/overlay.cpp
     src/motion_model/ConstantVelocityModel.cpp
@@ -59,7 +58,6 @@ set( headers
     src/direct/weights.h
     src/direct/overlay.h
     src/direct/AlignmentRgb.h
-    src/direct/AlignmentRgbPoseGraph.h
     src/direct/AlignmentRgbd.h
     src/motion_model/ConstantVelocityModel.h
     src/bundle_adjustment/BundleAdjustment.h
@@ -138,6 +136,8 @@ endif()
 # Add tests
 option(VSLAM_BUILD_TESTS "Enable to build tests" ON)
 if(VSLAM_BUILD_TESTS)
+  SET(VSLAM_TEST_BINARY_DIR "${CMAKE_BINARY_DIR}/test" CACHE PATH "Location of test binaries")
+  set(VSLAM_TEST_RESOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/test/resource" CACHE PATH "Location of test resources")
   enable_testing()
   find_package(GTest CONFIG REQUIRED)
   option(VSLAM_TEST_VISUALIZE "Enable test visualizations." ON)
@@ -149,11 +149,10 @@ if(VSLAM_BUILD_TESTS)
   pd_add_experiment(rgbd_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_simple.cpp)
   pd_add_experiment(rgb_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_odometry_simple.cpp)
   pd_add_experiment(rgbd_odometry_entropy ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_entropy.cpp)
-  pd_add_experiment(rgb_pose_graph_single_frame ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_pose_graph_single_frame.cpp)
-  pd_add_experiment(rgb_pose_graph ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_pose_graph.cpp)
   
   pd_add_experiment(direct_icp ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_direct_icp.cpp)
-  pd_add_experiment(multiframe_alignment ${CMAKE_CURRENT_LIST_DIR}/test/direct/multiframe_alignment.cpp)
+
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/pose_graph_optimization)
 
   pd_add_test(ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ba.cpp)
   pd_add_test(ceres_ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ceres_ba.cpp)

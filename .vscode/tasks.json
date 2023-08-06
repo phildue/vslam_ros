@@ -49,7 +49,7 @@
         },
         {
             "label": "build_vslam",
-            "command":"cd ${workspaceFolder}/build/vslam_ros/src/vslam && make ${input:test} -j4",
+            "command":"cd ${workspaceFolder}/build/vslam_ros/ && cmake --build . --target ${input:test}",
             "type": "shell",
             "problemMatcher": "$gcc",
             "group": {
@@ -383,6 +383,8 @@
             "type": "pickString",
             "description": "vslam unit test",
             "options":[
+                "pose_graph_optimization",
+                "loop_closure_detection",
                 "rgbd_odometry_simple",
                 "rgb_odometry_simple",
                 "multiframe_alignment",
