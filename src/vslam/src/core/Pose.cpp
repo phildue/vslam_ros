@@ -14,18 +14,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Pose.h"
-namespace vslam
-{
-Pose Pose::inverse() const
-{
-  //See: Characterizing the Uncertainty of Jointly Distributed Poses in the Lie Algebra
+namespace vslam {
+Pose Pose::inverse() const {
+  // See: Characterizing the Uncertainty of Jointly Distributed Poses in the Lie Algebra
   auto T_inv = _pose.inverse();
   auto sigma_inv = T_inv.Adj() * cov() * T_inv.Adj().transpose();
   return Pose(T_inv, sigma_inv);
 }
+Mat6d Pose::Adj() const { return _pose.Adj(); }
 
-Pose operator*(const Pose & p1, const Pose & p0)
-{
+Pose operator*(const Pose &p1, const Pose &p0) {
   auto T_01 = p1.SE3() * p0.SE3();
   auto sigma_ij = p0.cov();
   auto adj_ij = p0.SE3().Adj();
@@ -34,7 +32,7 @@ Pose operator*(const Pose & p1, const Pose & p0)
   Assuming the poses are independent
   See: Characterizing the Uncertainty of Jointly Distributed Poses in the Lie Algebra
   */
-  auto sigma_01 = sigma_ij + adj_ij * sigma_jk * adj_ij;
+  auto sigma_01 = sigma_ij + adj_ij * sigma_jk * adj_ij.transpose();
   return Pose(T_01, sigma_01);
 }
 }  // namespace vslam
