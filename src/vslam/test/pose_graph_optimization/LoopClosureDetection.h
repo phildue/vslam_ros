@@ -12,8 +12,8 @@ public:
   struct Result {
     TYPEDEF_PTR(Result)
     size_t from, to;
-    double entropyRatio;
     Pose relativePose;
+    bool isLoopClosure;
   };
   LoopClosureDetection(
     double maxTranslation, double maxAngle, double minRatio, AlignmentRgbd::UnPtr fineAligner, AlignmentRgbd::UnPtr coarseAligner);
