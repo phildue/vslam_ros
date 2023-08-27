@@ -26,6 +26,7 @@ set( sources
     src/direct/AlignmentRgb.cpp
     src/direct/AlignmentRgbd.cpp
     src/direct/overlay.cpp
+    src/direct/NormalEquations.cpp
     src/motion_model/ConstantVelocityModel.cpp
     src/bundle_adjustment/BundleAdjustment.cpp
     src/descriptor_matching/overlays.cpp
