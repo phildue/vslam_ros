@@ -1,5 +1,4 @@
 
-
 #include <execution>
 #include <numeric>
 
@@ -14,7 +13,7 @@
 #define PERFORMANCE_RGBD_ALIGNMENT false
 #define LOG_NAME "direct_odometry"
 #define MLOG(level) CLOG(level, LOG_NAME)
-
+#define exec_policy std::execution::par_unseq
 namespace vslam {
 std::map<std::string, double> AlignmentRgbd::defaultParameters() {
   return {{"nLevels", 4.0}, {"maxIterations", 100}, {"minParameterUpdate", 1e-4}, {"maxErrorIncrease", 1.5}};
@@ -67,10 +66,17 @@ Pose AlignmentRgbd::align(
 AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1) {
   return align(Frame::VecConstShPtr({frame0}), frame1);
 }
+AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior) {
+  return align(Frame::VecConstShPtr({frame0}), frame1, prior);
+}
 AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRef, Frame::ConstShPtr frame1) {
+  // TODO require prior explicitly
+  return align(framesRef, frame1, frame1->pose());
+}
+AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRef, Frame::ConstShPtr frame1, const Pose &prior) {
+
   TIMED_SCOPE(timer, "align");
 
-  const Pose &prior = frame1->pose();
   SE3f pose = prior.SE3().cast<float>();
   Mat6f covariance;
   std::vector<SE3f> motions(framesRef.size());
@@ -137,8 +143,16 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
     MLOG(DEBUG) << format(
       "Done: {}, level: {}, iteration: {}, error: {}, #: {},", reason, _level, _iteration, error, constraints[_level].size());
   }
-  return std::make_unique<Results>(
-    Results{Pose(pose.cast<double>(), covariance.cast<double>()), constraints, scale, iterations, normalEquations});
+  auto r = std::make_unique<Results>(Results{
+    Pose(pose.cast<double>(), covariance.cast<double>()),
+    std::vector<Constraint::VecConstShPtr>(constraints.size()),
+    scale,
+    iterations,
+    normalEquations});
+  std::transform(constraints.begin(), constraints.end(), r->constraints.begin(), [](auto c) {
+    return Constraint::VecConstShPtr{c.begin(), c.end()};
+  });
+  return r;
 }
 
 AlignmentRgbd::Constraint::VecShPtr
@@ -156,7 +170,7 @@ AlignmentRgbd::setupConstraints(const Frame::VecConstShPtr &frames, const std::v
     auto features = frame->features();
 
     std::vector<Constraint::ShPtr> constraints(features.size());
-    std::transform(std::execution::par_unseq, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
+    std::transform(exec_policy, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
       const Vec2d uv = ft->position() * scale;
       const float i = intensity.at<uint8_t>(uv(1), uv(0));
       const cv::Vec2f dIuv = dI.at<cv::Vec2f>(uv(1), uv(0));
@@ -234,7 +248,7 @@ AlignmentRgbd::Constraint::VecShPtr AlignmentRgbd::computeResidualsAndJacobian(
 
   auto withinImage = [&](const Vec2f &uv) -> bool { return (bw < uv(0) && uv(0) < w - bw && bh < uv(1) && uv(1) < h - bh); };
 
-  std::for_each(std::execution::par_unseq, constraints.begin(), constraints.end(), [&](auto c) {
+  std::for_each(exec_policy, constraints.begin(), constraints.end(), [&](auto c) {
     const size_t &i = c->fId;
     const Vec3f p0t = K * ((R[i] * (c->p0)) + t[i]);
     const Vec2f uv0t = Vec2f(p0t(0), p0t(1)) / p0t(2);
@@ -256,13 +270,9 @@ AlignmentRgbd::Constraint::VecShPtr AlignmentRgbd::computeResidualsAndJacobian(
 
 NormalEquations AlignmentRgbd::computeNormalEquations(const std::vector<AlignmentRgbd::Constraint::ShPtr> &constraints) const {
   TIMED_SCOPE_IF(timer2, format("computeNormalEquations{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
+  // TODO why does this give inconsistent results when run in parallel?
   NormalEquations ne = std::transform_reduce(
-    std::execution::par_unseq,
-    constraints.begin(),
-    constraints.end(),
-    NormalEquations({Mat6f::Zero(), Vec6f::Zero(), 0.0, 0}),
-    std::plus<NormalEquations>{},
-    [](auto c) {
+    std::execution::seq, constraints.begin(), constraints.end(), NormalEquations{}, std::plus<NormalEquations>{}, [](auto c) {
       return NormalEquations(
         {c->J.transpose() * c->weight * c->J,
          c->J.transpose() * c->weight * c->residual,

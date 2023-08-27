@@ -32,7 +32,7 @@ public:
   };
 
   struct Results {
-    TYPEDEF_PTR(Results);
+    TYPEDEF_PTR(Results)
     Pose pose;
     std::vector<Constraint::VecConstShPtr> constraints;
     std::vector<Mat2d> scale;
@@ -56,7 +56,9 @@ public:
     const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
 
   Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1);
+  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior);
   Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ConstShPtr frame1);
+  Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior);
 
   int nLevels() { return *std::max_element(_levels.begin(), _levels.end()) + 1; }
 
