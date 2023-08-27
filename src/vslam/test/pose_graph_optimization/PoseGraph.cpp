@@ -148,7 +148,7 @@ void PoseGraph::optimize() {
   for (auto cb : options.callbacks) {
     delete cb;
   }
-  * / log::append("GraphAfter", Overlay{_nodes, _edges});
+  log::append("GraphAfter", Overlay{_nodes, _edges});
 
   CLOG(INFO, LOG_NAME) << summary.BriefReport();
   CLOG(DEBUG, LOG_NAME) << summary.FullReport();
