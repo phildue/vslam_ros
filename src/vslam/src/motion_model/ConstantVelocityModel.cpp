@@ -29,7 +29,7 @@ ConstantVelocityModel::ConstantVelocityModel(double information, double maxTrans
     _maxTranslationalVelocity(maxTranslationalVelocity),
     _maxAngularVelocity(maxAngularVelocity / 180.0 * M_PI),
     _covariance((information * Mat6d::Identity()).inverse()),
-    _lastT(0) {}
+    _trajectory(std::make_unique<Trajectory>()) {}
 
 bool ConstantVelocityModel::exceedsThresholds(const Vec6d &velocity) const {
   const double translationalVelocity = velocity.block(0, 0, 3, 1).norm() * 1e9;
@@ -40,7 +40,7 @@ bool ConstantVelocityModel::exceedsThresholds(const Vec6d &velocity) const {
     using time::to_time_point;
     MLOG(WARNING) << format(
       "Velocity exceeded, ignoring t={:%Y-%m-%d %H:%M:%S} with vt = {}/{} m/s, va = {}/{} deg/s",
-      to_time_point(_lastT),
+      to_time_point(0),
       translationalVelocity,
       _maxTranslationalVelocity,
       angularVelocity * 180.0 / M_PI,
@@ -49,28 +49,40 @@ bool ConstantVelocityModel::exceedsThresholds(const Vec6d &velocity) const {
   return exceeds;
 }
 
-void ConstantVelocityModel::update(const Pose &pose, Timestamp timestamp) {
-  const double dT = (static_cast<double>(timestamp) - static_cast<double>(_lastT));
-  if (_lastT > 0 && dT > 0) {
-    const Vec6d velocity = (pose.SE3() * _lastPose.inverse()).log() / dT;
-
-    if (exceedsThresholds(velocity))
-      return;
-
-    _velocity = velocity;
-  }
-  _lastPose = pose.SE3();
-  _lastT = timestamp;
-}
+void ConstantVelocityModel::update(const Pose &pose, Timestamp timestamp) { _trajectory->append(timestamp, pose); }
 
 Pose ConstantVelocityModel::predict(Timestamp timestamp) const {
-  const double dT = (static_cast<double>(timestamp) - static_cast<double>(_lastT));
-  return Pose(SE3d::exp(_velocity * dT) * _lastPose, _covariance);
+  if (_trajectory->poses().empty()) {
+    return Pose(SE3d(), _covariance);
+  }
+  if (_trajectory->poses().size() < 2) {
+    return Pose(_trajectory->poses().begin()->second->SE3(), _covariance);
+  }
+  if (timestamp > _trajectory->tEnd()) {
+    auto it = _trajectory->poses().rbegin();
+    const Timestamp t1 = it->first;
+    const SE3d pose1 = it->second->SE3();
+    it++;
+    const Timestamp t0 = it->first;
+    const SE3d pose0 = it->second->SE3();
+    const Vec6d velocity = (pose1 * pose0.inverse()).log() / (double)(t1 - t0);
+    return Pose(SE3d::exp(velocity * (timestamp - t1)) * pose1, _covariance);
+  }
+  if (timestamp < _trajectory->tStart()) {
+    auto it = _trajectory->poses().begin();
+    const Timestamp t1 = it->first;
+    const SE3d pose1 = it->second->SE3();
+    it++;
+    const Timestamp t0 = it->first;
+    const SE3d pose0 = it->second->SE3();
+    const Vec6d velocity = (pose1 * pose0.inverse()).log() / (double)(t1 - t0);
+    return Pose(SE3d::exp(velocity * (timestamp - t1)) * pose1, _covariance);
+  }
+  return Pose(_trajectory->poseAt(timestamp)->SE3(), _covariance);
 }
 
 Pose ConstantVelocityModel::predict(Timestamp from, Timestamp to) const {
-  const double dT = (static_cast<double>(to) - static_cast<double>(from));
-  return Pose(SE3d::exp(_velocity * dT), _covariance);
+  return Pose(predict(to).SE3() * predict(from).SE3().inverse(), _covariance);
 }
 
 }  // namespace vslam

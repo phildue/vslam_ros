@@ -19,15 +19,13 @@
 #include <map>
 
 #include "core/Pose.h"
+#include "core/Trajectory.h"
+#include "core/macros.h"
 #include "core/types.h"
 namespace vslam {
 class ConstantVelocityModel {
 public:
-  typedef std::shared_ptr<ConstantVelocityModel> ShPtr;
-  typedef std::unique_ptr<ConstantVelocityModel> UnPtr;
-  typedef std::shared_ptr<const ConstantVelocityModel> ConstShPtr;
-  typedef std::unique_ptr<const ConstantVelocityModel> ConstUnPtr;
-
+  TYPEDEF_PTR(ConstantVelocityModel)
   static std::map<std::string, double> defaultParameters() {
     return {{"information", 0.05}, {"maxTranslationalVelocity", 10.0}, {"maxAngularVelocity", 180.0}};
   }
@@ -45,9 +43,8 @@ private:
   const double _maxTranslationalVelocity, _maxAngularVelocity;
   const Mat6d _covariance;
   Vec6d _velocity = Vec6d::Zero();
-  SE3d _lastPose;
-  Timestamp _lastT;
   bool exceedsThresholds(const Vec6d &speed) const;
+  Trajectory::ShPtr _trajectory;
 };
 
 }  // namespace vslam
