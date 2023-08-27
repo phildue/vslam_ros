@@ -8,6 +8,7 @@ using namespace testing;
 
 #include "LoopClosureDetection.h"
 #include "PoseGraph.h"
+#include "descriptor_matching/overlays.h"
 #include "vslam/core.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
@@ -30,6 +31,75 @@ Result:
 Explanation:
 
 */
+class Map {
+public:
+  Map() {
+    _lc = std::make_unique<LoopClosureDetection>(
+      0.1,
+      5.0 / 180.0 * M_PI,
+      0.9,
+      std::make_unique<AlignmentRgbd>(std::vector<int>{3}, 20, 1e-4, 1.1),
+      std::make_unique<AlignmentRgbd>(AlignmentRgbd::defaultParameters()));
+    _poseGraph = std::make_unique<PoseGraph>();
+    _trajectory = std::make_unique<Trajectory>();
+  }
+  void addKeyframe(Frame::ShPtr kf) {
+    _timestamps[kf->id()] = kf->t();
+    _trajectory->append(kf->t(), kf->pose());
+    _keyFrames.push_back(kf);
+    _entropiesTrack[kf->id()] = {};
+  }
+  void addFrame(Frame::ShPtr f) {
+    _trajectory->append(f->t(), f->pose());
+    _timestamps[f->id()] = f->t();
+    _entropiesTrack[_keyFrames.back()->id()].push_back(std::log(f->pose().cov().determinant()));
+    _poseGraph->addMeasurement(
+      _keyFrames.back()->id(), f->id(), Pose(f->pose().SE3() * _keyFrames.back()->pose().SE3().inverse(), f->pose().cov()));
+  }
+
+  int detectLoopClosures(Frame::ConstShPtr kf) {
+
+    if (_entropiesTrack.find(kf->id()) == _entropiesTrack.end() || _entropiesTrack[kf->id()].empty()) {
+      // TODO print warning?
+      return 0;
+    }
+    const double meanEntropyTrack =
+      std::accumulate(_entropiesTrack[kf->id()].begin(), _entropiesTrack[kf->id()].end(), 0.0) / _entropiesTrack[kf->id()].size();
+    Frame::VecConstShPtr candidates;
+    std::copy_if(_keyFrames.begin(), _keyFrames.end(), std::back_inserter(candidates), [&](auto cf) {
+      return !_poseGraph->hasMeasurement(kf->id(), cf->id()) && !_poseGraph->hasMeasurement(cf->id(), kf->id());
+    });
+
+    if (candidates.empty()) {
+      return 0;
+    }
+
+    auto loopClosures = _lc->detect(kf, meanEntropyTrack, candidates);
+    for (const auto &lc : loopClosures) {
+      _poseGraph->addMeasurement(lc->from, lc->to, lc->relativePose);
+    }
+    return loopClosures.size();
+  }
+  void optimize() {
+    _poseGraph->optimize();
+    for (const auto &[id, pose] : _poseGraph->poses()) {
+      _trajectory->append(_timestamps.at(id), pose);
+    }
+    for (const auto &kf : _keyFrames) {
+      kf->pose().SE3() = _poseGraph->poses().at(kf->id());
+    }
+  }
+  Trajectory trajectory() const { return Trajectory(*_trajectory); }
+  const Frame::VecShPtr &keyframes() const { return _keyFrames; }
+
+private:
+  std::map<uint64_t, Timestamp> _timestamps;
+  Frame::VecShPtr _keyFrames;
+  std::map<uint64_t, std::vector<double>> _entropiesTrack;
+  std::unique_ptr<LoopClosureDetection> _lc;
+  PoseGraph::UnPtr _poseGraph;
+  Trajectory::UnPtr _trajectory;
+};
 
 int main(int argc, char **argv) {
   const std::string filename = argv[0];
@@ -46,24 +116,21 @@ int main(int argc, char **argv) {
   const std::string outPath = format("{}/algorithm_results/{}", dl->sequencePath(), experimentId);
   const std::string trajectoryAlgoPath = format("{}/{}-algo.txt", outPath, dl->sequenceId());
   const size_t nFrames = std::min(-1UL, dl->nFrames());
-  const size_t fNo0 = nFrames >= dl->nFrames() ? 0UL : random::U(0UL, dl->nFrames() - nFrames);
+  const size_t fNo0 = 0;  // nFrames >= dl->nFrames() ? 0UL : random::U(0UL, dl->nFrames() - nFrames);
 
-  const int tRmse = 200;
-  std::thread thread;
   log::configure(TEST_RESOURCE "/log/");
   log::config("Frame")->show = 1;
-  log::config("LoopClosures")->show = 0;
+  log::config("FrameFeatures")->show = -1;
+  log::config("LoopClosures")->show = 1;
+  log::config("LoopClosuresRatioTest")->show = 1;
+  log::config("KeyFrame")->show = -1;
+  log::config("GraphBefore")->show = 1;
+  log::config("GraphAfter")->show = 1;
 
   auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
   auto motionModel = std::make_shared<ConstantVelocityModel>(10.0, INFd, INFd);
   auto featureSelection = std::make_shared<FeatureSelection>(5, 0.01, 0.3, 0, 8.0, 10, 4);
-  auto loopClosureDetection = std::make_unique<LoopClosureDetection>(
-    0.1,
-    5.0 / 180.0 * M_PI,
-    0.9,
-    std::make_unique<AlignmentRgbd>(std::vector<int>{3}, 20, 1e-4, 1.1),
-    std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters()));
-  auto poseGraph = std::make_unique<PoseGraph>();
+  auto map = std::make_shared<Map>();
   log::initialize(outPath, true);
 
   Trajectory::ShPtr traj = std::make_shared<Trajectory>();
@@ -72,32 +139,29 @@ int main(int argc, char **argv) {
   kf->computePyramid(directIcp->nLevels());
   kf->computeDerivatives();
   kf->computePcl();
+  map->addKeyframe(kf);
   featureSelection->select(kf, true);
   motionModel->update(kf->pose(), kf->t());
 
   Frame::ShPtr lf = kf;
-  traj->append(kf->t(), kf->pose().inverse());
+  traj->append(kf->t(), kf->pose());
   double entropyRef = 0.;
   double nConstraintsRef = INFd;
   double errorRef = 0.;
-  std::vector<Frame::ShPtr> kfs;
-  kfs.push_back(kf);
-  std::vector<double> entropiesTrack;
-  std::map<size_t, Timestamp> timestamps;
-  timestamps[kf->id()] = kf->t();
-
+  std::map<size_t, double> meanEntropies;
+  int nLoopClosures = 0;
   for (size_t fId = fNo0 + 1; fId < fNo0 + nFrames; fId++) {
     try {
 
       Frame::ShPtr f = dl->loadFrame(fId);
-      timestamps[f->id()] = f->t();
       f->computePyramid(directIcp->nLevels());
       f->pose() = motionModel->predict(f->t());
       log::append("Frame", [&]() { return overlay::frames({kf, lf, f}); });
+      log::append("FrameFeatures", overlay::Hstack(overlay::Features(kf, 10), overlay::ReprojectedFeatures(kf, f, 10)));
       auto results = directIcp->align(kf, f);
       f->pose() = results->pose;
-      entropiesTrack.push_back(std::log(f->pose().cov().determinant()));
-      const double entropyRatio = entropiesTrack.back() / entropyRef;
+      log::append("FrameFeatures", overlay::Hstack(overlay::Features(kf, 10), overlay::ReprojectedFeatures(kf, f, 10)));
+      const double entropyRatio = std::log(results->pose.cov().determinant()) / entropyRef;
       const double nConstraintsRatio = (double)results->constraints.size() / (double)nConstraintsRef;
       const double errorRatio = results->normalEquations[0].error / errorRef;
       print(
@@ -115,59 +179,64 @@ int main(int argc, char **argv) {
       if (lf != kf && entropyRatio < 0.9) {
         print("Keyframe selected.\n");
         kf = lf;
+        map->addKeyframe(kf);
 
         kf->computeDerivatives();
         kf->computePcl();
         featureSelection->select(kf, true);
-        const double meanEntropy =
-          std::accumulate(entropiesTrack.begin(), entropiesTrack.end(), 0.0, [&](auto s, auto e) { return s + e / entropiesTrack.size(); });
-        auto loopClosures = loopClosureDetection->detect(kf, meanEntropy, {kfs.begin(), kfs.end()});
-        for (const auto &lc : loopClosures) {
-          poseGraph->addMeasurement(lc->from, lc->to, lc->relativePose);
-        }
-        if (!loopClosures.empty()) {
-          poseGraph->optimize();
-          for (const auto &[id, pose] : poseGraph->poses()) {
-            traj->append(timestamps.at(id), Pose(pose));
-            motionModel->update(Pose(pose), timestamps.at(id));
-          }
-        }
 
         log::append("KeyFrame", [&]() { return overlay::frames({kf, lf, f}); });
-        kfs.push_back(kf);
 
         f->pose() = motionModel->predict(f->t());
         results = directIcp->align(kf, f);
         f->pose() = results->pose;
+        log::append("Frame", overlay::Hstack(overlay::Features(kf, 10), overlay::ReprojectedFeatures(kf, f, 10)));
+
         errorRef = results->normalEquations[0].error;
         nConstraintsRef = results->constraints.size();
         entropyRef = std::log(f->pose().cov().determinant());
       }
-      poseGraph->addMeasurement(kf->id(), f->id(), Pose(f->pose().SE3() * kf->pose().SE3().inverse(), f->pose().cov()));
+      map->addFrame(f);
       motionModel->update(f->pose(), f->t());
-      traj->append(dl->timestamps()[fId], f->pose().inverse());
+      traj->append(f->t(), f->pose());
+      if (lf != kf) {
+        lf->removeFeatures();
+      }
       lf = f;
 
     } catch (const std::runtime_error &e) {
       std::cerr << e.what() << std::endl;
     }
+  }
 
-    if (fId > tRmse && fId % tRmse == 0) {
-      if (thread.joinable()) {
-        thread.join();
-      }
-      thread = std::thread([&]() {
-        evaluation::tum::writeTrajectory(*traj, trajectoryAlgoPath);
-        evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
-      });
-    };
+  int n = 0;
+  do {
+    n = 0;
+    for (auto kf : map->keyframes()) {
+      n += map->detectLoopClosures(kf);
+    }
+    nLoopClosures += n;
+    if (n > 0) {
+      map->optimize();
+    }
+  } while (n > 0);
+
+  LOG(INFO) << format("Created keyframes {}, Detected loop closures: {}", map->keyframes().size(), nLoopClosures);
+
+  for (const auto &[t, pose] : traj->poses()) {
+    const SE3d diff = map->trajectory().poseAt(t, false)->SE3() * pose->SE3().inverse();
+    LOG(INFO) << format(
+      "t={} |diff|={:.3f}m rx={:.3f} ry={:.3f} rz={:.3f}",
+      t,
+      diff.translation().norm(),
+      diff.angleX() / M_PI * 180.0,
+      diff.angleY() / M_PI * 180.0,
+      diff.angleZ() / M_PI * 180.0);
   }
-  for (const auto &_kf : kfs) {
-    _kf->removeFeatures();
-  }
-  if (thread.joinable()) {
-    thread.join();
-  }
-  evaluation::tum::writeTrajectory(*traj, trajectoryAlgoPath);
+
+  evaluation::tum::writeTrajectory(traj->inverse(), trajectoryAlgoPath);
+  evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
+
+  evaluation::tum::writeTrajectory(map->trajectory().inverse(), trajectoryAlgoPath);
   evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
 }
