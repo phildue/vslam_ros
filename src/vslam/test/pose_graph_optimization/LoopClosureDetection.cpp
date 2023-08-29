@@ -29,8 +29,8 @@ LoopClosureDetection::detect(Frame::ConstShPtr f, double entropyRef, const Frame
   for (const auto &lc : results) {
     CLOG(INFO, LOG_NAME) << format(
       "Detected loop closure between {} and {} with: t={:.3f}m r={:.3f}°\n",
-      lc->from,
-      lc->to,
+      lc->t0,
+      lc->t1,
       lc->relativePose.translation().norm(),
       lc->relativePose.totalRotationDegrees());
   }
@@ -39,8 +39,8 @@ LoopClosureDetection::detect(Frame::ConstShPtr f, double entropyRef, const Frame
 
 LoopClosureDetection::Result::UnPtr LoopClosureDetection::align(Frame::ConstShPtr f0, double entropyRef, Frame::ConstShPtr f1) const {
   Result::UnPtr result = std::make_unique<Result>();
-  result->from = f0->id();
-  result->to = f1->id();
+  result->t0 = f0->t();
+  result->t1 = f1->t();
   const Mat6d priorCov = Mat6d::Identity() * std::numeric_limits<double>::quiet_NaN();
   auto r01 = _fineAligner->align(f0, f1, Pose(f1->pose().SE3(), priorCov));
   double entropyRatio = std::log(r01->pose.cov().determinant()) / entropyRef;
@@ -63,16 +63,18 @@ LoopClosureDetection::Result::UnPtr LoopClosureDetection::align(Frame::ConstShPt
   result->isLoopClosure = std::isfinite(entropyRatio) && entropyRatio > _minRatio;
   const double diffNorm = (diff.log().transpose() * diffCov.inverse() * diff.log());
   CLOG(DEBUG, LOG_NAME) << format(
-    "Ratio test between {} and {}: t={:.3f}m r={:.3f}° c={:.2f}% dt={:.3f} da={:.3f} |d|={:.3f} [{}]",
-    result->from,
-    result->to,
+    "Ratio test between {} and {}: t={:.3f}m r={:.3f}° c={:.2f}% dt={:.3f} da={:.3f} dc={:.3f} |d|={:.3f} [{}]",
+    f0->id(),
+    f1->id(),
     result->relativePose.translation().norm(),
     result->relativePose.totalRotationDegrees(),
     entropyRatio * 100,
     diff.translation().norm(),
     (diff.angleX() + diff.angleY() + diff.angleZ()) / M_PI * 180.0,
+    std::log(r01->pose.cov().determinant()) / std::log(f1->pose().cov().determinant()),
     diffNorm,
     result->isLoopClosure ? "PASSED" : "NOT PASSED");
+
   log::append("LoopClosuresRatioTest", [&]() { return overlay::frames(Frame::VecConstShPtr{f0, f1}); });
 
   if (result->isLoopClosure) {
@@ -98,18 +100,17 @@ bool LoopClosureDetection::isCandidate(Frame::ConstShPtr f, Frame::ConstShPtr cf
 
   int nFeatures = 0;
   double opticalFlow = 0.;
-  /*
-    for (const auto &ft : f->features()) {
-      Vec2d uv1 = cf->world2image(f->p3dWorld(ft->v(), ft->u()));
-      if (uv1.allFinite() && f->withinImage(uv1)) {
-        nFeatures++;
-        opticalFlow += (uv1 - ft->position()).norm();
-      }
+
+  for (const auto &ft : f->features()) {
+    Vec2d uv1 = cf->world2image(f->p3dWorld(ft->v(), ft->u()));
+    if (uv1.allFinite() && f->withinImage(uv1)) {
+      nFeatures++;
+      opticalFlow += (uv1 - ft->position()).norm();
     }
-    opticalFlow /= nFeatures;
-    const bool passed = nFeatures / (double)f->features().size() > 0.75 && opticalFlow < 200;
-    */
-  const bool passed = t < 0.5;
+  }
+  opticalFlow /= nFeatures;
+
+  const bool passed = t < 1.0 && nFeatures / (double)f->features().size() > 0.75;
 
   CLOG(DEBUG, LOG_NAME) << format(
     "Evaluting candidate for {}, {}: Features: {:.2f} OpticalFlow: {:.2f} t={:.2f} r={:.2f}: [{}]",

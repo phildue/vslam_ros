@@ -41,33 +41,30 @@ public:
       std::make_unique<AlignmentRgbd>(std::vector<int>{3}, 20, 1e-4, 1.1),
       std::make_unique<AlignmentRgbd>(AlignmentRgbd::defaultParameters()));
     _poseGraph = std::make_unique<PoseGraph>();
-    _trajectory = std::make_unique<Trajectory>();
   }
   void addKeyframe(Frame::ShPtr kf) {
-    _timestamps[kf->id()] = kf->t();
-    _trajectory->append(kf->t(), kf->pose());
     _keyFrames.push_back(kf);
     _entropiesTrack[kf->id()] = {};
   }
   void addFrame(Frame::ShPtr f) {
-    _trajectory->append(f->t(), f->pose());
-    _timestamps[f->id()] = f->t();
     _entropiesTrack[_keyFrames.back()->id()].push_back(std::log(f->pose().cov().determinant()));
     _poseGraph->addMeasurement(
-      _keyFrames.back()->id(), f->id(), Pose(f->pose().SE3() * _keyFrames.back()->pose().SE3().inverse(), f->pose().cov()));
+      _keyFrames.back()->t(), f->t(), Pose(f->pose().SE3() * _keyFrames.back()->pose().SE3().inverse(), f->pose().cov()));
   }
 
   int detectLoopClosures(Frame::ConstShPtr kf) {
 
     if (_entropiesTrack.find(kf->id()) == _entropiesTrack.end() || _entropiesTrack[kf->id()].empty()) {
-      // TODO print warning?
+      LOG(WARNING) << format("No track found for frame: {} at {}", kf->id(), kf->t());
       return 0;
     }
+
     const double meanEntropyTrack =
       std::accumulate(_entropiesTrack[kf->id()].begin(), _entropiesTrack[kf->id()].end(), 0.0) / _entropiesTrack[kf->id()].size();
+
     Frame::VecConstShPtr candidates;
     std::copy_if(_keyFrames.begin(), _keyFrames.end(), std::back_inserter(candidates), [&](auto cf) {
-      return !_poseGraph->hasMeasurement(kf->id(), cf->id()) && !_poseGraph->hasMeasurement(cf->id(), kf->id());
+      return cf->id() != kf->id() && !_poseGraph->hasMeasurement(kf->t(), cf->t());
     });
 
     if (candidates.empty()) {
@@ -76,29 +73,24 @@ public:
 
     auto loopClosures = _lc->detect(kf, meanEntropyTrack, candidates);
     for (const auto &lc : loopClosures) {
-      _poseGraph->addMeasurement(lc->from, lc->to, lc->relativePose);
+      _poseGraph->addMeasurement(lc->t0, lc->t1, lc->relativePose);
     }
     return loopClosures.size();
   }
   void optimize() {
     _poseGraph->optimize();
-    for (const auto &[id, pose] : _poseGraph->poses()) {
-      _trajectory->append(_timestamps.at(id), pose);
-    }
     for (const auto &kf : _keyFrames) {
-      kf->pose().SE3() = _poseGraph->poses().at(kf->id());
+      kf->pose().SE3() = _poseGraph->poses().at(kf->t());
     }
   }
-  Trajectory trajectory() const { return Trajectory(*_trajectory); }
+  Trajectory trajectory() const { return Trajectory(_poseGraph->poses()); }
   const Frame::VecShPtr &keyframes() const { return _keyFrames; }
 
 private:
-  std::map<uint64_t, Timestamp> _timestamps;
   Frame::VecShPtr _keyFrames;
   std::map<uint64_t, std::vector<double>> _entropiesTrack;
   std::unique_ptr<LoopClosureDetection> _lc;
   PoseGraph::UnPtr _poseGraph;
-  Trajectory::UnPtr _trajectory;
 };
 
 int main(int argc, char **argv) {
@@ -121,7 +113,7 @@ int main(int argc, char **argv) {
   log::configure(TEST_RESOURCE "/log/");
   log::config("Frame")->show = 1;
   log::config("FrameFeatures")->show = -1;
-  log::config("LoopClosures")->show = 1;
+  log::config("LoopClosures")->show = 0;
   log::config("LoopClosuresRatioTest")->show = 1;
   log::config("KeyFrame")->show = -1;
   log::config("GraphBefore")->show = 1;
@@ -208,6 +200,8 @@ int main(int argc, char **argv) {
       std::cerr << e.what() << std::endl;
     }
   }
+  evaluation::tum::writeTrajectory(traj->inverse(), trajectoryAlgoPath);
+  evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
 
   int n = 0;
   do {
@@ -218,25 +212,22 @@ int main(int argc, char **argv) {
     nLoopClosures += n;
     if (n > 0) {
       map->optimize();
+      evaluation::tum::writeTrajectory(map->trajectory().inverse(), trajectoryAlgoPath);
+      evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
     }
   } while (n > 0);
 
   LOG(INFO) << format("Created keyframes {}, Detected loop closures: {}", map->keyframes().size(), nLoopClosures);
-
-  for (const auto &[t, pose] : traj->poses()) {
-    const SE3d diff = map->trajectory().poseAt(t, false)->SE3() * pose->SE3().inverse();
-    LOG(INFO) << format(
-      "t={} |diff|={:.3f}m rx={:.3f} ry={:.3f} rz={:.3f}",
-      t,
-      diff.translation().norm(),
-      diff.angleX() / M_PI * 180.0,
-      diff.angleY() / M_PI * 180.0,
-      diff.angleZ() / M_PI * 180.0);
-  }
-
-  evaluation::tum::writeTrajectory(traj->inverse(), trajectoryAlgoPath);
-  evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
-
-  evaluation::tum::writeTrajectory(map->trajectory().inverse(), trajectoryAlgoPath);
-  evaluation::computeKPIs(dl->sequenceId(), experimentId, false);
+  /*
+    for (const auto &[t, pose] : traj->poses()) {
+      const SE3d diff = map->trajectory().poseAt(t, false)->SE3() * pose->SE3().inverse();
+      LOG(INFO) << format(
+        "t={} |diff|={:.3f}m rx={:.3f} ry={:.3f} rz={:.3f}",
+        t,
+        diff.translation().norm(),
+        diff.angleX() / M_PI * 180.0,
+        diff.angleY() / M_PI * 180.0,
+        diff.angleZ() / M_PI * 180.0);
+    }
+    */
 }

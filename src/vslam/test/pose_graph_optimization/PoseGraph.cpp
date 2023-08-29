@@ -36,7 +36,7 @@ private:
 
 struct Overlay {
 
-  const std::map<size_t, SE3d> &poses;
+  const std::map<Timestamp, SE3d> &poses;
   const PoseGraph::Constraint::VecShPtr &edges;
 
 public:
@@ -61,12 +61,12 @@ public:
     const double s = 1. / 0.001;
     const double oy = 480;
     const double ox = 640;
-    for (const auto &[id, pose] : poses) {
+    for (const auto &[t, pose] : poses) {
       cv::circle(mat, cv::Point(pose.translation().x() * s + ox, pose.translation().y() * s + oy), 2, cv::Scalar(255, 0, 0), 2);
     }
     for (const auto &edge : edges) {
-      SE3d pose0 = poses.at(edge->from);
-      SE3d pose1 = poses.at(edge->to);
+      SE3d pose0 = poses.at(edge->t0);
+      SE3d pose1 = poses.at(edge->t1);
 
       Vec3d d = pose1.translation() - pose0.translation();
       Vec3d c = pose0.translation() + d / 2.;
@@ -112,18 +112,18 @@ private:
 };
 PoseGraph::PoseGraph() { log::create(LOG_NAME); }
 
-bool PoseGraph::hasMeasurement(size_t frameId0, size_t frameId1) {
-  return std::find_if(_edges.begin(), _edges.end(), [&](auto c) { return (c->from == frameId0 && c->to == frameId1); }) != _edges.end();
+bool PoseGraph::hasMeasurement(Timestamp t0, Timestamp t1) {
+  return std::find_if(_edges.begin(), _edges.end(), [&](auto c) { return (c->t0 == t0 && c->t1 == t1); }) != _edges.end();
 }
-void PoseGraph::addMeasurement(size_t frameId0, size_t frameId1, const Pose &pose01) {
-  if (_nodes.find(frameId0) == _nodes.end()) {
-    _nodes[frameId0] = SE3d();
+void PoseGraph::addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01) {
+  if (_nodes.find(t0) == _nodes.end()) {
+    _nodes[t0] = SE3d();
   }
-  if (_nodes.find(frameId1) == _nodes.end()) {
-    _nodes[frameId1] = pose01.SE3() * _nodes[frameId0];
+  if (_nodes.find(t1) == _nodes.end()) {
+    _nodes[t1] = pose01.SE3() * _nodes[t0];
   }
 
-  _edges.push_back(std::make_shared<Constraint>(frameId0, frameId1, pose01));
+  _edges.push_back(std::make_shared<Constraint>(t0, t1, pose01));
 }
 void PoseGraph::optimize() {
   ceres::Problem problem;
@@ -139,7 +139,7 @@ void PoseGraph::optimize() {
   options.callbacks.push_back(new Callback());
   auto loss = nullptr;  // ceres::TukeyLoss(0.1);
   for (auto &e : _edges) {
-    problem.AddResidualBlock(OdometryError::Create(e->pose), loss, _nodes.at(e->from).data(), _nodes.at(e->to).data());
+    problem.AddResidualBlock(OdometryError::Create(e->pose), loss, _nodes.at(e->t0).data(), _nodes.at(e->t1).data());
   }
   ceres::Solver::Summary summary;
   TIMED_SCOPE(timer, "solve");

@@ -11,7 +11,7 @@ class LoopClosureDetection {
 public:
   struct Result {
     TYPEDEF_PTR(Result)
-    size_t from, to;
+    Timestamp t0, t1;
     Pose relativePose;
     bool isLoopClosure;
   };

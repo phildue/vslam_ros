@@ -8,19 +8,19 @@ class PoseGraph {
 public:
   TYPEDEF_PTR(PoseGraph)
   PoseGraph();
-  bool hasMeasurement(size_t frameId0, size_t frameId1);
-  void addMeasurement(size_t frameId0, size_t frameId1, const Pose &pose01);
+  bool hasMeasurement(Timestamp t0, Timestamp t1);
+  void addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01);
   void optimize();
-  const std::map<size_t, SE3d> &poses() const { return _nodes; }
+  const std::map<Timestamp, SE3d> &poses() const { return _nodes; }
   static constexpr const char LOG_NAME[] = "pose_graph_optimization";
   struct Constraint {
     TYPEDEF_PTR(Constraint)
-    size_t from, to;
+    Timestamp t0, t1;
     Pose pose;
   };
 
 private:
-  std::map<size_t, SE3d> _nodes;
+  std::map<Timestamp, SE3d> _nodes;
   Constraint::VecShPtr _edges;
 };
 }  // namespace vslam
