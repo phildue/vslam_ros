@@ -33,6 +33,7 @@ set( sources
     src/descriptor_matching/FeatureTracking.cpp
     src/descriptor_matching/FeatureTrackingOcv.cpp
     src/descriptor_matching/Matcher.cpp
+    src/pose_graph_optimization/PoseGraph.cpp
     #src/mapping/Map.cpp
     /usr/local/include/easylogging++.cc
    )
@@ -66,9 +67,8 @@ set( headers
     src/descriptor_matching/FeatureTracking.h
     src/descriptor_matching/FeatureTrackingOcv.h
     src/descriptor_matching/Matcher.h
+    src/pose_graph_optimization/PoseGraph.h
 
-   # src/mapping/KeyFrameSelection.h
-   # src/mapping/Map.h
     /usr/local/include/easylogging++.h 
     include/vslam/core.h
     include/vslam/direct.h 
@@ -76,6 +76,7 @@ set( headers
     include/vslam/utils.h 
     include/vslam/descriptor_matching.h
     include/vslam/features.h 
+    include/vslam/pose_graph_optimization.h 
 
   )
 pd_setup_lib(${PROJECT_NAME} ${PROJECT_VERSION} "${sources}" "${headers}" pd)

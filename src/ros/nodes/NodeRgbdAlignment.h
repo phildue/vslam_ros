@@ -58,9 +58,8 @@ private:
 
   int _fNo;
   // Publications
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom, _pubOdomKf, _pubOdomKf2f;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPath;
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPoseGraph;
   std::shared_ptr<tf2_ros::TransformBroadcaster> _pubTf;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pubPclMap;
 

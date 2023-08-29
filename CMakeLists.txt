@@ -54,7 +54,9 @@ add_library(vslam_ros_nodes SHARED
   src/ros/nodes/NodeRgbdAlignment.cpp
   src/ros/nodes/NodeEvaluation.cpp
   src/ros/nodes/NodeReplayer.cpp
-  src/ros/nodes/NodeReplayerExtracted.cpp)
+  src/ros/nodes/NodeReplayerExtracted.cpp
+  src/ros/nodes/NodePoseGraph.cpp
+  )
 
 target_link_libraries(vslam_ros_nodes ${PROJECT_NAME})
 set_property(TARGET vslam_ros_nodes PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -69,6 +71,12 @@ rclcpp_components_register_nodes(
 rclcpp_components_register_nodes(
     vslam_ros_nodes
     PLUGIN "vslam_ros::NodeReplayerExtracted"
+    EXECUTABLE node_replayer_extracted
+)
+
+rclcpp_components_register_nodes(
+    vslam_ros_nodes
+    PLUGIN "vslam_ros::NodePoseGraph"
     EXECUTABLE node_replayer_extracted
 )
 

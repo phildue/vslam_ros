@@ -33,8 +33,9 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
     _replay(declare_parameter("replayMode", false)),
     _fNo(0),
     _pubOdom(create_publisher<nav_msgs::msg::Odometry>("/odom", 10)),
+    _pubOdomKf(create_publisher<nav_msgs::msg::Odometry>("/odom/keyframe", 10)),
+    _pubOdomKf2f(create_publisher<nav_msgs::msg::Odometry>("/odom/keyframe2frame", 10)),
     _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10)),
-    _pubPoseGraph(create_publisher<nav_msgs::msg::Path>("/path/pose_graph", 10)),
     _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this)),
     _pubPclMap(create_publisher<sensor_msgs::msg::PointCloud2>("/pcl/map", 10)),
     _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>(
@@ -241,6 +242,12 @@ void NodeRgbdAlignment::setReplay(bool ready) {
 }
 
 void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
+
+  // TODO since we measure the relative pose only,
+  //  can we simply, only publish the transformation to the last keyframe, while another node publishs that "global transformation"
+  //  At least this could be optional when a backend is available
+  //  Then the backend would take care of optimizing the global transformation
+
   // tf from origin (odom) to another fixed frame (world)
   geometry_msgs::msg::TransformStamped tfOrigin = _world2origin;
   tfOrigin.header.stamp = t;
@@ -262,6 +269,19 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
   vslam_ros::convert(_cf->pose().inverse(), odom.pose);
   vslam_ros::convert(_motion.inverse(), odom.twist);
   _pubOdom->publish(odom);
+
+  nav_msgs::msg::Odometry odomKf, odomKf2f;
+  odomKf.header.stamp = odomKf2f.header.stamp = t;
+  odomKf.header.frame_id = _frameId;
+  odomKf.child_frame_id = format("kf{}", _kf->id());
+
+  odomKf2f.header.frame_id = std::to_string(_kf->t());
+  odomKf2f.child_frame_id = std::to_string(_cf->t());
+  vslam_ros::convert(_kf->pose().inverse(), odomKf.pose);
+  Pose kf2f(_cf->pose().SE3() * _kf->pose().SE3().inverse(), _cf->pose().cov());
+  vslam_ros::convert(kf2f.inverse(), odomKf2f.pose);
+  _pubOdomKf->publish(odomKf);
+  _pubOdomKf2f->publish(odomKf2f);
 
   nav_msgs::msg::Path path;
   path.header = odom.header;

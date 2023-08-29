@@ -20,6 +20,7 @@
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
 #include "vslam/motion_model.h"
+#include "vslam/pose_graph_optimization.h"
 #include "vslam/utils.h"
 
 #endif
