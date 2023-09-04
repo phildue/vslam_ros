@@ -17,13 +17,11 @@
 #define VSLAM_TRAJECTORY_H__
 #include <map>
 #include <memory>
-
+// TODO rather use pose objects and references..
 #include "Pose.h"
 #include "types.h"
-namespace vslam
-{
-class Trajectory
-{
+namespace vslam {
+class Trajectory {
 public:
   typedef std::shared_ptr<Trajectory> ShPtr;
   typedef std::unique_ptr<Trajectory> UnPtr;
@@ -31,18 +29,19 @@ public:
   typedef std::unique_ptr<const Trajectory> ConstUnPtr;
 
   Trajectory();
-  Trajectory(const std::map<Timestamp, Pose::ConstShPtr> & poses);
-  Trajectory(const std::map<Timestamp, SE3d> & poses);
+  Trajectory(const std::map<Timestamp, Pose::ShPtr> &poses);
+  Trajectory(const std::map<Timestamp, SE3d> &poses);
+  Pose::ShPtr poseAt(Timestamp t);
   Pose::ConstShPtr poseAt(Timestamp t, bool interpolate = true) const;
   std::pair<Timestamp, Pose::ConstShPtr> nearestPoseAt(Timestamp t) const;
 
   Pose::ConstShPtr motionBetween(Timestamp t0, Timestamp t1, bool interpolate = true) const;
 
-  void append(Timestamp t, Pose::ConstShPtr pose);
-  void append(Timestamp t, const Pose & pose);
+  void append(Timestamp t, const Pose &pose);
 
   Trajectory inverse() const;
-  const std::map<Timestamp, Pose::ConstShPtr> & poses() const { return _poses; }
+  std::map<Timestamp, Pose::ShPtr> &poses() { return _poses; }
+  std::map<Timestamp, Pose::ConstShPtr> poses() const { return {_poses.begin(), _poses.end()}; }
   Timestamp tStart() const;
   Timestamp tEnd() const;
   size_t size() const { return _poses.size(); }
@@ -50,7 +49,7 @@ public:
 private:
   Pose::ConstShPtr interpolateAt(Timestamp t) const;
 
-  std::map<Timestamp, Pose::ConstShPtr> _poses;
+  std::map<Timestamp, Pose::ShPtr> _poses;
 };
 }  // namespace vslam
 

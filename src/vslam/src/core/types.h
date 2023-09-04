@@ -34,21 +34,15 @@
 #define NANf std::numeric_limits<float>::quiet_NaN()
 #define NANi std::numeric_limits<int>::quiet_NaN()
 
-namespace Eigen
-{
+namespace Eigen {
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 }
 
 using fmt::format;
 using fmt::print;
-template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of_v<Eigen::DenseBase<T>, T>, char>>
-: ostream_formatter
-{
-};
+template <typename T> struct fmt::formatter<T, std::enable_if_t<std::is_base_of_v<Eigen::DenseBase<T>, T>, char>> : fmt::ostream_formatter {};
 
-namespace vslam
-{
+namespace vslam {
 typedef std::uint8_t image_value_t;
 typedef Eigen::Matrix<image_value_t, Eigen::Dynamic, Eigen::Dynamic> Image;
 typedef std::vector<Image> ImageVec;
@@ -70,14 +64,11 @@ typedef std::vector<MatXd> MatXdVec;
 
 typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> MatXf;
 
-template <typename Derived, int nRows, int nCols>
-using Mat = Eigen::Matrix<Derived, nRows, nCols>;
+template <typename Derived, int nRows, int nCols> using Mat = Eigen::Matrix<Derived, nRows, nCols>;
 
-template <int nRows, int nCols>
-using Matd = Eigen::Matrix<double, nRows, nCols>;
+template <int nRows, int nCols> using Matd = Eigen::Matrix<double, nRows, nCols>;
 
-template <int nRows, int nCols>
-using Matf = Eigen::Matrix<float, nRows, nCols>;
+template <int nRows, int nCols> using Matf = Eigen::Matrix<float, nRows, nCols>;
 
 typedef Eigen::VectorXd VecXd;
 typedef Eigen::Vector2d Vec2d;
@@ -121,4 +112,4 @@ typedef std::uint64_t Timestamp;
 
 }  // namespace vslam
 
-#endif  //VSLAM_TYPES_H
+#endif  // VSLAM_TYPES_H
