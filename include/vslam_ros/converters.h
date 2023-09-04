@@ -27,29 +27,30 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sophus/se3.hpp>
 
-namespace vslam_ros
-{
-void convert(vslam::Timestamp t, builtin_interfaces::msg::Time & tRos);
-void convert(const builtin_interfaces::msg::Time & tRos, vslam::Timestamp & t);
+namespace vslam_ros {
+void convert(vslam::Timestamp t, builtin_interfaces::msg::Time &tRos);
+void convert(const builtin_interfaces::msg::Time &tRos, vslam::Timestamp &t);
 
-vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo & msg);
-void convert(vslam::Camera::ConstShPtr cam, sensor_msgs::msg::CameraInfo & msg);
+vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo &msg);
+void convert(vslam::Camera::ConstShPtr cam, sensor_msgs::msg::CameraInfo &msg);
 
-geometry_msgs::msg::Pose convert(const Sophus::SE3d & se3);
-void convert(const Sophus::SE3d & se3, geometry_msgs::msg::Twist & twist);
-Sophus::SE3d convert(const geometry_msgs::msg::Pose & ros);
+geometry_msgs::msg::Pose convert(const Sophus::SE3d &se3);
+void convert(const Sophus::SE3d &se3, geometry_msgs::msg::Twist &twist);
+Sophus::SE3d convert(const geometry_msgs::msg::Pose &ros);
 
-Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped & tf);
-void convert(const Sophus::SE3d & sophus, geometry_msgs::msg::TransformStamped & tf);
-void convert(const vslam::Pose & p, geometry_msgs::msg::PoseWithCovariance & pRos);
-void convert(const vslam::Pose & p, geometry_msgs::msg::TwistWithCovariance & pRos);
-void convert(const geometry_msgs::msg::PoseWithCovariance & pRos, vslam::Pose & p);
-void convert(const geometry_msgs::msg::TwistWithCovariance & pRos, vslam::Pose & p);
+Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped &tf);
+void convert(const Sophus::SE3d &sophus, geometry_msgs::msg::TransformStamped &tf);
+void convert(const vslam::Pose &p, geometry_msgs::msg::PoseWithCovariance &pRos);
+
+void convert(const vslam::Pose &p, geometry_msgs::msg::TwistWithCovariance &pRos);
+void convert(const geometry_msgs::msg::PoseWithCovariance &pRos, vslam::Pose &p);
+void convert(const geometry_msgs::msg::TwistWithCovariance &pRos, vslam::Pose &p);
 #if false
 void convert(
   const std::vector<vslam::Point3D::ConstShPtr> & pcl, sensor_msgs::msg::PointCloud2 & pclRos);
 #endif
-void convert(const vslam::Trajectory & traj, nav_msgs::msg::Path & trajRos);
+void convert(const vslam::Trajectory &traj, nav_msgs::msg::Path &trajRos);
+void convert(const nav_msgs::msg::Path &trajRos, vslam::Trajectory &traj);
 
 }  // namespace vslam_ros
 #endif
