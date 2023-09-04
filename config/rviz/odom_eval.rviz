@@ -9,8 +9,8 @@ Panels:
         - /Path1
         - /TF1
         - /TF1/Frames1
-        - /Path3
-        - /Path4
+        - /PathOpt1
+        - /PathOdom1
       Splitter Ratio: 0.5
     Tree Height: 478
   - Class: rviz_common/Selection
@@ -133,7 +133,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.029999999329447746
-      Name: Path
+      Name: PathGt
       Offset:
         X: 0
         Y: 0
@@ -209,7 +209,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.029999999329447746
-      Name: Path
+      Name: PathOpt
       Offset:
         X: 0
         Y: 0
@@ -237,7 +237,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.029999999329447746
-      Name: Path
+      Name: PathOdom
       Offset:
         X: 0
         Y: 0
@@ -301,7 +301,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 5.920034885406494
+      Distance: 6.2666521072387695
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

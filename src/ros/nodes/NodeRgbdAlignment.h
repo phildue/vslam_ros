@@ -25,6 +25,10 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
+#include "vslam/vslam.h"
+#include "vslam_ros/Associator.h"
+#include "vslam_ros/visibility_control.h"
+#include "vslam_ros_interfaces/srv/replayer_play.hpp"
 #include <Eigen/Dense>
 #include <chrono>
 #include <image_transport/image_transport.hpp>
@@ -42,10 +46,6 @@
 #include <std_srvs/srv/set_bool.hpp>
 #include <stereo_msgs/msg/disparity_image.hpp>
 
-#include "vslam/vslam.h"
-#include "vslam_ros/Associator.h"
-#include "vslam_ros/visibility_control.h"
-
 namespace vslam_ros {
 class NodeRgbdAlignment : public rclcpp::Node {
 public:
@@ -59,6 +59,7 @@ private:
   int _fNo;
   // Publications
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr _pubOdom, _pubOdomKf, _pubOdomKf2f;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _pubKeyImg, _pubKeyDepth;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPath;
   std::shared_ptr<tf2_ros::TransformBroadcaster> _pubTf;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pubPclMap;
@@ -80,7 +81,7 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> _subTf;
 
   // Clients
-  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr _cliReplayer;
+  rclcpp::Client<vslam_ros_interfaces::srv::ReplayerPlay>::SharedPtr _cliReplayer;
 
   // Timers
   rclcpp::TimerBase::SharedPtr _periodicTimer, _processFrameTimer;
@@ -101,6 +102,7 @@ private:
   vslam::Pose _motion;
   vslam::Trajectory _trajectory;
   vslam::Frame::ShPtr _kf, _lf, _cf;
+  bool _newKeyFrame;
   double _entropyRef, _maxEntropyReduction;
   void initialize();
   void process();

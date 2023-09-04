@@ -35,6 +35,8 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
     _pubOdom(create_publisher<nav_msgs::msg::Odometry>("/odom", 10)),
     _pubOdomKf(create_publisher<nav_msgs::msg::Odometry>("/odom/keyframe", 10)),
     _pubOdomKf2f(create_publisher<nav_msgs::msg::Odometry>("/odom/keyframe2frame", 10)),
+    _pubKeyImg(create_publisher<sensor_msgs::msg::Image>("/keyframe/image", 10)),
+    _pubKeyDepth(create_publisher<sensor_msgs::msg::Image>("/keyframe/depth", 10)),
     _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10)),
     _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this)),
     _pubPclMap(create_publisher<sensor_msgs::msg::PointCloud2>("/pcl/map", 10)),
@@ -46,7 +48,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
     _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock())),
     _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer)) {
   if (_replay) {
-    _cliReplayer = create_client<std_srvs::srv::SetBool>("togglePlay");
+    _cliReplayer = create_client<vslam_ros_interfaces::srv::ReplayerPlay>("togglePlay");
   }
   _featureSelection = std::make_unique<FeatureSelection>(
     declare_parameter("features.intensity_gradient_min", 5),
@@ -152,6 +154,7 @@ void NodeRgbdAlignment::initialize() {
   _kf->computeDerivatives();
   _kf->computePcl();
   _featureSelection->select(_kf, true);
+
   _motionModel->update(_cf->pose(), _cf->t());
   _motion = _cf->pose() * _lf->pose().inverse();
 
@@ -164,7 +167,10 @@ void NodeRgbdAlignment::process() {
 
   auto results = _alignmentRgbd->align(_kf, _cf);
   _cf->pose() = results->pose;
-  if (1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction) {
+
+  // TODO keyframe handling should be in own class
+  _newKeyFrame = _lf != _kf && 1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction;
+  if (_newKeyFrame) {
     _kf->removeFeatures();
     _kf = _lf;
     _kf->computeDerivatives();
@@ -208,10 +214,7 @@ void NodeRgbdAlignment::timerCallback() {
     lookupTf();
   }
   RCLCPP_INFO(
-    get_logger(),
-    format(
-      "Egomotion: {} m/s {:.2f}°/s", _motionModel->velocity().translation().transpose(), _motionModel->velocity().totalRotationDegrees())
-      .c_str());
+    get_logger(), format("Pose: {} m {:.2f}°", _cf->pose().translation().transpose(), _cf->pose().totalRotationDegrees()).c_str());
 }
 
 void NodeRgbdAlignment::lookupTf() {
@@ -230,12 +233,13 @@ void NodeRgbdAlignment::setReplay(bool ready) {
     }
     RCLCPP_INFO(get_logger(), "Replayer Service not available, waiting again...");
   }
-  auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
-  request->data = ready;
-  using ServiceResponseFuture = rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture;
-  auto response_received_callback = [this](ServiceResponseFuture future) {
-    if (!future.get()->success) {
-      RCLCPP_WARN(get_logger(), "Last replayer signal result was not valid.");
+  auto request = std::make_shared<vslam_ros_interfaces::srv::ReplayerPlay::Request>();
+  request->play = ready;
+  request->requester = get_name();
+  using ServiceResponseFuture = rclcpp::Client<vslam_ros_interfaces::srv::ReplayerPlay>::SharedFuture;
+  auto response_received_callback = [ready, request, this](ServiceResponseFuture future) {
+    if (!request->play) {
+      RCLCPP_WARN(get_logger(), "Try stopping replayer ... [%s]", future.get()->isplaying ? "Failed" : "Success");
     }
   };
   _cliReplayer->async_send_request(request, response_received_callback);
@@ -254,34 +258,59 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
   tfOrigin.header.frame_id = _fixedFrameId;
   tfOrigin.child_frame_id = _frameId;
 
-  // Send current camera pose as estimate for pose of optical frame
+  // tf from current frame to origin
   geometry_msgs::msg::TransformStamped tf;
   tf.header.stamp = t;
   tf.header.frame_id = _frameId;
   tf.child_frame_id = "camera";  // camera name?
   vslam_ros::convert(_cf->pose().SE3().inverse(), tf);
-  _pubTf->sendTransform({tf, tfOrigin});
 
-  // Send pose, twist and path in optical frame
   nav_msgs::msg::Odometry odom;
   odom.header.stamp = t;
   odom.header.frame_id = _frameId;
+  odom.child_frame_id = "camera";  // camera name?
   vslam_ros::convert(_cf->pose().inverse(), odom.pose);
   vslam_ros::convert(_motion.inverse(), odom.twist);
   _pubOdom->publish(odom);
 
-  nav_msgs::msg::Odometry odomKf, odomKf2f;
-  odomKf.header.stamp = odomKf2f.header.stamp = t;
-  odomKf.header.frame_id = _frameId;
-  odomKf.child_frame_id = format("kf{}", _kf->id());
+  // tf from keyframe to origin
+  geometry_msgs::msg::TransformStamped tfKey;
+  tfKey.header.stamp = t;
+  tfKey.header.frame_id = std::to_string(_kf->t());
+  tfKey.child_frame_id = "camera";  // camera name?
+  vslam_ros::convert(_cf->pose().SE3().inverse(), tf);
 
-  odomKf2f.header.frame_id = std::to_string(_kf->t());
-  odomKf2f.child_frame_id = std::to_string(_cf->t());
-  vslam_ros::convert(_kf->pose().inverse(), odomKf.pose);
-  Pose kf2f(_cf->pose().SE3() * _kf->pose().SE3().inverse(), _cf->pose().cov());
-  vslam_ros::convert(kf2f.inverse(), odomKf2f.pose);
+  nav_msgs::msg::Odometry odomKf;
+  odomKf.header.stamp = t;
+  odomKf.header.frame_id = _frameId;
+  odomKf.child_frame_id = std::to_string(_kf->t());
   _pubOdomKf->publish(odomKf);
-  _pubOdomKf2f->publish(odomKf2f);
+
+  _pubTf->sendTransform({tf, tfOrigin, tfKey});
+
+  if (_cf && _kf && _cf != _kf) {
+    // tf from current frame to keyframe
+    nav_msgs::msg::Odometry odomKf2f;
+    odomKf2f.header.stamp = t;
+    odomKf2f.header.frame_id = std::to_string(_kf->t());
+    odomKf2f.child_frame_id = std::to_string(_cf->t());
+    vslam_ros::convert(_kf->pose().inverse(), odomKf.pose);
+    Pose kf2f(_cf->pose().SE3() * _kf->pose().SE3().inverse(), _cf->pose().cov());
+    vslam_ros::convert(kf2f.inverse(), odomKf2f.pose);
+    _pubOdomKf2f->publish(odomKf2f);
+  }
+
+  if (_newKeyFrame) {
+    RCLCPP_INFO(get_logger(), "New Keyframe: %ld", _kf->id());
+    namespace enc = sensor_msgs::image_encodings;
+    std_msgs::msg::Header header;
+    header.frame_id = "camera";
+    vslam_ros::convert(_kf->t(), header.stamp);
+    cv_bridge::CvImage img(header, enc::MONO8, _kf->intensity());
+    cv_bridge::CvImage depth(header, enc::TYPE_32FC1, _kf->depth());
+    _pubKeyImg->publish(*img.toImageMsg());
+    _pubKeyDepth->publish(*depth.toImageMsg());
+  }
 
   nav_msgs::msg::Path path;
   path.header = odom.header;

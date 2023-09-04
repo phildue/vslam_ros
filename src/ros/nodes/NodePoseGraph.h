@@ -10,8 +10,9 @@
 #include <stereo_msgs/msg/disparity_image.hpp>
 #include <string>
 
-#include "vslam/vslam.h"
+#include "vslam/pose_graph_optimization.h"
 #include "vslam_ros/visibility_control.h"
+#include "vslam_ros_interfaces/srv/replayer_play.hpp"
 namespace vslam_ros {
 class NodePoseGraph : public rclcpp::Node {
 public:
@@ -21,6 +22,9 @@ public:
 private:
   void callbackOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
   void callbackOdomLc(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
+  void setReplay(bool play);
+
+  rclcpp::Client<vslam_ros_interfaces::srv::ReplayerPlay>::SharedPtr _cliReplayer;
 
   const rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _subOdom, _subLoop;
   const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pub;

@@ -116,6 +116,11 @@ bool PoseGraph::hasMeasurement(Timestamp t0, Timestamp t1) {
   return std::find_if(_edges.begin(), _edges.end(), [&](auto c) { return (c->t0 == t0 && c->t1 == t1); }) != _edges.end();
 }
 void PoseGraph::addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01) {
+
+  if (t0 == t1) {
+    throw std::runtime_error(format("Constraint has to be between different nodes, but was [{}]-->[{}]", t0, t1));
+  }
+
   if (_nodes.find(t0) == _nodes.end()) {
     _nodes[t0] = SE3d();
   }
