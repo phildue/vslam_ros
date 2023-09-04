@@ -90,7 +90,7 @@ Frame::VecConstShPtr LoopClosureDetection::selectCandidates(Frame::ConstShPtr f,
 }
 bool LoopClosureDetection::isCandidate(Frame::ConstShPtr f, Frame::ConstShPtr cf) const {
 
-  if (f->id() == cf->id()) {
+  if (f->id() == cf->id() || f->t() == cf->t()) {
     return false;
   }
 
@@ -110,7 +110,7 @@ bool LoopClosureDetection::isCandidate(Frame::ConstShPtr f, Frame::ConstShPtr cf
   }
   opticalFlow /= nFeatures;
 
-  const bool passed = t < 1.0 && nFeatures / (double)f->features().size() > 0.75;
+  const bool passed = t < _maxTranslation && nFeatures;
 
   CLOG(DEBUG, LOG_NAME) << format(
     "Evaluting candidate for {}, {}: Features: {:.2f} OpticalFlow: {:.2f} t={:.2f} r={:.2f}: [{}]",

@@ -6,9 +6,9 @@ using namespace testing;
 #include <opencv2/highgui.hpp>
 #include <thread>
 
-#include "LoopClosureDetection.h"
-#include "PoseGraph.h"
 #include "descriptor_matching/overlays.h"
+#include "loop_closure_detection/LoopClosureDetection.h"
+#include "pose_graph_optimization/PoseGraph.h"
 #include "vslam/core.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"

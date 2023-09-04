@@ -6,9 +6,8 @@
 
 namespace vslam {
 class LoopClosureDetection {
-  TYPEDEF_PTR(LoopClosureDetection)
-
 public:
+  TYPEDEF_PTR(LoopClosureDetection)
   struct Result {
     TYPEDEF_PTR(Result)
     Timestamp t0, t1;

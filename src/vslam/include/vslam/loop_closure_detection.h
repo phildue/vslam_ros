@@ -13,15 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_ROS2_H__
-#define VSLAM_ROS2_H__
-#include "converters.h"
-#include "nodes/NodeEvaluation.h"
-#include "nodes/NodeLoopClosures.h"
-#include "nodes/NodePoseGraph.h"
-#include "nodes/NodeReplayer.h"
-#include "nodes/NodeReplayerExtracted.h"
-#include "nodes/NodeRgbdAlignment.h"
-#include "nodes/NodeStereoDepth.h"
-#include "vslam/vslam.h"
-#endif
+#ifndef VSLAM_LOOP_CLOSURE_DETECTION_PACKAGE_H__
+#define VSLAM_LOOP_CLOSURE_DETECTION_PACKAGE_H__
+#include "loop_closure_detection/LoopClosureDetection.h"
+
+#endif  // VSLAM_LOOP_CLOSURE_DETECTION_PACKAGE_H__
