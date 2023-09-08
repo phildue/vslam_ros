@@ -19,14 +19,14 @@
 
 #include <gtest/gtest.h>
 
-#include <Eigen/Dense>
-#include <opencv2/highgui.hpp>
-#include <opencv4/opencv2/core/eigen.hpp>
-
 #include "vslam/core.h"
 #include "vslam/descriptor_matching.h"
 #include "vslam/evaluation.h"
+#include "vslam/features.h"
 #include "vslam/utils.h"
+#include <Eigen/Dense>
+#include <opencv2/highgui.hpp>
+#include <opencv4/opencv2/core/eigen.hpp>
 using namespace testing;
 using namespace vslam;
 using namespace vslam::evaluation;
