@@ -40,7 +40,7 @@
           reliability: reliable
 /NodeLoopClosures:
   ros__parameters:
-    min_entropy_ratio: 0.95
+    min_entropy_ratio: 0.9
     candidate_selection:
       max_translation: 0.5
       min_features: 500
