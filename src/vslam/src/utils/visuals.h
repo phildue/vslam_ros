@@ -15,6 +15,7 @@ cv::Mat visualizeFrame(Frame::ConstShPtr frame, int level = 0);
 cv::Mat visualizeFramePair(Frame::ConstShPtr f0, Frame::ConstShPtr f1);
 namespace overlay {
 cv::Mat frames(Frame::VecConstShPtr frames);
+cv::Mat frames(Frame::VecConstShPtr frames, int nRows, int nCols, int h = 240, int w = 320);
 
 template <class... Drawables> class Hstack {
 private:
@@ -32,6 +33,8 @@ public:
     return mat;
   }
 };
+cv::Mat arrangeInGrid(const std::vector<cv::Mat> &mats_, int nRows, int nCols, int h = 240, int w = 320);
+
 }  // namespace overlay
 }  // namespace vslam
 #endif  // VSLAM_VISUALS_H__

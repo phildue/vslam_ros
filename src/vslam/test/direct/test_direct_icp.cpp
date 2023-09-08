@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   log::configure(TEST_RESOURCE "/log.conf");
   auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
   auto motionModel = std::make_shared<ConstantVelocityModel>(INFd, INFd, INFd);
-  auto featureSelection = std::make_shared<FeatureSelection>(10, 0.01, 0.3, 0, 8.0f, 5.0, 1);
+  auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 1);
 
   Trajectory::ShPtr traj = std::make_shared<Trajectory>();
   const size_t fEnd = dl->timestamps().size();
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   kf->computePyramid(directIcp->nLevels());
   kf->computeDerivatives();
   kf->computePcl();
-  featureSelection->select(kf, true);
+  featureSelection->select(kf);
   motionModel->update(kf->pose(), kf->t());
 
   Frame::ShPtr lf = kf;
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
         kf = lf;
         kf->computeDerivatives();
         kf->computePcl();
-        featureSelection->select(kf, true);
+        featureSelection->select(kf);
         f->pose() = motionModel->predict(f->t());
         results = directIcp->align(kf, f);
         f->pose() = results->pose;

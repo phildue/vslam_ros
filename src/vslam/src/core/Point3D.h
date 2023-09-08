@@ -20,35 +20,34 @@
 #ifndef VSLAM_POINT_H
 #define VSLAM_POINT_H
 
+#include "types.h"
 #include <Eigen/Dense>
+#include <map>
 #include <memory>
 #include <vector>
-
-#include "types.h"
-namespace vslam
-{
+namespace vslam {
 class Feature2D;
 
-class Point3D
-{
+class Point3D {
 public:
   typedef std::shared_ptr<Point3D> ShPtr;
   typedef std::shared_ptr<const Point3D> ConstShPtr;
   typedef std::vector<ShPtr> VecShPtr;
+  typedef std::map<size_t, ShPtr> MapShPtr;
   typedef std::vector<ConstShPtr> VecConstShPtr;
+  typedef std::map<size_t, ConstShPtr> MapConstShPtr;
 
-  Point3D(const Vec3d & position, std::shared_ptr<Feature2D> ft);
-  Point3D(const Vec3d & position, const std::vector<std::shared_ptr<Feature2D>> & features);
+  Point3D(const Vec3d &position, std::shared_ptr<Feature2D> ft);
+  Point3D(const Vec3d &position, const std::vector<std::shared_ptr<Feature2D>> &features);
   void addFeature(std::shared_ptr<Feature2D> ft);
   void removeFeatures();
   void removeFeature(std::shared_ptr<Feature2D> f);
 
-  const Vec3d & position() const { return _position; }
-  Vec3d & position() { return _position; }
+  const Vec3d &position() const { return _position; }
+  Vec3d &position() { return _position; }
 
   std::vector<std::shared_ptr<Feature2D>> features() { return _features; }
-  std::vector<std::shared_ptr<const Feature2D>> features() const
-  {
+  std::vector<std::shared_ptr<const Feature2D>> features() const {
     return std::vector<std::shared_ptr<const Feature2D>>(_features.begin(), _features.end());
   }
   std::uint64_t id() const { return _id; }
@@ -61,4 +60,4 @@ private:
 };
 
 }  // namespace vslam
-#endif  //VSLAM_POINT_H
+#endif  // VSLAM_POINT_H

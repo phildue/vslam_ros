@@ -35,6 +35,9 @@ public:
 
   struct Results {
     typedef std::unique_ptr<Results> UnPtr;
+    typedef std::shared_ptr<Results> ShPtr;
+    typedef std::shared_ptr<const Results> ConstShPtr;
+
     Pose pose;
     std::vector<Constraint::VecConstShPtr> constraints;
     std::vector<double> scale;
@@ -64,8 +67,8 @@ public:
     const SE3d &guess,
     const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
 
-  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ShPtr frame1);
-  Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ShPtr frame1);
+  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1);
+  Results::UnPtr align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1);
 
   int nLevels() { return _nLevels; }
 
@@ -76,7 +79,7 @@ private:
 
   int _level, _iteration;
 
-  Constraint::VecShPtr setupConstraints(const Frame::VecConstShPtr &framesRef, const std::vector<SE3f> &motion) const;
+  Constraint::VecShPtr setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features) const;
 
   Constraint::VecShPtr
   computeResidualsAndJacobian(const Constraint::VecShPtr &constraints, Frame::ConstShPtr f1, const std::vector<SE3f> &motion) const;
@@ -84,10 +87,6 @@ private:
   NormalEquations computeNormalEquations(const std::vector<Constraint::ShPtr> &constraints) const;
 
   NormalEquations computeNormalEquations(const Pose &prior, const SE3f &pose);
-
-  Matf<2, 6> computeJacobianWarp(const Vec3f &p, Camera::ConstShPtr cam) const;
-
-  Vec6f computeJacobianSE3z(const Vec3f &p) const;
 };
 
 }  // namespace vslam

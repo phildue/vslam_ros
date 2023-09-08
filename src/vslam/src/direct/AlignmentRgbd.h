@@ -9,6 +9,7 @@
 #include "NormalEquations.h"
 #include "core/Camera.h"
 #include "core/Frame.h"
+#include "core/Point3D.h"
 #include "core/Pose.h"
 #include "core/macros.h"
 #include "core/types.h"
@@ -24,7 +25,7 @@ public:
     Vec2f uv0, uv1;
     Vec3f p0;
     Vec2f iz0;
-    Vec6f JZJw;
+    Matf<1, 6> JZJw;
     Matf<2, 6> J;
     Mat2f weight;
     Vec2f residual;
@@ -57,8 +58,8 @@ public:
 
   Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1);
   Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior);
-  Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ConstShPtr frame1);
-  Results::UnPtr align(Frame::VecConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior);
+  Results::UnPtr align(Feature2D::VecConstShPtr features, Frame::ConstShPtr frame1);
+  Results::UnPtr align(Feature2D::VecConstShPtr features, Frame::ConstShPtr frame1, const Pose &prior);
 
   int nLevels() { return *std::max_element(_levels.begin(), _levels.end()) + 1; }
 
@@ -69,7 +70,7 @@ private:
 
   int _level, _iteration;
 
-  Constraint::VecShPtr setupConstraints(const Frame::VecConstShPtr &framesRef, const std::vector<SE3f> &motion) const;
+  Constraint::VecShPtr setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features) const;
 
   Constraint::VecShPtr
   computeResidualsAndJacobian(const Constraint::VecShPtr &constraints, Frame::ConstShPtr f1, const std::vector<SE3f> &motion) const;
@@ -77,10 +78,6 @@ private:
   NormalEquations computeNormalEquations(const std::vector<Constraint::ShPtr> &constraints) const;
 
   NormalEquations computeNormalEquations(const Pose &prior, const SE3f &pose);
-
-  Matf<2, 6> computeJacobianWarp(const Vec3f &p, Camera::ConstShPtr cam) const;
-
-  Vec6f computeJacobianSE3z(const Vec3f &p) const;
 };
 
 }  // namespace vslam

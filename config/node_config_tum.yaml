@@ -2,10 +2,10 @@
 /NodeRgbdAlignment: #todo rename odometry
   ros__parameters:
     features:
-      intensity_gradient_min: 5
+      intensity_gradient_min: 5.0
       depth_gradient_min: 0.01
       depth_gradient_max: 0.3
-      depth_min: 0
+      depth_min: 0.0
       depth_max: 8.0
       grid_size: 10.0
       n_levels: 4
@@ -45,10 +45,10 @@
       max_translation: 0.5
       min_features: 500
     features:
-        intensity_gradient_min: 5
+        intensity_gradient_min: 5.0
         depth_gradient_min: 0.01
         depth_gradient_max: 0.3
-        depth_min: 0
+        depth_min: 0.0
         depth_max: 8.0
         grid_size: 10.0
         n_levels: 4

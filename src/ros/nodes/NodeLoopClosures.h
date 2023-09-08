@@ -52,7 +52,7 @@ private:
   const double _minTranslation;
   const int _minFeatures;
   const vslam::loop_closure_detection::DifferentialEntropy::UnPtr _loopClosureDetection;
-  const vslam::FeatureSelection::UnPtr _featureSelection;
+  const vslam::FeatureSelection<vslam::FiniteGradient>::UnPtr _featureSelection;
   struct Entropy {
     vslam::Timestamp t;
     double entropy;

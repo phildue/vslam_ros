@@ -5,88 +5,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-        "name": "(gdb) Launch",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/install/vslam_ros/lib/${input:package}/${input:program}",
-        "args": ["--ros-args","--params-file","${workspaceFolder}/config/nodeMapping.yaml"],
-        //"preLaunchTask": "build",
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "additionalSOLibSearchPath": "${workspaceFolder/install/vslam_ros/lib"
-      },
-    {
-      "name": "(gdb) Test",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/vslam_ros/src/vslam/test/${input:test}",
-      "args": [],
-      "preLaunchTask": "build-debug",
-      "stopAtEntry": false,
-      "cwd": "${fileDirname}",
-      "environment": [],
-      "externalConsole": false,
-      "MIMode": "gdb",
-      "setupCommands": [
-          {
-              "description": "Enable pretty-printing for gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-          }
-      ]
-    },
-    {
-      "name": "(gdb) Run Executable",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/install/bin/${input:target}",
-      "args": ["--ros-args","--params-file","${workspaceFolder}/RgbdAlignmentNode.yaml"],
-      "preLaunchTask": "build",
-      "stopAtEntry": false,
-      "cwd": "${fileDirname}",
-      "environment": [],
-      "externalConsole": false,
-      "additionalSOLibSearchPath": "${workspaceFolder/install/lib",
-      "MIMode": "gdb",
-      "setupCommands": [
-          {
-              "description": "Enable pretty-printing for gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-          }
-      ]
-    },
-    {
-      "name": "(gdb) Run Rgbd Alignment",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/install/bin/rgbdAlignment",
-      "args": ["--ros-args","--params-file","${workspaceFolder}/src/vslam_ros/vslam_ros/config/RgbdAlignmentNodeParams.yaml"],
-      "preLaunchTask": "build",
-      "stopAtEntry": false,
-      "cwd": "${fileDirname}",
-      "environment": [],
-      "externalConsole": false,
-      "additionalSOLibSearchPath": "${workspaceFolder/install/lib",
-      "MIMode": "gdb",
-      "setupCommands": [
-          {
-              "description": "Enable pretty-printing for gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-          }
-      ]
-    },
-    {
       "name": "(gdb) Launch Test",
       "type": "cppdbg",
       "request": "launch",
@@ -124,26 +42,6 @@
         "console": "integratedTerminal",
       },
     // Example gdb launch of a ros executable
-    {
-      "name": "(gdb) Launch ROS node",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/install/${input:package}/lib/${input:package}/${input:program}",
-      "args": ["--ros-args","--params-file","${workspaceFolder}/config/nodeMapping.yaml"],
-      "preLaunchTask": "build",
-      "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "MIMode": "gdb",
-      "additionalSOLibSearchPath": "${workspaceFolder/install/vslam_ros/lib",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
-    },
     {
         "name": "(gdb) Launch Composition",
         "type": "cppdbg",
@@ -210,13 +108,15 @@
         "options":[
             "pose_graph_optimization",
             "loop_closure_detection",
-            "rgbd_odometry_simple",
-            "rgb_odometry_simple",
+        "rgb_pose_graph",
+        "rgb_pose_graph_single_frame",
+        "rgbd_odometry_simple",
+        "rgb_odometry_simple",
+        "rgbd_odometry_entropy",
+        "rgbd_odometry_local_map",
         "multiframe_alignment",
-        "direct_rgb_alignment",
-        "descriptor_matching",
+        "descriptor_odometry",
         "frame2",
-        "rgbd_alignment",
         "rpe",
         "motion_model",
         "ekf_se3",
@@ -226,7 +126,8 @@
         "trajectory",
         "map",
         "frame",
-        "ba"
+        "ba",
+        "jacobians"
         ]
       },
       {
@@ -234,6 +135,7 @@
         "type": "pickString",
         "description": "sequence",
         "options": [
+            "random",
             "rgbd_dataset_freiburg1_desk",
             "rgbd_dataset_freiburg1_desk_validation",
             "rgbd_dataset_freiburg1_desk2",
@@ -243,11 +145,15 @@
             "rgbd_dataset_freiburg1_xyz",
             "rgbd_dataset_freiburg1_360",
             "rgbd_dataset_freiburg1_plant",
+            "rgbd_dataset_freiburg1_teddy",
             "rgbd_dataset_freiburg2_desk",
             "rgbd_dataset_freiburg2_desk_validation",
             "rgbd_dataset_freiburg2_pioneer_360",
             "rgbd_dataset_freiburg2_pioneer_slam",
+            "rgbd_dataset_freiburg2_pioneer_slam2",
+            "rgbd_dataset_freiburg2_pioneer_slam3",
             "rgbd_dataset_freiburg3_long_office_household",
+            "00"
         ]
     },
     {

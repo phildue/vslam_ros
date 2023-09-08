@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
   auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
   auto motionModel = std::make_shared<ConstantVelocityModel>(10.0, INFd, INFd);
-  auto featureSelection = std::make_shared<FeatureSelection>(5, 0.01, 0.3, 0, 8.0, 10, 4);
+  auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 1);
   auto map = std::make_shared<Map>();
   log::initialize(outPath, true);
 
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
   kf->computeDerivatives();
   kf->computePcl();
   map->addKeyframe(kf);
-  featureSelection->select(kf, true);
+  featureSelection->select(kf);
   motionModel->update(kf->pose(), kf->t());
 
   Frame::ShPtr lf = kf;
@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
 
         kf->computeDerivatives();
         kf->computePcl();
-        featureSelection->select(kf, true);
+        featureSelection->select(kf);
 
         log::append("KeyFrame", [&]() { return overlay::frames({kf, lf, f}); });
 

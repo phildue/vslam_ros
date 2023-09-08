@@ -33,13 +33,14 @@ NodeLoopClosures::NodeLoopClosures(const rclcpp::NodeOptions &options) :
         declare_parameter("aligner.coarse.max_iterations", 50),
         declare_parameter("aligner.coarse.min_parameter_update", 0.0001),
         declare_parameter("aligner.coarse.max_error_increase", 10)))),
-    _featureSelection(std::make_unique<FeatureSelection>(
-      declare_parameter("features.intensity_gradient_min", 5),
-      declare_parameter("features.depth_gradient_min", 0.01),
-      declare_parameter("features.depth_gradient_max", 0.3),
-      declare_parameter("features.depth_min", 0),
-      declare_parameter("features.depth_max", 8.0),
-      declare_parameter("features.grid_size", 10.0),
+    _featureSelection(std::make_unique<FeatureSelection<FiniteGradient>>(
+      FiniteGradient{
+        declare_parameter<float>("features.intensity_gradient_min", 5.0f),
+        declare_parameter<float>("features.depth_gradient_min", 0.01f),
+        declare_parameter<float>("features.depth_gradient_max", 0.3f),
+        declare_parameter<float>("features.depth_min", 0.0f),
+        declare_parameter<float>("features.depth_max", 8.0f)},
+      declare_parameter<float>("features.grid_size", 10.0f),
       declare_parameter("features.n_levels", 4))),
     _trajectory(std::make_unique<Trajectory>()) {
   if (declare_parameter("replay", true)) {
@@ -62,7 +63,7 @@ void NodeLoopClosures::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msg
   kfn->computePyramid(4);
   kfn->computeDerivatives();
   kfn->computePcl();
-  _featureSelection->select(kfn, false);
+  _featureSelection->select(kfn);
   std::for_each(_keyframes.begin(), _keyframes.end(), [&](auto kf) {
     const auto &entropiesTrack = _childFrames[kf->t()];
     if (std::find_if(entropiesTrack.begin(), entropiesTrack.end(), [&](auto cf) { return cf.t == kfn->t(); }) != entropiesTrack.end()) {

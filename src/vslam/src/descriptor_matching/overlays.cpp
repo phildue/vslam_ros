@@ -23,8 +23,6 @@
 namespace vslam::overlay {
 std::map<uint64_t, cv::Scalar> FeatureDisplacement::_colorMap = {};
 
-
-
 cv::Mat MatchCandidates::draw() const {
   cv::Mat mat0, mat1;
   cv::cvtColor(_f0->intensity(), mat0, cv::COLOR_GRAY2BGR);
@@ -70,18 +68,18 @@ cv::Mat CorrespondingPoints::draw() const {
         auto ft = _frames[j]->observationOf(p->id());
         if (ft) {
           cv::Point center(ft->position().x(), ft->position().y());
-          const double radius = 5;
+          const double radius = 2;
           cv::circle(mats[j], center, radius, color, 2);
-          std::stringstream ss;
-          ss << ft->point()->id();
-          cv::putText(mats[j], ss.str(), center, cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 255));
+          if (_legend) {
+            std::stringstream ss;
+            ss << ft->point()->id();
+            cv::putText(mats[j], ss.str(), center, cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 255));
+          }
         }
       }
     }
   }
-  cv::Mat mat;
-  cv::hconcat(mats, mat);
-  return mat;
+  return arrangeInGrid(mats, _rows, _cols, _h, _w);
 }
 
 FeatureDisplacement::FeatureDisplacement(
