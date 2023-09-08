@@ -15,6 +15,6 @@
 
 #ifndef VSLAM_POSE_GRAPH_OPTIMIZATION_PACKAGE_H__
 #define VSLAM_POSE_GRAPH_OPTIMIZATION_PACKAGE_H__
-#include "pose_graph_optimization/PoseGraph.h"
+#include "pose_graph_optimization/PoseGraphOptimizer.h"
 
 #endif  // VSLAM_POSE_GRAPH_OPTIMIZATION_PACKAGE_H__

@@ -20,7 +20,7 @@ set( sources
     src/utils/utils.cpp
     src/features/keypoint_selection.cpp
     src/features/FeatureSelection.cpp
-
+    src/features/overlays.cpp
     src/evaluation/evaluation.cpp
     src/evaluation/tum.cpp
     src/direct/AlignmentRgb.cpp
@@ -33,8 +33,9 @@ set( sources
     src/descriptor_matching/FeatureTracking.cpp
     src/descriptor_matching/FeatureTrackingOcv.cpp
     src/descriptor_matching/Matcher.cpp
-    src/pose_graph_optimization/PoseGraph.cpp
-    src/loop_closure_detection/LoopClosureDetection.cpp
+    src/pose_graph_optimization/PoseGraphOptimizer.cpp
+    src/loop_closure_detection/CandidateProposal.cpp
+    src/loop_closure_detection/DifferentialEntropy.cpp
     #src/mapping/Map.cpp
     /usr/local/include/easylogging++.cc
    )
@@ -54,6 +55,7 @@ set( headers
     src/utils/log.h
     src/features/keypoint_selection.h
     src/features/FeatureSelection.h
+    src/features/overlays.h
     src/evaluation/evaluation.h
     src/evaluation/tum.h
     src/direct/NormalEquations.h
@@ -68,8 +70,9 @@ set( headers
     src/descriptor_matching/FeatureTracking.h
     src/descriptor_matching/FeatureTrackingOcv.h
     src/descriptor_matching/Matcher.h
-    src/pose_graph_optimization/PoseGraph.h
-    src/loop_closure_detection/LoopClosureDetection.h
+    src/pose_graph_optimization/PoseGraphOptimizer.h
+    src/loop_closure_detection/CandidateProposal.h
+    src/loop_closure_detection/DifferentialEntropy.h
 
     /usr/local/include/easylogging++.h 
     include/vslam/core.h

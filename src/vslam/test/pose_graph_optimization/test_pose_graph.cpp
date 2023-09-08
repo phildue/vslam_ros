@@ -19,13 +19,13 @@
 
 #include <gtest/gtest.h>
 
-#include "pose_graph_optimization/PoseGraph.h"
+#include "pose_graph_optimization/PoseGraphOptimizer.h"
 
 using namespace testing;
 using namespace vslam;
 
 TEST(PoseGraphTest, OptimizeSynthetic) {
-  auto poseGraph = std::make_shared<PoseGraph>();
+  auto poseGraph = std::make_shared<PoseGraphOptimizer>(100);
 
   Pose pose01;
   pose01.cov() = Mat6d::Identity();

@@ -1,4 +1,4 @@
-#include "PoseGraph.h"
+#include "PoseGraphOptimizer.h"
 #include "utils/log.h"
 #include <ceres/ceres.h>
 #include <opencv2/highgui.hpp>
@@ -37,7 +37,7 @@ private:
 struct Overlay {
 
   const std::map<Timestamp, SE3d> &poses;
-  const PoseGraph::Constraint::VecShPtr &edges;
+  const PoseGraphOptimizer::Constraint::VecShPtr &edges;
 
 public:
   cv::Mat operator()() const { return draw(); }
@@ -92,10 +92,10 @@ public:
   virtual ~Callback() {}
   ceres::CallbackReturnType operator()(const ceres::IterationSummary &summary) override {
     if (summary.iteration == 0) {
-      CLOG(DEBUG, PoseGraph::LOG_NAME) << format(
-        "iter | cost     | cost_change | |gradient| | |step|   | tr_ratio | tr_radius | successful");
+      CLOG(DEBUG, PoseGraphOptimizer::LOG_NAME)
+        << format("iter | cost     | cost_change | |gradient| | |step|   | tr_ratio | tr_radius | successful");
     }
-    CLOG(DEBUG, PoseGraph::LOG_NAME) << format(
+    CLOG(DEBUG, PoseGraphOptimizer::LOG_NAME) << format(
       "{:03d}  | {:3.2e} | {:3.2e}    | {:3.2e}   | {:3.2e} | {:3.2e} | {:3.2e} | {}",
       summary.iteration,
       summary.cost,
@@ -110,12 +110,15 @@ public:
 
 private:
 };
-PoseGraph::PoseGraph() { log::create(LOG_NAME); }
+PoseGraphOptimizer::PoseGraphOptimizer(double lossThr) :
+    _lossThr(lossThr) {
+  log::create(LOG_NAME);
+}
 
-bool PoseGraph::hasMeasurement(Timestamp t0, Timestamp t1) {
+bool PoseGraphOptimizer::hasMeasurement(Timestamp t0, Timestamp t1) {
   return std::find_if(_edges.begin(), _edges.end(), [&](auto c) { return (c->t0 == t0 && c->t1 == t1); }) != _edges.end();
 }
-void PoseGraph::addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01) {
+void PoseGraphOptimizer::addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01) {
 
   if (t0 == t1) {
     throw std::runtime_error(format("Constraint has to be between different nodes, but was [{}]-->[{}]", t0, t1));
@@ -130,7 +133,7 @@ void PoseGraph::addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01) {
 
   _edges.push_back(std::make_shared<Constraint>(t0, t1, pose01));
 }
-void PoseGraph::optimize() {
+void PoseGraphOptimizer::optimize() {
   ceres::Problem problem;
   ceres::Solver::Options options;
   options.update_state_every_iteration = true;
@@ -142,9 +145,10 @@ void PoseGraph::optimize() {
   }
   problem.SetParameterBlockConstant(_nodes.begin()->second.data());
   options.callbacks.push_back(new Callback());
-  auto loss = nullptr;  // ceres::TukeyLoss(0.1);
+  // auto loss = nullptr;
   for (auto &e : _edges) {
-    problem.AddResidualBlock(OdometryError::Create(e->pose), loss, _nodes.at(e->t0).data(), _nodes.at(e->t1).data());
+    problem.AddResidualBlock(
+      OdometryError::Create(e->pose), new ceres::HuberLoss(_lossThr), _nodes.at(e->t0).data(), _nodes.at(e->t1).data());
   }
   ceres::Solver::Summary summary;
   TIMED_SCOPE(timer, "solve");

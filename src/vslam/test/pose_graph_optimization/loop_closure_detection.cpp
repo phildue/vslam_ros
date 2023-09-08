@@ -6,14 +6,13 @@ using namespace testing;
 #include <opencv2/highgui.hpp>
 #include <thread>
 
-#include "descriptor_matching/overlays.h"
-#include "loop_closure_detection/LoopClosureDetection.h"
-#include "pose_graph_optimization/PoseGraph.h"
 #include "vslam/core.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
+#include "vslam/loop_closure_detection.h"
 #include "vslam/motion_model.h"
+#include "vslam/pose_graph_optimization.h"
 #include "vslam/utils.h"
 using namespace vslam;
 
@@ -34,13 +33,11 @@ Explanation:
 class Map {
 public:
   Map() {
-    _lc = std::make_unique<LoopClosureDetection>(
-      0.1,
-      5.0 / 180.0 * M_PI,
+    _lc = std::make_unique<loop_closure_detection::DifferentialEntropy>(
       0.9,
       std::make_unique<AlignmentRgbd>(std::vector<int>{3}, 20, 1e-4, 1.1),
       std::make_unique<AlignmentRgbd>(AlignmentRgbd::defaultParameters()));
-    _poseGraph = std::make_unique<PoseGraph>();
+    _poseGraph = std::make_unique<PoseGraphOptimizer>(100);
   }
   void addKeyframe(Frame::ShPtr kf) {
     _keyFrames.push_back(kf);
@@ -70,12 +67,29 @@ public:
     if (candidates.empty()) {
       return 0;
     }
+    int nLoopClosures = 0;
+    for (const auto &cf : candidates) {
+      int nFeatures = 0;
+      double opticalFlow = 0.;
 
-    auto loopClosures = _lc->detect(kf, meanEntropyTrack, candidates);
-    for (const auto &lc : loopClosures) {
-      _poseGraph->addMeasurement(lc->t0, lc->t1, lc->relativePose);
+      for (const auto &ft : cf->features()) {
+        Vec2d uv1 = kf->world2image(cf->p3dWorld(ft->v(), ft->u()));
+        if (uv1.allFinite() && kf->withinImage(uv1)) {
+          nFeatures++;
+          opticalFlow += (uv1 - ft->position()).norm();
+        }
+      }
+      opticalFlow /= nFeatures;
+      if ((kf->pose().SE3() * cf->pose().SE3().inverse()).translation().norm() > 0.5 || nFeatures < 500) {
+        continue;
+      }
+      auto lc = _lc->isLoopClosure(kf, meanEntropyTrack, cf);
+      if (lc) {
+        nLoopClosures++;
+        _poseGraph->addMeasurement(lc->t0, lc->t1, lc->relativePose);
+      }
     }
-    return loopClosures.size();
+    return nLoopClosures;
   }
   void optimize() {
     _poseGraph->optimize();
@@ -89,8 +103,8 @@ public:
 private:
   Frame::VecShPtr _keyFrames;
   std::map<uint64_t, std::vector<double>> _entropiesTrack;
-  std::unique_ptr<LoopClosureDetection> _lc;
-  PoseGraph::UnPtr _poseGraph;
+  std::unique_ptr<loop_closure_detection::DifferentialEntropy> _lc;
+  PoseGraphOptimizer::UnPtr _poseGraph;
 };
 
 int main(int argc, char **argv) {

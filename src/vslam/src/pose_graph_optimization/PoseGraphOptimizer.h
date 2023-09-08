@@ -4,10 +4,10 @@
 #include "core/types.h"
 #include <map>
 namespace vslam {
-class PoseGraph {
+class PoseGraphOptimizer {
 public:
-  TYPEDEF_PTR(PoseGraph)
-  PoseGraph();
+  TYPEDEF_PTR(PoseGraphOptimizer)
+  PoseGraphOptimizer(double lossThr);
   bool hasMeasurement(Timestamp t0, Timestamp t1);
   void addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01);
   void optimize();
@@ -20,6 +20,7 @@ public:
   };
 
 private:
+  const double _lossThr;
   std::map<Timestamp, SE3d> _nodes;
   Constraint::VecShPtr _edges;
 };

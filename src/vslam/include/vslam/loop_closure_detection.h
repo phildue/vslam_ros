@@ -15,6 +15,7 @@
 
 #ifndef VSLAM_LOOP_CLOSURE_DETECTION_PACKAGE_H__
 #define VSLAM_LOOP_CLOSURE_DETECTION_PACKAGE_H__
-#include "loop_closure_detection/LoopClosureDetection.h"
+#include "loop_closure_detection/CandidateProposal.h"
+#include "loop_closure_detection/DifferentialEntropy.h"
 
 #endif  // VSLAM_LOOP_CLOSURE_DETECTION_PACKAGE_H__
