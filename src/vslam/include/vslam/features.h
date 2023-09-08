@@ -17,5 +17,5 @@
 #define VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
 #include "features/FeatureSelection.h"
 #include "features/keypoint_selection.h"
-
+#include "features/overlays.h"
 #endif  // VSLAM_KEYPOINT_SELECTION_PACKAGE_H__
