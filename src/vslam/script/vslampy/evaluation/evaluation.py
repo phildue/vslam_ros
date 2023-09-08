@@ -32,6 +32,7 @@ class Evaluation:
             self.folder_results = result_folder
 
         self.filepath_trajectory_algo = os.path.join(self.folder_results, sequence.id() + "-algo.txt")
+        self.filepath_trajectory_optimized_algo = os.path.join(self.folder_results, sequence.id() + "-optimized-algo.txt")
         self.filepath_trajectory_plot = os.path.join(self.folder_results, "trajectory.png")            
         self.filepath_params = os.path.join(self.folder_results, "params.yaml")
         self.filepath_meta = os.path.join(self.folder_results, "meta.yaml")
