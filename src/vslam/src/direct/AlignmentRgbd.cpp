@@ -143,10 +143,22 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Feature2D::VecConstShPtr feat
         reason = format("Minimum step size reached: {:.5f}/{:.5f}", dx.norm(), _minParameterUpdate);
         break;
       }
-      MLOG(DEBUG) << format("level: {}, iteration: {}, error: {}, #: {},", _level, _iteration, error, constraints[_level].size());
+      MLOG(DEBUG) << format(
+        "level: {}, i: {}, #: {}, err: {}, cov: {}",
+        _level,
+        _iteration,
+        constraints[_level].size(),
+        error,
+        covariance.diagonal().transpose().block(0, 0, 1, 3).norm());
     }
     MLOG(INFO) << format(
-      "Done: {}, level: {}, iteration: {}, error: {}, #: {},", reason, _level, _iteration, error, constraints[_level].size());
+      "Done: {}, level: {}, i: {}, #: {}, err: {}, cov: {},",
+      reason,
+      _level,
+      _iteration,
+      constraints[_level].size(),
+      error,
+      covariance.diagonal().transpose().block(0, 0, 1, 3).norm());
   }
   auto r = std::make_unique<Results>(Results{
     Pose(pose.cast<double>(), covariance.cast<double>()),
@@ -178,13 +190,13 @@ AlignmentRgbd::setupConstraints(const Frame::VecConstShPtr &framesRef, const Fea
     }
     c->uv0 = Vec2d(ft->position()).cast<float>();
     c->p0 = Vec3d(frame->p3d(uv(1), uv(0), _level)).cast<float>();
-    c->iz0 = Vec2f(frame->intensity(uv(1), uv(0), _level), c->p0.z());
+    c->iz0 = Vec2f(frame->intensity(uv(1), uv(0), _level) / 255., c->p0.z());
 
     // Dont we have to recompute this each iteration? NO we always linearize and differentiate around the identity warp
     const Mat<float, 1, 2> JI(frame->dIx(uv(1), uv(0), _level), frame->dIy(uv(1), uv(0), _level));
     const Mat<float, 1, 2> JZ(frame->dZx(uv(1), uv(0), _level), frame->dZy(uv(1), uv(0), _level));
 
-    c->J.row(0) = JI * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
+    c->J.row(0) = 1. / 255. * JI * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
                   jacobian::transform_se3(SE3f(), c->p0);
     c->JZJw = JZ * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
               jacobian::transform_se3(SE3f(), c->p0);
@@ -240,7 +252,7 @@ AlignmentRgbd::Constraint::VecShPtr AlignmentRgbd::computeResidualsAndJacobian(
 
     const Vec3f p1t = ((Rinv[i] * (iz1w(1) * (Kinv * Vec3f(uv0t(0), uv0t(1), 1.0)))) + tinv[i]);
 
-    c->residual = Vec2f(iz1w(0), p1t.z()) - c->iz0;
+    c->residual = Vec2f(iz1w(0) / 255.0, p1t.z()) - c->iz0;
 
     c->J.row(1) = c->JZJw - jacobian::transform_se3(motion[i], c->p0).row(2);
 

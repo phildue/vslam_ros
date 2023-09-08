@@ -261,33 +261,26 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
   tfOrigin.header.frame_id = _fixedFrameId;
   tfOrigin.child_frame_id = _frameId;
 
-  // tf from current frame to origin
-  geometry_msgs::msg::TransformStamped tf;
-  tf.header.stamp = t;
-  tf.header.frame_id = _frameId;
-  tf.child_frame_id = "camera";  // camera name?
-  vslam_ros::convert(_cf->pose().SE3().inverse(), tf);
-
-  nav_msgs::msg::Odometry odom;
-  odom.header.stamp = t;
-  odom.header.frame_id = _frameId;
-  odom.child_frame_id = "camera";  // camera name?
-  vslam_ros::convert(_cf->pose().inverse(), odom.pose);
-  vslam_ros::convert(_motion.inverse(), odom.twist);
-  _pubOdom->publish(odom);
-
-  // tf from keyframe to origin
+  // tf from origin to keyframe
   geometry_msgs::msg::TransformStamped tfKey;
   tfKey.header.stamp = t;
-  tfKey.header.frame_id = std::to_string(_kf->t());
-  tfKey.child_frame_id = "camera";  // camera name?
-  vslam_ros::convert(_cf->pose().SE3().inverse(), tf);
+  tfKey.header.frame_id = _frameId;
+  tfKey.child_frame_id = std::to_string(_kf->t());
+  vslam_ros::convert(_kf->pose().SE3().inverse(), tfKey);
 
   nav_msgs::msg::Odometry odomKf;
   odomKf.header.stamp = t;
   odomKf.header.frame_id = _frameId;
   odomKf.child_frame_id = std::to_string(_kf->t());
+  vslam_ros::convert(_kf->pose().inverse(), odomKf.pose);
   _pubOdomKf->publish(odomKf);
+
+  // tf from keyframe to current frame
+  geometry_msgs::msg::TransformStamped tf;
+  tf.header.stamp = t;
+  tf.header.frame_id = std::to_string(_kf->t());
+  tf.child_frame_id = "camera";  // camera name?
+  vslam_ros::convert((_cf->pose().SE3() * _kf->pose().SE3().inverse()).inverse(), tf);
 
   _pubTf->sendTransform({tf, tfOrigin, tfKey});
 
@@ -326,7 +319,8 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
   }
 
   nav_msgs::msg::Path path;
-  path.header = odom.header;
+  path.header.stamp = t;
+  path.header.frame_id = _frameId;
   vslam_ros::convert(_trajectory.inverse(), path);
   _pubPath->publish(path);
 }

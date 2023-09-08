@@ -69,9 +69,6 @@ void NodeLoopClosures::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msg
     if (std::find_if(entropiesTrack.begin(), entropiesTrack.end(), [&](auto cf) { return cf.t == kfn->t(); }) != entropiesTrack.end()) {
       return;
     }
-
-    RCLCPP_INFO(get_logger(), "Track: [%ld]", entropiesTrack.size());
-
     if (!_isCandidate(kf, kfn)) {
       return;
     }

@@ -11,8 +11,8 @@ NodeEvaluation::NodeEvaluation(const rclcpp::NodeOptions &options) :
     rclcpp::Node("NodeEvaluation", options),
     // _sub(create_subscription<nav_msgs::msg::Odometry>("/odom", 10, std::bind(&NodeEvaluation::callbackOdom, this,
     // std::placeholders::_1))),
-    _subPath(
-      create_subscription<nav_msgs::msg::Path>("/odom/path", 10, std::bind(&NodeEvaluation::callbackPath, this, std::placeholders::_1))),
+    _subPath(create_subscription<nav_msgs::msg::Path>(
+      "/pose_graph/path", 10, std::bind(&NodeEvaluation::callbackPath, this, std::placeholders::_1))),
     _pub(create_publisher<nav_msgs::msg::Path>("/path/gt", 10)) {
   _outputDirectory = declare_parameter("outputDirectory", "/tmp/");
   _algoFileName = declare_parameter("algoOutputFile", "/tmp/trajectory.txt");
