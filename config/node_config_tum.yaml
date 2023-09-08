@@ -1,5 +1,5 @@
 
-/NodeRgbdAlignment:
+/NodeRgbdAlignment: #todo rename odometry
   ros__parameters:
     features:
       intensity_gradient_min: 5
@@ -9,15 +9,15 @@
       depth_max: 8.0
       grid_size: 10.0
       n_levels: 4
-    odometry:
+    odometry: #todo rename aligner
       n_levels: 4
-      max_iterations: 100
+      max_iterations: 40
       min_parameter_update: 0.0001
       max_error_increase: 10
-    motion_model:
+    motion_model: #todo rename predictor
       information: 10.0
     keyframe_selection:
-      max_entropy_reduction: 0.05
+      max_entropy_reduction: 0.1
     sync:
       queue_size_max: 50
       queue_size_min: 10
@@ -38,6 +38,39 @@
           durability: volatile
           history: keep_last
           reliability: reliable
+/NodeLoopClosures:
+  ros__parameters:
+    min_entropy_ratio: 0.95
+    candidate_selection:
+      max_translation: 0.5
+      min_features: 500
+    features:
+        intensity_gradient_min: 5
+        depth_gradient_min: 0.01
+        depth_gradient_max: 0.3
+        depth_min: 0
+        depth_max: 8.0
+        grid_size: 10.0
+        n_levels: 4
+    aligner:
+      coarse:
+        max_iterations: 30
+        min_parameter_update: 0.0001
+        max_error_increase: 10
+      fine:
+        n_levels: 4
+        max_iterations: 40
+        min_parameter_update: 0.0001
+        max_error_increase: 10
+    logimg:
+      LoopClosures:
+        show: 1
+      LoopClosuresRatioTest:
+        show: -1
+/NodePoseGraph:
+  ros__parameters:
+    optimizer:
+      loss_threshold: 0.5
 /NodeReplayer:
   ros__parameters:
     delay: 0.0

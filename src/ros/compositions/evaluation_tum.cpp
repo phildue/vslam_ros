@@ -48,7 +48,6 @@ int main(int argc, char *argv[]) {
 
   auto loopClosure = std::make_shared<vslam_ros::NodeLoopClosures>(options);
   exec.add_node(loopClosure);
-
   auto evaluator = std::make_shared<vslam_ros::NodeEvaluation>(options);
   exec.add_node(evaluator);
   auto replayer = std::make_shared<vslam_ros::NodeReplayer>(options);
