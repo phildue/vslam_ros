@@ -37,7 +37,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
     _pubOdomKf2f(create_publisher<nav_msgs::msg::Odometry>("/odom/keyframe2frame", 10)),
     _pubKeyImg(create_publisher<sensor_msgs::msg::Image>("/keyframe/image", 10)),
     _pubKeyDepth(create_publisher<sensor_msgs::msg::Image>("/keyframe/depth", 10)),
-    _pubPath(create_publisher<nav_msgs::msg::Path>("/path", 10)),
+    _pubPath(create_publisher<nav_msgs::msg::Path>("/odom/path", 10)),
     _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this)),
     _pubPclMap(create_publisher<sensor_msgs::msg::PointCloud2>("/pcl/map", 10)),
     _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>(
@@ -213,8 +213,6 @@ void NodeRgbdAlignment::timerCallback() {
   if (!_tfAvailable) {
     lookupTf();
   }
-  RCLCPP_INFO(
-    get_logger(), format("Pose: {} m {:.2f}°", _cf->pose().translation().transpose(), _cf->pose().totalRotationDegrees()).c_str());
 }
 
 void NodeRgbdAlignment::lookupTf() {
@@ -296,12 +294,22 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
     odomKf2f.child_frame_id = std::to_string(_cf->t());
     vslam_ros::convert(_kf->pose().inverse(), odomKf.pose);
     Pose kf2f(_cf->pose().SE3() * _kf->pose().SE3().inverse(), _cf->pose().cov());
-    vslam_ros::convert(kf2f.inverse(), odomKf2f.pose);
+    vslam_ros::convert(kf2f, odomKf2f.pose);
     _pubOdomKf2f->publish(odomKf2f);
   }
 
   if (_newKeyFrame) {
-    RCLCPP_INFO(get_logger(), "New Keyframe: %ld", _kf->id());
+
+    RCLCPP_INFO(
+      get_logger(),
+      format(
+        "Keyframe at [{}], [{}]. Pose: {} m {:.2f}°",
+        _kf->id(),
+        _kf->t(),
+        _cf->pose().translation().transpose(),
+        _cf->pose().totalRotationDegrees())
+        .c_str());
+
     namespace enc = sensor_msgs::image_encodings;
     std_msgs::msg::Header header;
     header.frame_id = "camera";

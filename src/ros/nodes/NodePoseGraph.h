@@ -28,7 +28,7 @@ private:
 
   const rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _subOdom, _subLoop;
   const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pub;
-  vslam::PoseGraph _poseGraph;
+  vslam::PoseGraphOptimizer _poseGraph;
   std::map<std::string, vslam::Timestamp> _keyframes;
 };
 }  // namespace vslam_ros

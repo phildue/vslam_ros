@@ -12,22 +12,21 @@
 
 #include "vslam/vslam.h"
 #include "vslam_ros/visibility_control.h"
-namespace vslam_ros
-{
-class NodeEvaluation : public rclcpp::Node
-{
+namespace vslam_ros {
+class NodeEvaluation : public rclcpp::Node {
 public:
   COMPOSITION_PUBLIC
-  NodeEvaluation(const rclcpp::NodeOptions & options);
+  NodeEvaluation(const rclcpp::NodeOptions &options);
 
 private:
-  void callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-
+  void callbackOdom(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
+  void callbackPath(nav_msgs::msg::Path::ConstSharedPtr path);
   const rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr _sub;
+  const rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr _subPath;
   const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pub;
-  std::string _algoFileName, _outputDirectory;
+  std::string _algoFileName, _outputDirectory, _trajOptFileName;
   nav_msgs::msg::Path _pathGt;
-  vslam::Trajectory::ShPtr _trajAlgo;
+  vslam::Trajectory::ShPtr _trajAlgo, _trajOptAlgo;
   vslam::Trajectory::ConstShPtr _trajGt;
 };
 }  // namespace vslam_ros

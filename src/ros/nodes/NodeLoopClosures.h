@@ -12,6 +12,7 @@
 #include <message_filters/synchronizer.h>
 #include <vslam_ros_interfaces/srv/replayer_play.hpp>
 
+#include <functional>
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -48,8 +49,9 @@ private:
 
   vslam::Frame::UnPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
   void setReplay(bool play);
-
-  const vslam::LoopClosureDetection::UnPtr _loopClosureDetection;
+  const double _minTranslation;
+  const int _minFeatures;
+  const vslam::loop_closure_detection::DifferentialEntropy::UnPtr _loopClosureDetection;
   const vslam::FeatureSelection::UnPtr _featureSelection;
   struct Entropy {
     vslam::Timestamp t;
@@ -58,7 +60,9 @@ private:
   std::map<vslam::Timestamp, std::vector<Entropy>> _childFrames;
 
   vslam::Frame::VecShPtr _keyframes;
-  std::vector<vslam::LoopClosureDetection::Result::ConstShPtr> _loopClosures;
+  std::vector<vslam::loop_closure_detection::LoopClosure::ConstShPtr> _loopClosures;
+  std::function<bool(vslam::Frame::ConstShPtr, vslam::Frame::ConstShPtr)> _isCandidate;
+
   vslam::Trajectory::UnPtr _trajectory;
   vslam::Camera::ShPtr _camera;
 };

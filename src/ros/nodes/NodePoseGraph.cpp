@@ -9,6 +9,7 @@ using namespace vslam;
 namespace vslam_ros {
 NodePoseGraph::NodePoseGraph(const rclcpp::NodeOptions &options) :
     rclcpp::Node("NodePoseGraph", options),
+    _poseGraph(declare_parameter("optimizer.loss_threshold", 1.0)),
     _subOdom(create_subscription<nav_msgs::msg::Odometry>(
       "/odom/keyframe2frame", 10, std::bind(&NodePoseGraph::callbackOdom, this, std::placeholders::_1))),
     _subLoop(create_subscription<nav_msgs::msg::Odometry>(
@@ -30,7 +31,7 @@ void NodePoseGraph::callbackOdom(const nav_msgs::msg::Odometry::ConstSharedPtr m
     RCLCPP_WARN(get_logger(), "Odometry constraint is already present. Ignoring..");
     return;
   }
-  _poseGraph.addMeasurement(std::stoull(msg->header.frame_id), std::stoull(msg->child_frame_id), pose.inverse());
+  _poseGraph.addMeasurement(std::stoull(msg->header.frame_id), std::stoull(msg->child_frame_id), pose);
 
   nav_msgs::msg::Path path;
   path.header.stamp = msg->header.stamp;
@@ -52,7 +53,6 @@ void NodePoseGraph::callbackOdomLc(const nav_msgs::msg::Odometry::ConstSharedPtr
     return;
   }
   _poseGraph.addMeasurement(std::stoull(msg->header.frame_id), std::stoull(msg->child_frame_id), pose.inverse());
-  setReplay(false);
   _poseGraph.optimize();
 
   nav_msgs::msg::Path path;
@@ -60,7 +60,6 @@ void NodePoseGraph::callbackOdomLc(const nav_msgs::msg::Odometry::ConstSharedPtr
   path.header.frame_id = "odom";  // todo make configurable
   vslam_ros::convert(Trajectory(_poseGraph.poses()).inverse(), path);
   _pub->publish(path);
-  setReplay(true);
 }
 
 void NodePoseGraph::setReplay(bool ready) {

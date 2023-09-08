@@ -19,20 +19,20 @@ NodeLoopClosures::NodeLoopClosures(const rclcpp::NodeOptions &options) :
     _subPath(create_subscription<nav_msgs::msg::Path>(
       "/pose_graph/path", 10, std::bind(&NodeLoopClosures::callbackPath, this, std::placeholders::_1))),
     _pub(create_publisher<nav_msgs::msg::Odometry>("/loop_closures/odom", 10)),
-    _loopClosureDetection(std::make_unique<LoopClosureDetection>(
-      declare_parameter("candidate_selection.min_translation", 0.5),
-      declare_parameter("candidate_selection.max_angle", M_PI),
-      declare_parameter("candidate_selection.min_entropy_ratio", 0.9),
-      std::make_unique<AlignmentRgbd>(
-        declare_parameter("aligner.coarse.n_levels", 4),
-        declare_parameter("aligner.coarse.max_iterations", 50),
-        declare_parameter("aligner.coarse.min_parameter_update", 0.0001),
-        declare_parameter("aligner.coarse.max_error_increase", 10)),
+    _minTranslation(),
+    _minFeatures(),
+    _loopClosureDetection(std::make_unique<loop_closure_detection::DifferentialEntropy>(
+      declare_parameter("min_entropy_ratio", 0.9),
       std::make_unique<AlignmentRgbd>(
         declare_parameter("aligner.fine.n_levels", 4),
         declare_parameter("aligner.fine.max_iterations", 50),
         declare_parameter("aligner.fine.min_parameter_update", 0.0001),
-        declare_parameter("aligner.fine.max_error_increase", 10)))),
+        declare_parameter("aligner.fine.max_error_increase", 10)),
+      std::make_unique<AlignmentRgbd>(
+        std::vector<int>({3}),
+        declare_parameter("aligner.coarse.max_iterations", 50),
+        declare_parameter("aligner.coarse.min_parameter_update", 0.0001),
+        declare_parameter("aligner.coarse.max_error_increase", 10)))),
     _featureSelection(std::make_unique<FeatureSelection>(
       declare_parameter("features.intensity_gradient_min", 5),
       declare_parameter("features.depth_gradient_min", 0.01),
@@ -45,41 +45,43 @@ NodeLoopClosures::NodeLoopClosures(const rclcpp::NodeOptions &options) :
   if (declare_parameter("replay", true)) {
     _cliReplayer = create_client<vslam_ros_interfaces::srv::ReplayerPlay>("togglePlay");
   }
+  auto minTrans = std::make_shared<loop_closure_detection::candidate_proposal::RelativePose>(
+    declare_parameter("candidate_selection.max_translation", 0.5));
+  auto minFt = std::make_shared<loop_closure_detection::candidate_proposal::ReprojectedFeatures>(
+    declare_parameter("candidate_selection.min_features", 500));
+
+  _isCandidate = [minTrans, minFt](auto f0, auto f1) { return minTrans->isCandidate(f0, f1) && minFt->isCandidate(f0, f1); };
+  log::config("LoopClosures")->show = declare_parameter("logimg.LoopClosures.show", -1);
+  log::config("LoopClosuresRatioTest")->show = declare_parameter("logimg.LoopClosuresRatioTest.show", -1);
 }
 
 void NodeLoopClosures::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) {
-  setReplay(false);
+  // setReplay(false);
   Frame::ShPtr kfn = createFrame(msgImg, msgDepth);
+  /*TODO do we have to recompute it all? */
   kfn->computePyramid(4);
   kfn->computeDerivatives();
   kfn->computePcl();
   _featureSelection->select(kfn, false);
   std::for_each(_keyframes.begin(), _keyframes.end(), [&](auto kf) {
-    Frame::VecConstShPtr candidates;
-
-    /*
-    std::copy_if(_keyframes.begin(), _keyframes.end(), std::back_inserter(candidates), [&](auto cf) {
-      return std::find_if(_loopClosures.begin(), _loopClosures.end(), [&](auto lc) { return lc->t0 == kf->t() && lc->t1 == cf->t(); }) ==
-               _loopClosures.end() &&
-             std::find_if(_childFrames[kf->t()].begin(), _childFrames[kf->t()].end(), [&](auto e) { return e.t == cf->t(); }) ==
-               _childFrames[kf->t()].end();
-    });
-*/
-    if (std::find_if(_childFrames[kf->t()].begin(), _childFrames[kf->t()].end(), [&](auto e) {
-          return e.t == kfn->t();
-        }) == _childFrames[kf->t()].end()) {
-      candidates.push_back(kfn);
+    const auto &entropiesTrack = _childFrames[kf->t()];
+    if (std::find_if(entropiesTrack.begin(), entropiesTrack.end(), [&](auto cf) { return cf.t == kfn->t(); }) != entropiesTrack.end()) {
+      return;
     }
 
+    RCLCPP_INFO(get_logger(), "Track: [%ld]", entropiesTrack.size());
+
+    if (!_isCandidate(kf, kfn)) {
+      return;
+    }
     const double meanEntropyTrack =
-      std::transform_reduce(
-        _childFrames[kf->t()].begin(), _childFrames[kf->t()].end(), 0.0, std::plus<double>{}, [](auto cf) { return cf.entropy; }) /
-      _childFrames[kf->t()].size();
+      std::transform_reduce(entropiesTrack.begin(), entropiesTrack.end(), 0.0, std::plus<double>{}, [](auto cf) { return cf.entropy; }) /
+      entropiesTrack.size();
 
-    auto lcs = _loopClosureDetection->detect(kf, meanEntropyTrack, candidates);
+    auto lc = _loopClosureDetection->isLoopClosure(kf, meanEntropyTrack, kfn);
 
-    RCLCPP_INFO(get_logger(), "Detected [%ld] loop closures among [%ld] candidates", lcs.size(), candidates.size());
-    for (auto &lc : lcs) {
+    if (lc) {
+      RCLCPP_INFO(get_logger(), "Detected loop closures between [%ld] and [%ld]", lc->t0, lc->t1);
       nav_msgs::msg::Odometry odom;
       odom.header.stamp = msgImg->header.stamp;
       odom.header.frame_id = std::to_string(lc->t0);
@@ -87,12 +89,12 @@ void NodeLoopClosures::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msg
 
       vslam_ros::convert(lc->relativePose.inverse(), odom.pose);
       _pub->publish(odom);
-      _loopClosures.push_back(LoopClosureDetection::Result::ConstShPtr(std::move(lc)));
+      _loopClosures.push_back(loop_closure_detection::LoopClosure::ConstShPtr(std::move(lc)));
     }
   });
 
   _keyframes.push_back(kfn);
-  setReplay(true);
+  // setReplay(true);
 }
 
 void NodeLoopClosures::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) {
@@ -137,10 +139,9 @@ void NodeLoopClosures::callbackOdom(nav_msgs::msg::Odometry::ConstSharedPtr msg)
   vslam_ros::convert(msg->pose, pose);
   vslam_ros::convert(msg->header.stamp, t);
   if (!_trajectory->poseAt(t)) {
-    _trajectory->append(t, pose.inverse());
+    _trajectory->append(t, pose);
   }
-  _childFrames[std::stoull(msg->header.frame_id)].push_back(
-    {std::stoull(msg->child_frame_id), std::log(pose.inverse().cov().determinant())});
+  _childFrames[std::stoull(msg->header.frame_id)].push_back({std::stoull(msg->child_frame_id), std::log(pose.cov().determinant())});
 }
 
 void NodeLoopClosures::callbackPath(nav_msgs::msg::Path::ConstSharedPtr msg) {
