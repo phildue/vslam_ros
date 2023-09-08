@@ -107,7 +107,6 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
       if (constraints[_level].size() < 6) {
         reason = format("Not enough constraints: {}", constraints[_level].size());
         MLOG(WARNING) << reason;
-        pose = SE3f();
         break;
       }
       {
@@ -131,6 +130,11 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
 
       dx = normalEquations[_level].A.ldlt().solve(normalEquations[_level].b);
 
+      if (!dx.allFinite()) {
+        reason = format("NaN during optimization");
+        break;
+      }
+
       pose = SE3f::exp(-dx) * pose;
       covariance = normalEquations[_level].A.inverse();
 
@@ -140,7 +144,7 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
       }
       MLOG(DEBUG) << format("level: {}, iteration: {}, error: {}, #: {},", _level, _iteration, error, constraints[_level].size());
     }
-    MLOG(DEBUG) << format(
+    MLOG(INFO) << format(
       "Done: {}, level: {}, iteration: {}, error: {}, #: {},", reason, _level, _iteration, error, constraints[_level].size());
   }
   auto r = std::make_unique<Results>(Results{
@@ -148,6 +152,7 @@ AlignmentRgbd::Results::UnPtr AlignmentRgbd::align(Frame::VecConstShPtr framesRe
     std::vector<Constraint::VecConstShPtr>(constraints.size()),
     scale,
     iterations,
+    _levels,
     normalEquations});
   std::transform(constraints.begin(), constraints.end(), r->constraints.begin(), [](auto c) {
     return Constraint::VecConstShPtr{c.begin(), c.end()};

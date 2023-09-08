@@ -36,7 +36,7 @@ public:
     Pose pose;
     std::vector<Constraint::VecConstShPtr> constraints;
     std::vector<Mat2d> scale;
-    std::vector<int> iteration;
+    std::vector<int> iteration, levels;
     std::vector<NormalEquations> normalEquations;
   };
 
