@@ -38,6 +38,7 @@ private:
   Frame::ShPtr _lastFrame, _keyFrame;
   double _entropyRef;
   bool _newKeyFrame;
+  static constexpr const char LOG_NAME[] = "keyframe_selection";
 };
 }  // namespace vslam::keyframe_selection
 #endif  // VSLAM_KEY_FRAME_SELECTION

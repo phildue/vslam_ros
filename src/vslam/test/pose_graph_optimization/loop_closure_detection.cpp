@@ -32,32 +32,19 @@ Explanation:
 */
 class Map {
 public:
-  Map() {
-    _lc = std::make_unique<loop_closure_detection::DifferentialEntropy>(
-      0.9,
-      std::make_unique<AlignmentRgbd>(std::vector<int>{3}, 20, 1e-4, 1.1),
-      std::make_unique<AlignmentRgbd>(AlignmentRgbd::defaultParameters()));
+  Map() :
+      _lc{0.9, 0.8, {std::vector<int>{3}, 20, 1e-4, 1.1}, {3, 20, 1e-4, 10.}} {
+
     _poseGraph = std::make_unique<PoseGraphOptimizer>(100);
   }
-  void addKeyframe(Frame::ShPtr kf) {
-    _keyFrames.push_back(kf);
-    _entropiesTrack[kf->id()] = {};
-  }
+  void addKeyframe(Frame::ShPtr kf) { _keyFrames.push_back(kf); }
   void addFrame(Frame::ShPtr f) {
-    _entropiesTrack[_keyFrames.back()->id()].push_back(std::log(f->pose().cov().determinant()));
+    _lc.update(_keyFrames.back()->t(), f->t(), f->pose());
     _poseGraph->addMeasurement(
       _keyFrames.back()->t(), f->t(), Pose(f->pose().SE3() * _keyFrames.back()->pose().SE3().inverse(), f->pose().cov()));
   }
 
   int detectLoopClosures(Frame::ConstShPtr kf) {
-
-    if (_entropiesTrack.find(kf->id()) == _entropiesTrack.end() || _entropiesTrack[kf->id()].empty()) {
-      LOG(WARNING) << format("No track found for frame: {} at {}", kf->id(), kf->t());
-      return 0;
-    }
-
-    const double meanEntropyTrack =
-      std::accumulate(_entropiesTrack[kf->id()].begin(), _entropiesTrack[kf->id()].end(), 0.0) / _entropiesTrack[kf->id()].size();
 
     Frame::VecConstShPtr candidates;
     std::copy_if(_keyFrames.begin(), _keyFrames.end(), std::back_inserter(candidates), [&](auto cf) {
@@ -83,7 +70,7 @@ public:
       if ((kf->pose().SE3() * cf->pose().SE3().inverse()).translation().norm() > 0.5 || nFeatures < 500) {
         continue;
       }
-      auto lc = _lc->isLoopClosure(kf, meanEntropyTrack, cf);
+      auto lc = _lc.isLoopClosure(kf, cf);
       if (lc) {
         nLoopClosures++;
         _poseGraph->addMeasurement(lc->t0, lc->t1, lc->relativePose);
@@ -102,8 +89,7 @@ public:
 
 private:
   Frame::VecShPtr _keyFrames;
-  std::map<uint64_t, std::vector<double>> _entropiesTrack;
-  std::unique_ptr<loop_closure_detection::DifferentialEntropy> _lc;
+  loop_closure_detection::DifferentialEntropy<AlignmentRgbd> _lc;
   PoseGraphOptimizer::UnPtr _poseGraph;
 };
 

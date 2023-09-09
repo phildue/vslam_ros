@@ -9,13 +9,12 @@ using namespace vslam;
 namespace vslam_ros {
 NodePoseGraph::NodePoseGraph(const rclcpp::NodeOptions &options) :
     rclcpp::Node("NodePoseGraph", options),
-    _poseGraph(declare_parameter("optimizer.loss_threshold", 1.0)),
     _subOdom(create_subscription<nav_msgs::msg::Odometry>(
       "/odom/keyframe2frame", 10, std::bind(&NodePoseGraph::callbackOdom, this, std::placeholders::_1))),
     _subLoop(create_subscription<nav_msgs::msg::Odometry>(
       "/loop_closures/odom", 10, std::bind(&NodePoseGraph::callbackOdomLc, this, std::placeholders::_1))),
-
-    _pub(create_publisher<nav_msgs::msg::Path>("/pose_graph/path", 10)) {
+    _pub(create_publisher<nav_msgs::msg::Path>("/pose_graph/path", 10)),
+    _poseGraph(declare_parameter("optimizer.loss_threshold", 1.0), static_cast<int>(declare_parameter("optimizer.max_iterations", 100))) {
   if (declare_parameter("replay", true)) {
     _cliReplayer = create_client<vslam_ros_interfaces::srv::ReplayerPlay>("togglePlay");
   }

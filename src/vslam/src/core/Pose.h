@@ -26,7 +26,7 @@ public:
   typedef std::shared_ptr<const Pose> ConstShPtr;
   typedef std::unique_ptr<const Pose> ConstUnPtr;
 
-  Pose(const SE3d &pose = SE3d(), const Mat6d &cov = Mat6d::Identity()) :
+  Pose(const SE3d &pose = SE3d(), const Mat6d &cov = Mat6d::Identity() * std::numeric_limits<double>::quiet_NaN()) :
       _pose(pose),
       _cov(cov) {}
 

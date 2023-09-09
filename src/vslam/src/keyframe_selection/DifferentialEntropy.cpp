@@ -41,7 +41,7 @@ void DifferentialEntropy::update(Frame::ShPtr currentFrame) {
     _newKeyFrame = true;
     _keyFrame = _lastFrame;
   }
-  LOG(INFO) << format(
+  CLOG(DEBUG, LOG_NAME) << format(
     "Entropy ratio: [{:.3f}/{:.3f}] [{:.3f}/{:.3f}] {}",
     entropy / _entropyRef,
     _minEntropyRatio,

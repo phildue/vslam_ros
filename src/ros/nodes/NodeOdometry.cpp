@@ -56,18 +56,17 @@ NodeOdometry::NodeOdometry(const rclcpp::NodeOptions &options) :
       static_cast<float>(declare_parameter("features.grid_size", 10.0)),
       static_cast<int>(declare_parameter("features.n_levels", 4))},
     _aligner{
-      static_cast<int>(declare_parameter("odometry.n_levels", 4)),
-      static_cast<int>(declare_parameter("odometry.max_iterations", 50)),
-      declare_parameter("odometry.min_parameter_update", 0.0001),
-      declare_parameter("odometry.max_error_increase", 10.0)},
+      static_cast<int>(declare_parameter("aligner.n_levels", 4)),
+      static_cast<int>(declare_parameter("aligner.max_iterations", 50)),
+      declare_parameter("aligner.min_parameter_update", 0.0001),
+      declare_parameter("aligner.max_error_increase", 10.0)},
     _prediction{declare_parameter("predictor.information", 10.0), INFd, INFd},
-  _keyframeSelection{1.0 - declare_parameter("keyframe_selection.max_entropy_reduction", 0.05)}
-{
+    _keyframeSelection{1.0 - declare_parameter("keyframe_selection.max_entropy_reduction", 0.05)} {
   if (_replay) {
     _cliReplayer = create_client<vslam_ros_interfaces::srv::ReplayerPlay>("togglePlay");
   }
 
-  _nLevels = std::max(get_parameter("features.n_levels").as_int(), get_parameter("odometry.n_levels").as_int());
+  _nLevels = std::max(get_parameter("features.n_levels").as_int(), get_parameter("aligner.n_levels").as_int());
 
   vslam::log::configure(declare_parameter("log.config_directory", "/home/ros/vslam_ros/config/log/"));
 #ifdef USE_ROS2_SYNC

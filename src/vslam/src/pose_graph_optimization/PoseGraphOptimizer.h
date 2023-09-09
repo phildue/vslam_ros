@@ -7,7 +7,7 @@ namespace vslam {
 class PoseGraphOptimizer {
 public:
   TYPEDEF_PTR(PoseGraphOptimizer)
-  PoseGraphOptimizer(double lossThr);
+  PoseGraphOptimizer(double lossThr, int maxIterations = 100);
   bool hasMeasurement(Timestamp t0, Timestamp t1);
   void addMeasurement(Timestamp t0, Timestamp t1, const Pose &pose01);
   void optimize();
@@ -21,6 +21,7 @@ public:
 
 private:
   const double _lossThr;
+  const int _maxIterations;
   std::map<Timestamp, SE3d> _nodes;
   Constraint::VecShPtr _edges;
 };

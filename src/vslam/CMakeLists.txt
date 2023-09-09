@@ -30,7 +30,6 @@ set( sources
     src/pose_prediction/ConstantVelocityModel.cpp
     src/pose_graph_optimization/PoseGraphOptimizer.cpp
     src/loop_closure_detection/CandidateProposal.cpp
-    src/loop_closure_detection/DifferentialEntropy.cpp
     #src/mapping/Map.cpp
     /usr/local/include/easylogging++.cc
    )

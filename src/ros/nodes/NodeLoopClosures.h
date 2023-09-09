@@ -49,13 +49,9 @@ private:
 
   vslam::Frame::UnPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
   void setReplay(bool play);
-  const vslam::loop_closure_detection::DifferentialEntropy _loopClosureDetection;
+  vslam::loop_closure_detection::DifferentialEntropy<vslam::AlignmentRgbd> _loopClosureDetection;
   const vslam::FeatureSelection<vslam::FiniteGradient> _featureSelection;
-  struct Entropy {
-    vslam::Timestamp t;
-    double entropy;
-  };
-  std::map<vslam::Timestamp, std::vector<Entropy>> _childFrames;
+ 
 
   vslam::Frame::VecShPtr _keyframes;
   std::vector<vslam::loop_closure_detection::LoopClosure::ConstShPtr> _loopClosures;

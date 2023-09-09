@@ -9,7 +9,7 @@
       depth_max: 8.0
       grid_size: 10.0
       n_levels: 4
-    odometry:
+    aligner:
       n_levels: 4
       max_iterations: 40
       min_parameter_update: 0.0001
@@ -40,10 +40,6 @@
           reliability: reliable
 /NodeLoopClosures:
   ros__parameters:
-    min_entropy_ratio: 0.9
-    candidate_selection:
-      max_translation: 0.5
-      min_features: 500
     features:
         intensity_gradient_min: 5.0
         depth_gradient_min: 0.01
@@ -52,25 +48,32 @@
         depth_max: 8.0
         grid_size: 10.0
         n_levels: 4
+    candidate_selection:
+      max_translation: 0.5
+      min_features: 500
+    min_entropy_ratio:
+      coarse: 0.81
+      fine: 0.9
     aligner:
       coarse:
         max_iterations: 30
         min_parameter_update: 0.0001
-        max_error_increase: 10
+        max_error_increase: 10.0
       fine:
-        n_levels: 4
+        n_levels: 3
         max_iterations: 40
         min_parameter_update: 0.0001
-        max_error_increase: 10
+        max_error_increase: 10.0
     logimg:
       LoopClosures:
-        show: 1
+        show: 100
       LoopClosuresRatioTest:
         show: -1
 /NodePoseGraph:
   ros__parameters:
     optimizer:
       loss_threshold: 0.5
+      max_iterations: 100
 /NodeReplayer:
   ros__parameters:
     delay: 0.0

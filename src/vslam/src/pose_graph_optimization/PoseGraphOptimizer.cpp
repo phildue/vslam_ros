@@ -110,8 +110,9 @@ public:
 
 private:
 };
-PoseGraphOptimizer::PoseGraphOptimizer(double lossThr) :
-    _lossThr(lossThr) {
+PoseGraphOptimizer::PoseGraphOptimizer(double lossThr, int maxIterations) :
+    _lossThr(lossThr),
+    _maxIterations(maxIterations) {
   log::create(LOG_NAME);
 }
 
@@ -138,7 +139,7 @@ void PoseGraphOptimizer::optimize() {
   ceres::Solver::Options options;
   options.update_state_every_iteration = true;
   options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-  options.max_num_iterations = 50;
+  options.max_num_iterations = _maxIterations;
   options.check_gradients = false;
   for (auto &[id, node] : _nodes) {
     problem.AddParameterBlock(node.data(), SE3d::num_parameters, new Sophus::Manifold<Sophus::SE3>());
