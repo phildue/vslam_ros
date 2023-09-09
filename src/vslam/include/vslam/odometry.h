@@ -13,10 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_DIRECT_PACKAGE_H__
-#define VSLAM_DIRECT_PACKAGE_H__
-#include "direct/bundle_adjustment/AlignmentRgbPoseGraph.h"
-#include "direct/odometry/AlignmentRgb.h"
-#include "direct/odometry/AlignmentRgbd.h"
+#ifndef VSLAM_ODOMETRY_PACKAGE_H__
+#define VSLAM_ODOMETRY_PACKAGE_H__
+#include "odometry/AlignmentRgb.h"
+#include "odometry/AlignmentRgbd.h"
 
 #endif  // VSLAM_DIRECT_ICP_PACKAGE_H__

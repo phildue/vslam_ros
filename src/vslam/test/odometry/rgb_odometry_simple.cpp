@@ -7,8 +7,8 @@ using namespace testing;
 #include <thread>
 
 #include "vslam/core.h"
-#include "vslam/direct.h"
 #include "vslam/evaluation.h"
+#include "vslam/odometry.h"
 #include "vslam/utils.h"
 
 using namespace vslam;
@@ -26,10 +26,10 @@ int main(int argc, char **argv) {
   const int tRmse = 200;
   std::thread thread;
 
-  auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
-
+  auto alignment = std::make_shared<AlignmentRgb>(AlignmentRgb::defaultParameters());
   log::initialize(outPath, true);
   log::configure(TEST_RESOURCE "/log/");
+  log::config("Features")->show = 1;
   Trajectory::ShPtr traj = std::make_shared<Trajectory>();
   const size_t fEnd = dl->timestamps().size();
   Pose motion;
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
       cv::waitKey(1);
       {
         TIMED_SCOPE(timer, "computeFrame");
-        motion = directIcp->align(dl->cam(), img0, depth0, img, depth, motion.SE3());
+        motion = alignment->align(dl->cam(), img0, depth0, img, motion.SE3());
       }
       pose = motion * pose;
       traj->append(dl->timestamps()[fId], pose.inverse());

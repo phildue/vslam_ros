@@ -16,9 +16,9 @@
 #ifndef VSLAM_H__
 #define VSLAM_H__
 #include "vslam/core.h"
-#include "vslam/direct.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
+#include "vslam/odometry.h"
 #include "vslam/pose_graph_optimization.h"
 #include "vslam/pose_prediction.h"
 #include "vslam/utils.h"

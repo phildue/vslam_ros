@@ -8,7 +8,7 @@ using namespace testing;
 
 #include "features/FeatureTracking.h"
 #include "vslam/core.h"
-#include "vslam/direct.h"
+#include "vslam/odometry.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
 #include "vslam/pose_prediction.h"

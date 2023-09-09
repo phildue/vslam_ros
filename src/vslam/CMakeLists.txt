@@ -23,10 +23,9 @@ set( sources
     src/features/overlays.cpp
     src/evaluation/evaluation.cpp
     src/evaluation/tum.cpp
-    src/direct/odometry/AlignmentRgb.cpp
-    src/direct/odometry/AlignmentRgbd.cpp
-    src/direct/overlays.cpp
-    src/direct/NormalEquations.cpp
+    src/odometry/AlignmentRgb.cpp
+    src/odometry/AlignmentRgbd.cpp
+    src/odometry/NormalEquations.cpp
     src/pose_prediction/ConstantVelocityModel.cpp
     src/pose_graph_optimization/PoseGraphOptimizer.cpp
     src/loop_closure_detection/CandidateProposal.cpp
@@ -53,12 +52,11 @@ set( headers
     src/features/overlays.h
     src/evaluation/evaluation.h
     src/evaluation/tum.h
-    src/direct/NormalEquations.h
-    src/direct/interpolate.h
-    src/direct/weights.h
-    src/direct/overlays.h
-    src/direct/odometry/AlignmentRgb.h
-    src/direct/odometry/AlignmentRgbd.h
+    src/odometry/NormalEquations.h
+    src/odometry/interpolate.h
+    src/odometry/weights.h
+    src/odometry/AlignmentRgb.h
+    src/odometry/AlignmentRgbd.h
     src/pose_prediction/ConstantVelocityModel.h
     src/pose_graph_optimization/PoseGraphOptimizer.h
     src/loop_closure_detection/CandidateProposal.h
@@ -66,7 +64,7 @@ set( headers
 
     /usr/local/include/easylogging++.h 
     include/vslam/core.h
-    include/vslam/direct.h 
+    include/vslam/odometry.h 
     include/vslam/evaluation.h 
     include/vslam/utils.h 
     include/vslam/features.h 
@@ -148,16 +146,8 @@ if(VSLAM_BUILD_TESTS)
   pd_add_test(camera ${CMAKE_CURRENT_LIST_DIR}/test/core/test_camera.cpp)
   pd_add_test(random ${CMAKE_CURRENT_LIST_DIR}/test/core/test_random.cpp)
   pd_add_test(trajectory ${CMAKE_CURRENT_LIST_DIR}/test/core/test_trajectory.cpp)
-  pd_add_test(jacobians ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_jacobians.cpp)
 
-  pd_add_experiment(rgbd_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_simple.cpp)
-  pd_add_experiment(rgb_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_odometry_simple.cpp)
-  pd_add_experiment(rgbd_odometry_entropy ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_entropy.cpp)
-  
-  pd_add_experiment(direct_icp ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_direct_icp.cpp)
-
-  pd_add_experiment(rgbd_odometry_local_map ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_local_map.cpp)
-
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/odometry)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/pose_graph_optimization)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching)
   

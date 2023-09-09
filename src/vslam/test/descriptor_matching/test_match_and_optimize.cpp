@@ -13,8 +13,8 @@ using namespace testing;
 #include "features/overlays.h"
 #include "overlays.h"
 #include "vslam/core.h"
-#include "vslam/direct.h"
 #include "vslam/evaluation.h"
+#include "vslam/odometry.h"
 #include "vslam/pose_prediction.h"
 #include "vslam/utils.h"
 

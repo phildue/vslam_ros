@@ -2,7 +2,7 @@
 #include "core/Frame.h"
 #include "core/macros.h"
 #include "core/types.h"
-#include "direct/odometry/AlignmentRgbd.h"  //TODO generic interface for odometry?
+#include "odometry/AlignmentRgbd.h"  //TODO generic interface for odometry?
 
 namespace vslam::loop_closure_detection {
 struct LoopClosure {

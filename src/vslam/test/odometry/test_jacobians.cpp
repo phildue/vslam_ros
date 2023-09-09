@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 using namespace testing;
-#include "direct/jacobians.h"
+#include "odometry/jacobians.h"
 #include "vslam/core.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
