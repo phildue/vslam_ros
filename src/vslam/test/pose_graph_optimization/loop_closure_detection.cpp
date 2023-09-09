@@ -89,7 +89,7 @@ public:
 
 private:
   Frame::VecShPtr _keyFrames;
-  loop_closure_detection::DifferentialEntropy<AlignmentRgbd> _lc;
+  loop_closure_detection::DifferentialEntropy<odometry::AlignmentRgbd> _lc;
   PoseGraphOptimizer::UnPtr _poseGraph;
 };
 
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
   log::config("GraphBefore")->show = 1;
   log::config("GraphAfter")->show = 1;
 
-  auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
+  auto directIcp = std::make_shared<odometry::AlignmentRgbd>(odometry::AlignmentRgbd::defaultParameters());
   auto motionModel = std::make_shared<pose_prediction::ConstantVelocityModel>(10.0, INFd, INFd);
   auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 1);
   auto map = std::make_shared<Map>();

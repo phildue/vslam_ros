@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   const int tRmse = 200;
   std::thread thread;
 
-  auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
+  auto directIcp = std::make_shared<odometry::AlignmentRgbd>(odometry::AlignmentRgbd::defaultParameters());
 
   log::initialize(outPath, true);
   log::configure(TEST_RESOURCE "/log/");

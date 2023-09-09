@@ -15,7 +15,7 @@
 #define LOG_NAME "direct_odometry"
 #define MLOG(level) CLOG(level, LOG_NAME)
 
-namespace vslam {
+namespace vslam::odometry {
 std::map<std::string, double> AlignmentRgb::defaultParameters() {
   return {{"nLevels", 4.0}, {"maxIterations", 100}, {"minParameterUpdate", 1e-4}, {"maxErrorIncrease", 1.5}};
 }
@@ -278,4 +278,4 @@ NormalEquations AlignmentRgb::computeNormalEquations(const Pose &prior, const SE
   return {priorInformation, priorError, priorError.norm(), 1};
 }
 
-}  // namespace vslam
+}  // namespace vslam::odometry

@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   const int tRmse = 200;
   std::thread thread;
 
-  auto alignment = std::make_shared<AlignmentRgb>(AlignmentRgb::defaultParameters());
+  auto alignment = std::make_shared<odometry::AlignmentRgb>(odometry::AlignmentRgb::defaultParameters());
   log::initialize(outPath, true);
   log::configure(TEST_RESOURCE "/log/");
   log::config("Features")->show = 1;

@@ -65,7 +65,7 @@ private:
     result->relativePose.cov() = r01->pose.cov();
     bool isLoopClosure = std::isfinite(entropy) && entropy < minEntropy;
     CLOG(DEBUG, LOG_NAME) << format(
-      "Ratio test between {} and {}: t={:.3f}m r={:.3f}° c={:.2f}/{:.2f} [{}]",
+      "Ratio test between {} and {}: t={:.3f}m r={:.3f}° c={:.2f}<{:.2f} [{}]",
       f0->t(),
       f1->t(),
       result->relativePose.translation().norm(),

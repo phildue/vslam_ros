@@ -49,7 +49,7 @@ private:
 
   vslam::Frame::UnPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
   void setReplay(bool play);
-  vslam::loop_closure_detection::DifferentialEntropy<vslam::AlignmentRgbd> _loopClosureDetection;
+  vslam::loop_closure_detection::DifferentialEntropy<vslam::odometry::AlignmentRgbd> _loopClosureDetection;
   const vslam::FeatureSelection<vslam::FiniteGradient> _featureSelection;
  
 

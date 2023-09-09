@@ -14,7 +14,7 @@
 #include "core/macros.h"
 #include "core/types.h"
 #include "weights.h"
-namespace vslam {
+namespace vslam::odometry {
 class AlignmentRgbd {
 public:
   TYPEDEF_PTR(AlignmentRgbd)
@@ -80,5 +80,5 @@ private:
   NormalEquations computeNormalEquations(const Pose &prior, const SE3f &pose);
 };
 
-}  // namespace vslam::odometr
+}  // namespace vslam::odometry
 #endif

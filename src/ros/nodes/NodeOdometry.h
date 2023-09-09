@@ -96,7 +96,7 @@ private:
 
   // Algorithm
   vslam::FeatureSelection<vslam::FiniteGradient> _featureSelection;
-  vslam::AlignmentRgbd _aligner;
+  vslam::odometry::AlignmentRgbd _aligner;
   vslam::pose_prediction::ConstantVelocityModel _prediction;
   vslam::keyframe_selection::DifferentialEntropy _keyframeSelection;
   vslam::Camera::ShPtr _camera;

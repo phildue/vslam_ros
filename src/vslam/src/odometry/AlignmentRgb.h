@@ -13,7 +13,7 @@
 
 #include "NormalEquations.h"
 #include "weights.h"
-namespace vslam {
+namespace vslam::odometry {
 class AlignmentRgb {
 public:
   typedef std::shared_ptr<AlignmentRgb> ShPtr;

@@ -45,7 +45,7 @@ TEST(DescriptorMatchingTest, DISABLED_EvaluateOnTum) {
   log::initialize(outPath, true);
   log::config("default")->show = 1;
 
-  auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
+  auto directIcp = std::make_shared<odometry::AlignmentRgbd>(odometry::AlignmentRgbd::defaultParameters());
   auto motionModel = std::make_shared<pose_prediction::ConstantVelocityModel>(pose_prediction::ConstantVelocityModel::defaultParameters());
   auto descriptorMatching = std::make_shared<FeatureTracking>();
   auto bundleAdjustment = std::make_shared<BundleAdjustment>(50, 30);
