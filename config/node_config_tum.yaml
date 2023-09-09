@@ -1,5 +1,5 @@
 
-/NodeRgbdAlignment: #todo rename odometry
+/NodeOdometry:
   ros__parameters:
     features:
       intensity_gradient_min: 5.0
@@ -9,12 +9,12 @@
       depth_max: 8.0
       grid_size: 10.0
       n_levels: 4
-    odometry: #todo rename aligner
+    odometry:
       n_levels: 4
       max_iterations: 40
       min_parameter_update: 0.0001
-      max_error_increase: 10
-    motion_model: #todo rename predictor
+      max_error_increase: 10.0
+    predictor:
       information: 10.0
     keyframe_selection:
       max_entropy_reduction: 0.1

@@ -84,6 +84,64 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
+        1311868171931515904:
+          Value: true
+        1311868172599590144:
+          Value: true
+        1311868172763469312:
+          Value: true
+        1311868172931606528:
+          Value: true
+        1311868173431624448:
+          Value: true
+        1311868173799548672:
+          Value: true
+        1311868174067655680:
+          Value: true
+        1311868174399742720:
+          Value: true
+        1311868174831814656:
+          Value: true
+        1311868175067713536:
+          Value: true
+        1311868175199577856:
+          Value: true
+        1311868175299978240:
+          Value: true
+        1311868175567799808:
+          Value: true
+        1311868175667695616:
+          Value: true
+        1311868175799815168:
+          Value: true
+        1311868176099800832:
+          Value: true
+        1311868176299834112:
+          Value: true
+        1311868176602124544:
+          Value: true
+        1311868176999907072:
+          Value: true
+        1311868178031987456:
+          Value: true
+        1311868178167954944:
+          Value: true
+        1311868178799974400:
+          Value: true
+        1311868179100092928:
+          Value: true
+        1311868179632000512:
+          Value: true
+        1311868179932050176:
+          Value: true
+        1311868180568027648:
+          Value: true
+        1311868181700024320:
+          Value: true
+        1311868182168076544:
+          Value: true
+        1311868182500921600:
+          Value: true
         All Enabled: false
         camera:
           Value: true
@@ -105,9 +163,9 @@ Visualization Manager:
           Value: false
       Marker Scale: 1
       Name: TF
-      Show Arrows: true
+      Show Arrows: false
       Show Axes: true
-      Show Names: true
+      Show Names: false
       Tree:
         world:
           kinect:
@@ -119,7 +177,64 @@ Visualization Manager:
                 openni_rgb_optical_frame:
                   {}
           odom:
-            camera:
+            1311868171931515904:
+              camera:
+                {}
+            1311868172599590144:
+              {}
+            1311868172763469312:
+              {}
+            1311868172931606528:
+              {}
+            1311868173431624448:
+              {}
+            1311868173799548672:
+              {}
+            1311868174067655680:
+              {}
+            1311868174399742720:
+              {}
+            1311868174831814656:
+              {}
+            1311868175067713536:
+              {}
+            1311868175199577856:
+              {}
+            1311868175299978240:
+              {}
+            1311868175567799808:
+              {}
+            1311868175667695616:
+              {}
+            1311868175799815168:
+              {}
+            1311868176099800832:
+              {}
+            1311868176299834112:
+              {}
+            1311868176602124544:
+              {}
+            1311868176999907072:
+              {}
+            1311868178031987456:
+              {}
+            1311868178167954944:
+              {}
+            1311868178799974400:
+              {}
+            1311868179100092928:
+              {}
+            1311868179632000512:
+              {}
+            1311868179932050176:
+              {}
+            1311868180568027648:
+              {}
+            1311868181700024320:
+              {}
+            1311868182168076544:
+              {}
+            1311868182500921600:
               {}
       Update Interval: 0
       Value: true
@@ -253,7 +368,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /path
+        Value: /odom/path
       Value: true
   Enabled: true
   Global Options:
@@ -301,7 +416,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 6.2666521072387695
+      Distance: 7.7394819259643555
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -316,10 +431,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8903980255126953
+      Pitch: 1.2003977298736572
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.005415325053036213
+      Yaw: 5.8285932540893555
     Saved: ~
 Window Geometry:
   Displays:
