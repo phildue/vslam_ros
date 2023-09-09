@@ -28,6 +28,8 @@
 #define UNUSED_FUNCTION(x) UNUSED_##x
 #endif
 
+#include <memory>
+#include <vector>
 #define TYPEDEF_PTR(name) \
   typedef std::shared_ptr<name> ShPtr; \
   typedef std::shared_ptr<const name> ConstShPtr; \

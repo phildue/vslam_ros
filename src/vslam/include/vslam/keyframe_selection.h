@@ -13,15 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_H__
-#define VSLAM_H__
-#include "vslam/core.h"
-#include "vslam/evaluation.h"
-#include "vslam/features.h"
-#include "vslam/keyframe_selection.h"
-#include "vslam/odometry.h"
-#include "vslam/pose_graph_optimization.h"
-#include "vslam/pose_prediction.h"
-#include "vslam/utils.h"
+#ifndef VSLAM_KEYFRAME_SELECTION_PACKAGE_H__
+#define VSLAM_KEYFRAME_SELECTION_PACKAGE_H__
+#include "keyframe_selection/DifferentialEntropy.h"
 
-#endif
+#endif  // VSLAM_KEYFRAME_SELECTION_PACKAGE_H__

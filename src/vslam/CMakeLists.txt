@@ -26,6 +26,7 @@ set( sources
     src/odometry/AlignmentRgb.cpp
     src/odometry/AlignmentRgbd.cpp
     src/odometry/NormalEquations.cpp
+    src/keyframe_selection/DifferentialEntropy.cpp
     src/pose_prediction/ConstantVelocityModel.cpp
     src/pose_graph_optimization/PoseGraphOptimizer.cpp
     src/loop_closure_detection/CandidateProposal.cpp
@@ -58,6 +59,7 @@ set( headers
     src/odometry/AlignmentRgb.h
     src/odometry/AlignmentRgbd.h
     src/pose_prediction/ConstantVelocityModel.h
+    src/keyframe_selection/DifferentialEntropy.h
     src/pose_graph_optimization/PoseGraphOptimizer.h
     src/loop_closure_detection/CandidateProposal.h
     src/loop_closure_detection/DifferentialEntropy.h

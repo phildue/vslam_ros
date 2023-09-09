@@ -88,7 +88,8 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
   _nLevels = std::max(get_parameter("features.n_levels").as_int(), get_parameter("odometry.n_levels").as_int());
   _prediction = std::make_shared<pose_prediction::ConstantVelocityModel>(declare_parameter("motion_model.information", 10.0), INFd, INFd);
 
-  _maxEntropyReduction = declare_parameter("keyframe_selection.max_entropy_reduction", 0.05);
+  _keyframeSelection =
+    std::make_unique<keyframe_selection::DifferentialEntropy>(1.0 - declare_parameter("keyframe_selection.max_entropy_reduction", 0.05));
   vslam::log::configure(declare_parameter("log.config_directory", "/home/ros/vslam_ros/config/log/"));
 #ifdef USE_ROS2_SYNC
 
@@ -152,7 +153,7 @@ void NodeRgbdAlignment::initialize() {
     _prediction->update(_cf->pose(), _cf->t());
     _trajectory.append(_cf->t(), _cf->pose());
 
-    publish(img->header.stamp);
+    publish(img->header.stamp, false);
     _fNo++;
     _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() { process(); });
   }
@@ -169,24 +170,26 @@ void NodeRgbdAlignment::process() {
     _cf->pose() = _prediction->predict(_cf->t());
     _cf->pose() = _align(_kf, _cf);
 
-    // TODO keyframe handling should be in own class
-    _newKeyFrame = _lf != _kf && 1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction;
-    if (_newKeyFrame) {
+    _keyframeSelection->update(_cf);
+    const bool newKeyFrame = _keyframeSelection->newKeyFrame();
+    if (newKeyFrame) {
       _kf->removeFeatures();
-      _kf = _lf;
+      _kf = _keyframeSelection->keyFrame();
       _kf->computeDerivatives();
       _kf->computePcl();
       _featureSelection->select(_kf);
-      _cf->pose() = _prediction->predict(_cf->t());
-      _cf->pose() = _align(_kf, _cf);
-      _entropyRef = std::log(_cf->pose().cov().determinant());
+      if (_kf != _cf) {
+        _cf->pose() = _prediction->predict(_cf->t());
+        _cf->pose() = _align(_kf, _cf);
+        _keyframeSelection->update(_cf);
+      }
     }
     _prediction->update(_cf->pose(), _cf->t());
     _motion = _cf->pose() * _lf->pose().inverse();
 
     _trajectory.append(_cf->t(), _cf->pose());
 
-    publish(img->header.stamp);
+    publish(img->header.stamp, newKeyFrame);
     _fNo++;
   }
 }
@@ -248,7 +251,7 @@ void NodeRgbdAlignment::setReplay(bool ready) {
   _cliReplayer->async_send_request(request, response_received_callback);
 }
 
-void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
+void NodeRgbdAlignment::publish(const rclcpp::Time &t, bool newKeyFrame) {
 
   // TODO since we measure the relative pose only,
   //  can we simply, only publish the transformation to the last keyframe, while another node publishs that "global transformation"
@@ -296,7 +299,7 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t) {
     _pubOdomKf2f->publish(odomKf2f);
   }
 
-  if (_newKeyFrame) {
+  if (newKeyFrame) {
 
     RCLCPP_INFO(
       get_logger(),

@@ -99,13 +99,12 @@ private:
   vslam::FeatureSelection<vslam::FiniteGradient>::UnPtr _featureSelection;
   std::function<vslam::Pose(vslam::Frame::ConstShPtr, vslam::Frame::ConstShPtr)> _align;
   vslam::pose_prediction::ConstantVelocityModel::ShPtr _prediction;
+  vslam::keyframe_selection::DifferentialEntropy::UnPtr _keyframeSelection;
   vslam::Camera::ShPtr _camera;
   vslam::Pose _motion;
   vslam::Trajectory _trajectory;
   vslam::Frame::ShPtr _kf, _lf, _cf;
-  bool _newKeyFrame;
   int _nLevels;
-  double _entropyRef, _maxEntropyReduction;
   void initialize();
   void process();
 
@@ -118,7 +117,7 @@ private:
   vslam::Frame::UnPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
 
   void timerCallback();
-  void publish(const rclcpp::Time &t);
+  void publish(const rclcpp::Time &t, bool newKeyFrame);
   void lookupTf();
   void setReplay(bool pause);
 };
