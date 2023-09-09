@@ -54,7 +54,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 add_library(vslam_ros_nodes SHARED
   src/ros/nodes/NodeStereoDepth.cpp
-  src/ros/nodes/NodeRgbdAlignment.cpp
+  src/ros/nodes/NodeOdometry.cpp
   src/ros/nodes/NodeEvaluation.cpp
   src/ros/nodes/NodeReplayer.cpp
   src/ros/nodes/NodeReplayerExtracted.cpp
@@ -92,7 +92,7 @@ rclcpp_components_register_nodes(
 
 rclcpp_components_register_node(
     vslam_ros_nodes
-    PLUGIN "vslam_ros::NodeRgbdAlignment"
+    PLUGIN "vslam_ros::NodeOdometry"
     EXECUTABLE node_rgbd_alignment
 )
 rclcpp_components_register_node(

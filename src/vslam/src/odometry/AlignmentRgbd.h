@@ -44,8 +44,8 @@ public:
   static std::map<std::string, double> defaultParameters();
 
   AlignmentRgbd(const std::map<std::string, double> params);
-  AlignmentRgbd(int nLevels = 4, double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
-  AlignmentRgbd(const std::vector<int> &levels, double maxIterations, double minParameterUpdate, double maxErrorIncrease);
+  AlignmentRgbd(int nLevels = 4, int maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
+  AlignmentRgbd(const std::vector<int> &levels, int maxIterations, double minParameterUpdate, double maxErrorIncrease);
 
   Pose align(
     Camera::ConstShPtr cam,
@@ -80,5 +80,5 @@ private:
   NormalEquations computeNormalEquations(const Pose &prior, const SE3f &pose);
 };
 
-}  // namespace vslam
+}  // namespace vslam::odometr
 #endif

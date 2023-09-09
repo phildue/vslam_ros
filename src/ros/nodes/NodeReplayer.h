@@ -33,7 +33,6 @@ public:
 
   void replayNext();
   void servicePlayCallback(
-    const std::shared_ptr<rmw_request_id_t> requestHeader,
     const std::shared_ptr<vslam_ros_interfaces::srv::ReplayerPlay::Request> request,
     std::shared_ptr<vslam_ros_interfaces::srv::ReplayerPlay::Response> response);
 

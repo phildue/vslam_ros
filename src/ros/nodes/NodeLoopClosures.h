@@ -49,10 +49,8 @@ private:
 
   vslam::Frame::UnPtr createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const;
   void setReplay(bool play);
-  const double _minTranslation;
-  const int _minFeatures;
-  const vslam::loop_closure_detection::DifferentialEntropy::UnPtr _loopClosureDetection;
-  const vslam::FeatureSelection<vslam::FiniteGradient>::UnPtr _featureSelection;
+  const vslam::loop_closure_detection::DifferentialEntropy _loopClosureDetection;
+  const vslam::FeatureSelection<vslam::FiniteGradient> _featureSelection;
   struct Entropy {
     vslam::Timestamp t;
     double entropy;

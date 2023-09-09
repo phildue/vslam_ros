@@ -19,15 +19,15 @@
 
 #include <cv_bridge/cv_bridge.h>
 
-#include "NodeRgbdAlignment.h"
+#include "NodeOdometry.h"
 #include "vslam_ros/converters.h"
 
 using namespace vslam;
 using namespace std::chrono_literals;
 
 namespace vslam_ros {
-NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
-    rclcpp::Node("NodeRgbdAlignment", options),
+NodeOdometry::NodeOdometry(const rclcpp::NodeOptions &options) :
+    rclcpp::Node("NodeOdometry", options),
     _queueSizeMin(declare_parameter("sync.queue_size_min", 10)),
     _queueSizeMax(declare_parameter("sync.queue_size_max", 50)),
     _replay(declare_parameter("replayMode", false)),
@@ -39,57 +39,36 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
     _pubKeyDepth(create_publisher<sensor_msgs::msg::Image>("/keyframe/depth", 10)),
     _pubPath(create_publisher<nav_msgs::msg::Path>("/odom/path", 10)),
     _pubTf(std::make_shared<tf2_ros::TransformBroadcaster>(this)),
-    _pubPclMap(create_publisher<sensor_msgs::msg::PointCloud2>("/pcl/map", 10)),
     _subCamInfo(create_subscription<sensor_msgs::msg::CameraInfo>(
-      "/camera/rgb/camera_info", 10, std::bind(&NodeRgbdAlignment::cameraCallback, this, std::placeholders::_1))),
+      "/camera/rgb/camera_info", 10, std::bind(&NodeOdometry::cameraCallback, this, std::placeholders::_1))),
     _tfAvailable(false),
-    _frameId(declare_parameter("tf.frame_id", _frameId)),
-    _fixedFrameId(declare_parameter("tf.base_link_id", _fixedFrameId)),
+    _frameId(declare_parameter("tf.frame_id", "odom")),
+    _fixedFrameId(declare_parameter("tf.base_link_id", "world")),
     _tfBuffer(std::make_unique<tf2_ros::Buffer>(get_clock())),
-    _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer)) {
+    _subTf(std::make_shared<tf2_ros::TransformListener>(*_tfBuffer)),
+    _featureSelection{
+      FiniteGradient{
+        static_cast<float>(declare_parameter("features.intensity_gradient_min", 5.0)),
+        static_cast<float>(declare_parameter("features.depth_gradient_min", 0.01)),
+        static_cast<float>(declare_parameter("features.depth_gradient_max", 0.3)),
+        static_cast<float>(declare_parameter("features.depth_min", 0.0)),
+        static_cast<float>(declare_parameter("features.depth_max", 8.0))},
+      static_cast<float>(declare_parameter("features.grid_size", 10.0)),
+      static_cast<int>(declare_parameter("features.n_levels", 4))},
+    _aligner{
+      static_cast<int>(declare_parameter("odometry.n_levels", 4)),
+      static_cast<int>(declare_parameter("odometry.max_iterations", 50)),
+      declare_parameter("odometry.min_parameter_update", 0.0001),
+      declare_parameter("odometry.max_error_increase", 10.0)},
+    _prediction{declare_parameter("predictor.information", 10.0), INFd, INFd},
+  _keyframeSelection{1.0 - declare_parameter("keyframe_selection.max_entropy_reduction", 0.05)}
+{
   if (_replay) {
     _cliReplayer = create_client<vslam_ros_interfaces::srv::ReplayerPlay>("togglePlay");
   }
-  _featureSelection = std::make_unique<FeatureSelection<FiniteGradient>>(
-    FiniteGradient{
-      declare_parameter<float>("features.intensity_gradient_min", 5.0f),
-      declare_parameter<float>("features.depth_gradient_min", 0.01f),
-      declare_parameter<float>("features.depth_gradient_max", 0.3f),
-      declare_parameter<float>("features.depth_min", 0.0f),
-      declare_parameter<float>("features.depth_max", 8.0f)},
-    declare_parameter<float>("features.grid_size", 10.0f),
-    declare_parameter("features.n_levels", 4));
-
-  const std::string odometryMethod = declare_parameter("odometry.method", "rgbd");
-  if (odometryMethod == "rgb") {
-    auto aligner = std::make_shared<AlignmentRgb>(
-      declare_parameter("odometry.n_levels", 4),
-      declare_parameter("odometry.max_iterations", 50),
-      declare_parameter("odometry.min_parameter_update", 0.0001),
-      declare_parameter("odometry.max_error_increase", 10));
-    _align = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
-      auto r = aligner->align(f0, f1);
-      return r->pose;
-    };
-  } else if (odometryMethod == "rgbd") {
-    auto aligner = std::make_shared<AlignmentRgbd>(
-      declare_parameter("odometry.n_levels", 4),
-      declare_parameter("odometry.max_iterations", 50),
-      declare_parameter("odometry.min_parameter_update", 0.0001),
-      declare_parameter("odometry.max_error_increase", 10));
-    _align = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
-      auto r = aligner->align(f0, f1);
-      return r->pose;
-    };
-  } else {
-    throw std::runtime_error(format("Unknown odometry method: {}", odometryMethod));
-  }
 
   _nLevels = std::max(get_parameter("features.n_levels").as_int(), get_parameter("odometry.n_levels").as_int());
-  _prediction = std::make_shared<pose_prediction::ConstantVelocityModel>(declare_parameter("motion_model.information", 10.0), INFd, INFd);
 
-  _keyframeSelection =
-    std::make_unique<keyframe_selection::DifferentialEntropy>(1.0 - declare_parameter("keyframe_selection.max_entropy_reduction", 0.05));
   vslam::log::configure(declare_parameter("log.config_directory", "/home/ros/vslam_ros/config/log/"));
 #ifdef USE_ROS2_SYNC
 
@@ -102,10 +81,10 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
   if (declare_parameter("sync.max_interval", 0.2) > 0.0) {
     _approximateSync.reset(new ApproximateSync(ApproximatePolicy(queue_size), _subImage, _subDepth));
     _approximateSync->setMaxIntervalDuration(rclcpp::Duration::from_seconds(get_parameter("sync.max_interval").as_double));
-    _approximateSync->registerCallback(&NodeRgbdAlignment::imageCallback, this);
+    _approximateSync->registerCallback(&NodeOdometry::imageCallback, this);
   } else {
     _exactSync.reset(new ExactSync(ExactPolicy(queue_size), _subImage, _subDepth));
-    _exactSync->registerCallback(&NodeRgbdAlignment::imageCallback, this);
+    _exactSync->registerCallback(&NodeOdometry::imageCallback, this);
   }
 #else
   _queue = std::make_unique<vslam_ros::Associator>(_queueSizeMax, declare_parameter("sync.max_interval", 0.02) * 1e9);
@@ -119,7 +98,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
   RCLCPP_INFO(get_logger(), "Ready.");
 }
 
-void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) {
+void NodeOdometry::cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg) {
   auto camera = vslam_ros::convert(*msg);
 
   if (camera->fx() > 0.0 && camera->cx() > 0.0) {
@@ -137,7 +116,7 @@ void NodeRgbdAlignment::cameraCallback(sensor_msgs::msg::CameraInfo::ConstShared
   }
 }
 
-void NodeRgbdAlignment::initialize() {
+void NodeOdometry::initialize() {
   if (std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
     TIMED_SCOPE(timerF, "initialize");
     auto const [_, depth, img] = _queue->pop();
@@ -148,9 +127,9 @@ void NodeRgbdAlignment::initialize() {
     _kf->computePyramid(_nLevels);
     _kf->computeDerivatives();
     _kf->computePcl();
-    _featureSelection->select(_kf);
+    _featureSelection.select(_kf);
 
-    _prediction->update(_cf->pose(), _cf->t());
+    _prediction.update(_cf->pose(), _cf->t());
     _trajectory.append(_cf->t(), _cf->pose());
 
     publish(img->header.stamp, false);
@@ -158,7 +137,7 @@ void NodeRgbdAlignment::initialize() {
     _processFrameTimer = create_wall_timer(std::chrono::milliseconds(10), [&]() { process(); });
   }
 }
-void NodeRgbdAlignment::process() {
+void NodeOdometry::process() {
   if (std::min(_queue->nImages(), _queue->nDepth()) > _queueSizeMin) {
     TIMED_SCOPE(timerF, "processFrame");
     auto const [_, depth, img] = _queue->pop();
@@ -167,24 +146,24 @@ void NodeRgbdAlignment::process() {
 
     _cf->computePyramid(_nLevels);
 
-    _cf->pose() = _prediction->predict(_cf->t());
-    _cf->pose() = _align(_kf, _cf);
+    _cf->pose() = _prediction.predict(_cf->t());
+    _cf->pose() = _aligner.align(_kf, _cf)->pose;
 
-    _keyframeSelection->update(_cf);
-    const bool newKeyFrame = _keyframeSelection->newKeyFrame();
+    _keyframeSelection.update(_cf);
+    const bool newKeyFrame = _keyframeSelection.newKeyFrame();
     if (newKeyFrame) {
       _kf->removeFeatures();
-      _kf = _keyframeSelection->keyFrame();
+      _kf = _keyframeSelection.keyFrame();
       _kf->computeDerivatives();
       _kf->computePcl();
-      _featureSelection->select(_kf);
+      _featureSelection.select(_kf);
       if (_kf != _cf) {
-        _cf->pose() = _prediction->predict(_cf->t());
-        _cf->pose() = _align(_kf, _cf);
-        _keyframeSelection->update(_cf);
+        _cf->pose() = _prediction.predict(_cf->t());
+        _cf->pose() = _aligner.align(_kf, _cf)->pose;
+        _keyframeSelection.update(_cf);
       }
     }
-    _prediction->update(_cf->pose(), _cf->t());
+    _prediction.update(_cf->pose(), _cf->t());
     _motion = _cf->pose() * _lf->pose().inverse();
 
     _trajectory.append(_cf->t(), _cf->pose());
@@ -195,7 +174,7 @@ void NodeRgbdAlignment::process() {
 }
 
 Frame::UnPtr
-NodeRgbdAlignment::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const {
+NodeOdometry::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth) const {
   namespace enc = sensor_msgs::image_encodings;
   auto cv_ptr = cv_bridge::toCvShare(msgImg);
   if (enc::isColor(msgImg->encoding)) {
@@ -208,7 +187,7 @@ NodeRgbdAlignment::createFrame(sensor_msgs::msg::Image::ConstSharedPtr msgImg, s
   return std::make_unique<Frame>(cv_ptr->image.clone(), depth.clone(), _camera, t);
 }
 
-void NodeRgbdAlignment::timerCallback() {
+void NodeOdometry::timerCallback() {
   const int maxQueue = static_cast<int>(0.75 * _queueSizeMax);
   const bool queueAlmostFull = std::max(_queue->nDepth(), _queue->nImages()) > maxQueue;
   if (_replay) {
@@ -223,7 +202,7 @@ void NodeRgbdAlignment::timerCallback() {
   }
 }
 
-void NodeRgbdAlignment::lookupTf() {
+void NodeOdometry::lookupTf() {
   try {
     _world2origin = _tfBuffer->lookupTransform(_fixedFrameId, _cameraFrameId.substr(1), tf2::TimePointZero);
     _tfAvailable = true;
@@ -232,7 +211,7 @@ void NodeRgbdAlignment::lookupTf() {
     RCLCPP_WARN(get_logger(), "%s", ex.what());
   }
 }
-void NodeRgbdAlignment::setReplay(bool ready) {
+void NodeOdometry::setReplay(bool ready) {
   while (!_cliReplayer->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
       throw std::runtime_error("Interrupted while waiting for the service. Exiting.");
@@ -251,7 +230,7 @@ void NodeRgbdAlignment::setReplay(bool ready) {
   _cliReplayer->async_send_request(request, response_received_callback);
 }
 
-void NodeRgbdAlignment::publish(const rclcpp::Time &t, bool newKeyFrame) {
+void NodeOdometry::publish(const rclcpp::Time &t, bool newKeyFrame) {
 
   // TODO since we measure the relative pose only,
   //  can we simply, only publish the transformation to the last keyframe, while another node publishs that "global transformation"
@@ -331,4 +310,4 @@ void NodeRgbdAlignment::publish(const rclcpp::Time &t, bool newKeyFrame) {
 }  // namespace vslam_ros
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(vslam_ros::NodeRgbdAlignment)
+RCLCPP_COMPONENTS_REGISTER_NODE(vslam_ros::NodeOdometry)

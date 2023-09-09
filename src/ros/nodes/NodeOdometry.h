@@ -48,10 +48,10 @@
 #include <stereo_msgs/msg/disparity_image.hpp>
 
 namespace vslam_ros {
-class NodeRgbdAlignment : public rclcpp::Node {
+class NodeOdometry : public rclcpp::Node {
 public:
   COMPOSITION_PUBLIC
-  NodeRgbdAlignment(const rclcpp::NodeOptions &options);
+  NodeOdometry(const rclcpp::NodeOptions &options);
 
 private:
   const int _queueSizeMin, _queueSizeMax;
@@ -63,7 +63,6 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _pubKeyImg, _pubKeyDepth;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pubPath;
   std::shared_ptr<tf2_ros::TransformBroadcaster> _pubTf;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pubPclMap;
 
   // Subscriptions
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr _subCamInfo;
@@ -96,10 +95,10 @@ private:
   std::shared_ptr<ApproximateSync> _approximateSync;
 
   // Algorithm
-  vslam::FeatureSelection<vslam::FiniteGradient>::UnPtr _featureSelection;
-  std::function<vslam::Pose(vslam::Frame::ConstShPtr, vslam::Frame::ConstShPtr)> _align;
-  vslam::pose_prediction::ConstantVelocityModel::ShPtr _prediction;
-  vslam::keyframe_selection::DifferentialEntropy::UnPtr _keyframeSelection;
+  vslam::FeatureSelection<vslam::FiniteGradient> _featureSelection;
+  vslam::AlignmentRgbd _aligner;
+  vslam::pose_prediction::ConstantVelocityModel _prediction;
+  vslam::keyframe_selection::DifferentialEntropy _keyframeSelection;
   vslam::Camera::ShPtr _camera;
   vslam::Pose _motion;
   vslam::Trajectory _trajectory;

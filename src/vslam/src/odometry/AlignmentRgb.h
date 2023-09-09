@@ -44,7 +44,7 @@ public:
   static std::map<std::string, double> defaultParameters();
 
   AlignmentRgb(const std::map<std::string, double> params);
-  AlignmentRgb(int nLevels = 4, double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
+  AlignmentRgb(int nLevels = 4, int maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
 
   Pose align(
     Camera::ConstShPtr cam,

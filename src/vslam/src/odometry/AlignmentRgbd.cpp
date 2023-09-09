@@ -23,7 +23,7 @@ std::map<std::string, double> AlignmentRgbd::defaultParameters() {
 AlignmentRgbd::AlignmentRgbd(const std::map<std::string, double> params) :
     AlignmentRgbd(params.at("nLevels"), params.at("maxIterations"), params.at("minParameterUpdate"), params.at("maxErrorIncrease")) {}
 
-AlignmentRgbd::AlignmentRgbd(int nLevels, double maxIterations, double minParameterUpdate, double maxErrorIncrease) :
+AlignmentRgbd::AlignmentRgbd(int nLevels, int maxIterations, double minParameterUpdate, double maxErrorIncrease) :
     _weightFunction(std::make_shared<TDistributionBivariate<Constraint>>(5.0, 1e-3, 10)),
     _maxIterations(maxIterations),
     _minParameterUpdate(minParameterUpdate),
@@ -33,7 +33,7 @@ AlignmentRgbd::AlignmentRgbd(int nLevels, double maxIterations, double minParame
     _levels.push_back(i);
   }
 }
-AlignmentRgbd::AlignmentRgbd(const std::vector<int> &levels, double maxIterations, double minParameterUpdate, double maxErrorIncrease) :
+AlignmentRgbd::AlignmentRgbd(const std::vector<int> &levels, int maxIterations, double minParameterUpdate, double maxErrorIncrease) :
     _weightFunction(std::make_shared<TDistributionBivariate<Constraint>>(5.0, 1e-3, 10)),
     _levels(levels),
     _maxIterations(maxIterations),

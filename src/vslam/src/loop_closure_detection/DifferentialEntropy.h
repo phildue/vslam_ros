@@ -10,6 +10,7 @@ struct LoopClosure {
   Timestamp t0, t1;
   Pose relativePose;
 };
+
 class DifferentialEntropy {
 public:
   TYPEDEF_PTR(DifferentialEntropy)

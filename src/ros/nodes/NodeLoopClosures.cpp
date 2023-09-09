@@ -19,9 +19,7 @@ NodeLoopClosures::NodeLoopClosures(const rclcpp::NodeOptions &options) :
     _subPath(create_subscription<nav_msgs::msg::Path>(
       "/pose_graph/path", 10, std::bind(&NodeLoopClosures::callbackPath, this, std::placeholders::_1))),
     _pub(create_publisher<nav_msgs::msg::Odometry>("/loop_closures/odom", 10)),
-    _minTranslation(),
-    _minFeatures(),
-    _loopClosureDetection(std::make_unique<loop_closure_detection::DifferentialEntropy>(
+    _loopClosureDetection{
       declare_parameter("min_entropy_ratio", 0.9),
       std::make_unique<AlignmentRgbd>(
         declare_parameter("aligner.fine.n_levels", 4),
@@ -32,16 +30,16 @@ NodeLoopClosures::NodeLoopClosures(const rclcpp::NodeOptions &options) :
         std::vector<int>({3}),
         declare_parameter("aligner.coarse.max_iterations", 50),
         declare_parameter("aligner.coarse.min_parameter_update", 0.0001),
-        declare_parameter("aligner.coarse.max_error_increase", 10)))),
-    _featureSelection(std::make_unique<FeatureSelection<FiniteGradient>>(
+        declare_parameter("aligner.coarse.max_error_increase", 10))},
+    _featureSelection{
       FiniteGradient{
-        declare_parameter<float>("features.intensity_gradient_min", 5.0f),
-        declare_parameter<float>("features.depth_gradient_min", 0.01f),
-        declare_parameter<float>("features.depth_gradient_max", 0.3f),
-        declare_parameter<float>("features.depth_min", 0.0f),
-        declare_parameter<float>("features.depth_max", 8.0f)},
-      declare_parameter<float>("features.grid_size", 10.0f),
-      declare_parameter("features.n_levels", 4))),
+        static_cast<float>(declare_parameter("features.intensity_gradient_min", 5.0)),
+        static_cast<float>(declare_parameter("features.depth_gradient_min", 0.01)),
+        static_cast<float>(declare_parameter("features.depth_gradient_max", 0.3)),
+        static_cast<float>(declare_parameter("features.depth_min", 0.0)),
+        static_cast<float>(declare_parameter("features.depth_max", 8.0))},
+      static_cast<float>(declare_parameter("features.grid_size", 10.0)),
+      static_cast<int>(declare_parameter("features.n_levels", 4))},
     _trajectory(std::make_unique<Trajectory>()) {
   if (declare_parameter("replay", true)) {
     _cliReplayer = create_client<vslam_ros_interfaces::srv::ReplayerPlay>("togglePlay");
@@ -63,7 +61,7 @@ void NodeLoopClosures::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msg
   kfn->computePyramid(4);
   kfn->computeDerivatives();
   kfn->computePcl();
-  _featureSelection->select(kfn);
+  _featureSelection.select(kfn);
   std::for_each(_keyframes.begin(), _keyframes.end(), [&](auto kf) {
     const auto &entropiesTrack = _childFrames[kf->t()];
     if (std::find_if(entropiesTrack.begin(), entropiesTrack.end(), [&](auto cf) { return cf.t == kfn->t(); }) != entropiesTrack.end()) {
@@ -76,7 +74,7 @@ void NodeLoopClosures::imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msg
       std::transform_reduce(entropiesTrack.begin(), entropiesTrack.end(), 0.0, std::plus<double>{}, [](auto cf) { return cf.entropy; }) /
       entropiesTrack.size();
 
-    auto lc = _loopClosureDetection->isLoopClosure(kf, meanEntropyTrack, kfn);
+    auto lc = _loopClosureDetection.isLoopClosure(kf, meanEntropyTrack, kfn);
 
     if (lc) {
       RCLCPP_INFO(get_logger(), "Detected loop closures between [%ld] and [%ld]", lc->t0, lc->t1);

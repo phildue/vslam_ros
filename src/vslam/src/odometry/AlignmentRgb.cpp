@@ -23,7 +23,7 @@ std::map<std::string, double> AlignmentRgb::defaultParameters() {
 AlignmentRgb::AlignmentRgb(const std::map<std::string, double> params) :
     AlignmentRgb(params.at("nLevels"), params.at("maxIterations"), params.at("minParameterUpdate"), params.at("maxErrorIncrease")) {}
 
-AlignmentRgb::AlignmentRgb(int nLevels, double maxIterations, double minParameterUpdate, double maxErrorIncrease) :
+AlignmentRgb::AlignmentRgb(int nLevels, int maxIterations, double minParameterUpdate, double maxErrorIncrease) :
     _weightFunction(std::make_shared<TDistribution<Constraint>>(5.0, 1e-3, 10)),
     _nLevels(nLevels),
     _maxIterations(maxIterations),

@@ -12,8 +12,7 @@ namespace vslam_ros {
 NodeReplayer::NodeReplayer(const rclcpp::NodeOptions &options) :
     rclcpp::Node("NodeReplayer", options),
     _servicePlay(create_service<vslam_ros_interfaces::srv::ReplayerPlay>(
-      "togglePlay",
-      std::bind(&NodeReplayer::servicePlayCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3))),
+      "togglePlay", std::bind(&NodeReplayer::servicePlayCallback, this, std::placeholders::_1, std::placeholders::_2))),
     _play(true) {
   _syncTopic = declare_parameter("sync_topic", "/camera/depth/image");
   _bagName = declare_parameter("bag_file", "/mnt/dataset/tum_rgbd/rgbd_dataset_freiburg1_desk2/rgbd_dataset_freiburg1_desk2.db3");
@@ -211,7 +210,6 @@ rcl_time_point_value_t NodeReplayer::seek(rcl_time_point_value_t t) {
 }
 
 void NodeReplayer::servicePlayCallback(
-  const std::shared_ptr<rmw_request_id_t> requestHeader,
   const std::shared_ptr<vslam_ros_interfaces::srv::ReplayerPlay::Request> request,
   std::shared_ptr<vslam_ros_interfaces::srv::ReplayerPlay::Response> response) {
   {

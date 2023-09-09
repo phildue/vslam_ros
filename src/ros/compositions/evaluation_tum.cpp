@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
   // Add some nodes to the executor which provide work for the executor during its "spin" function.
   // An example of available work is executing a subscription callback, or a timer callback.
-  auto odom = std::make_shared<vslam_ros::NodeRgbdAlignment>(options);
+  auto odom = std::make_shared<vslam_ros::NodeOdometry>(options);
   exec.add_node(odom);
 
   auto poseGraph = std::make_shared<vslam_ros::NodePoseGraph>(options);
