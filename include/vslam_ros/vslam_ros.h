@@ -17,9 +17,11 @@
 #define VSLAM_ROS2_H__
 #include "converters.h"
 #include "nodes/NodeEvaluation.h"
+#include "nodes/NodeLoopClosures.h"
+#include "nodes/NodePoseGraph.h"
 #include "nodes/NodeReplayer.h"
 #include "nodes/NodeReplayerExtracted.h"
-#include "nodes/NodeRgbdAlignment.h"
+#include "nodes/NodeOdometry.h"
 #include "nodes/NodeStereoDepth.h"
 #include "vslam/vslam.h"
 #endif

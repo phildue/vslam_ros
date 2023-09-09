@@ -17,19 +17,15 @@ void initialize(const std::string &folder, bool clean) {
   el::Loggers::reconfigureLogger("performance", el::ConfigurationType::Filename, format("{}/runtime.log", folder));
 }
 void configure(const std::string &directory) {
-  el::Loggers::reconfigureLogger("direct_odometry", el::Configurations(format("{}/{}.conf", directory, "direct_odometry").c_str()));
-  el::Loggers::reconfigureLogger("features", el::Configurations(format("{}/{}.conf", directory, "features").c_str()));
-  el::Loggers::reconfigureLogger("direct_pose_graph", el::Configurations(format("{}/{}.conf", directory, "direct_pose_graph").c_str()));
+  for (const auto &name : {"direct_odometry", "features", "direct_pose_graph", "loop_closure_detection", "pose_graph_optimization","keyframe_selection"}) {
+    const std::string filepath = format("{}/{}.conf", directory, name);
+    LOG(INFO) << format("Loading config for {} at {}", name, filepath);
+    el::Loggers::reconfigureLogger(name, el::Configurations(filepath));
+  }
 }
 
 void create(const std::string &name) {
   el::Loggers::getLogger(name);
-  el::Configurations defaultConf;
-  defaultConf.setToDefault();
-  defaultConf.set(el::Level::Debug, el::ConfigurationType::Format, "%datetime %level %msg");
-  defaultConf.set(el::Level::Debug, el::ConfigurationType::Enabled, "false");
-  el::Loggers::reconfigureLogger(name, defaultConf);
-
   configs.insert({name, std::make_shared<Config>(*configs["default"])});
 }
 

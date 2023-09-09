@@ -18,42 +18,38 @@
 #include <memory>
 
 #include "types.h"
-namespace vslam
-{
-class Pose
-{
+namespace vslam {
+class Pose {
 public:
   typedef std::shared_ptr<Pose> ShPtr;
   typedef std::unique_ptr<Pose> UnPtr;
   typedef std::shared_ptr<const Pose> ConstShPtr;
   typedef std::unique_ptr<const Pose> ConstUnPtr;
 
-  Pose(const SE3d & pose = SE3d(), const Mat6d & cov = Mat6d::Identity()) : _pose(pose), _cov(cov)
-  {
-  }
+  Pose(const SE3d &pose = SE3d(), const Mat6d &cov = Mat6d::Identity() * std::numeric_limits<double>::quiet_NaN()) :
+      _pose(pose),
+      _cov(cov) {}
 
-  const Vec3d & translation() const { return _pose.translation(); }
-  Vec3d & translation() { return _pose.translation(); }
-  double totalRotationDegrees() const
-  {
-    return _pose.log().block(3, 0, 3, 1).norm() * 180.0 / M_PI;
-  }
+  const Vec3d &translation() const { return _pose.translation(); }
+  Vec3d &translation() { return _pose.translation(); }
+  double totalRotationDegrees() const { return _pose.log().block(3, 0, 3, 1).norm() * 180.0 / M_PI; }
 
-  const SE3d & pose() const { return _pose; }
-  SE3d & pose() { return _pose; }
-  const SE3d & SE3() const { return _pose; }
-  SE3d & SE3() { return _pose; }
+  const SE3d &pose() const { return _pose; }
+  SE3d &pose() { return _pose; }
+  const SE3d &SE3() const { return _pose; }
+  SE3d &SE3() { return _pose; }
 
   Vec6d log() const { return _pose.log(); }
-  Matd<6, 6> & cov() { return _cov; }
-  const Matd<6, 6> & cov() const { return _cov; }
+  Matd<6, 6> &cov() { return _cov; }
+  const Matd<6, 6> &cov() const { return _cov; }
   Pose inverse() const;
+  Mat6d Adj() const;
 
 private:
   SE3d _pose;
   Matd<6, 6> _cov;
 };
-Pose operator*(const Pose & p1, const Pose & p0);
+Pose operator*(const Pose &p1, const Pose &p0);
 
 }  // namespace vslam
 #endif

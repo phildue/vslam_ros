@@ -40,7 +40,7 @@ Trajectory::UnPtr loadTrajectory(const std::string &path, bool invertPoses) {
   }
 
   // TODO shouldn't this better be objects or unique ptrs
-  std::map<Timestamp, Pose::ConstShPtr> poses;
+  std::map<Timestamp, Pose::ShPtr> poses;
 
   std::string line;
   while (getline(gtFile, line)) {

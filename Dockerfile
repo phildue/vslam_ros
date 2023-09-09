@@ -64,6 +64,7 @@ git clone https://github.com/ros-perception/image_pipeline.git && cd image_pipel
 git clone https://github.com/ros-perception/vision_opencv.git && cd vision_opencv && git checkout humble && \
 cd /opt/ros_deps_ws/ && colcon build --packages-up-to stereo_image_proc && echo "source /opt/ros_deps_ws/install/setup.bash" >> /home/ros/.bashrc
 RUN apt install --no-install-recommends -y ros-humble-depthai-ros
+RUN cd /opt/ros_deps_ws/src && git clone git@github.com:phildue/vslam_ros_interfaces.git && cd /opt/ros_deps_ws && colcon build --packages-up-to vslam_ros_interfaces
 USER ros
 RUN echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ros/vslam_ros/install/vslam_ros/lib" >> /home/ros/.bashrc
 RUN echo "PYTHON_PATH=$PYTHON_PATH:/home/ros/vslam_ros/script" >> /home/ros/.bashrc

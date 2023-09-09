@@ -61,6 +61,7 @@ def evaluate_sequence(sequence_id, experiment_name, commit_hash, workspace_dir, 
             -p gtTrajectoryFile:={dataset.gt_filepath()} \
             -p outputDirectory:={evaluation.folder_results} \
             -p algoOutputFile:={evaluation.filepath_trajectory_algo} \
+            -p trajOptFileName:={evaluation.filepath_trajectory_optimized_algo} \
             -p replayMode:=True \
             -p sync_topic:={dataset.sync_topic()} \
             -p log.root_dir:={evaluation.folder_logs} \

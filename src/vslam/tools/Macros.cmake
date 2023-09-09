@@ -63,12 +63,17 @@ macro(pd_add_test name sources)
     target_link_libraries( ${name} PRIVATE pd::vslam GTest::gtest_main )
     add_test( NAME ${name}.UnitTest COMMAND ${name})
     set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    
+    set_target_properties( ${name}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${VSLAM_TEST_BINARY_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${VSLAM_TEST_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${VSLAM_TEST_BINARY_DIR}"
+    )
     set(ExtraMacroArgs ${ARGN})
     list(LENGTH ExtraMacroArgs NumExtraMacroArgs)
     if(NumExtraMacroArgs GREATER 0)
         foreach(ExtraArg ${ExtraMacroArgs})
-            target_compile_definitions(test_${name} PUBLIC ${ExtraArg})
+            target_sources(${name} PRIVATE ${ExtraArg})
         endforeach()
     endif()
 endmacro()
@@ -76,17 +81,23 @@ endmacro()
 macro(pd_add_experiment name sources)
     add_executable( ${name} ${sources})
     target_compile_features(${name} PUBLIC cxx_std_20)
-    target_compile_definitions(${name} PUBLIC TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource")
+    target_compile_definitions(${name} PUBLIC TEST_RESOURCE="${VSLAM_TEST_RESOURCE_DIR}")
     target_compile_definitions(${name} PUBLIC TEST_VISUALIZE=${TEST_VISUALIZE})
     
-    target_link_libraries( ${name} PRIVATE pd::vslam GTest::gtest_main )
     set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    
+    target_link_libraries( ${name} PRIVATE pd::vslam GTest::gtest_main )
+    set_target_properties( ${name}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${VSLAM_TEST_BINARY_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${VSLAM_TEST_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${VSLAM_TEST_BINARY_DIR}"
+    )
     set(ExtraMacroArgs ${ARGN})
     list(LENGTH ExtraMacroArgs NumExtraMacroArgs)
     if(NumExtraMacroArgs GREATER 0)
         foreach(ExtraArg ${ExtraMacroArgs})
-            target_compile_definitions(test_${name} PUBLIC ${ExtraArg})
+            target_sources(${name} PRIVATE ${ExtraArg})
         endforeach()
     endif()
+
 endmacro()

@@ -19,14 +19,18 @@
 
 #include <gtest/gtest.h>
 
+#include "BundleAdjustment.h"
+#include "FeatureTracking.h"
+#include "FeatureTrackingOcv.h"
+#include "Matcher.h"
+#include "overlays.h"
+#include "vslam/core.h"
+#include "vslam/evaluation.h"
+#include "vslam/features.h"
+#include "vslam/utils.h"
 #include <Eigen/Dense>
 #include <opencv2/highgui.hpp>
 #include <opencv4/opencv2/core/eigen.hpp>
-
-#include "vslam/core.h"
-#include "vslam/descriptor_matching.h"
-#include "vslam/evaluation.h"
-#include "vslam/utils.h"
 using namespace testing;
 using namespace vslam;
 using namespace vslam::evaluation;

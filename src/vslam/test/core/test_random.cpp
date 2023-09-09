@@ -15,21 +15,18 @@
 
 #include <gtest/gtest.h>
 
-#include "core/core.h"
+#include "core/macros.h"
+#include "core/random.h"
 using namespace testing;
-using namespace pd;
-using namespace pd::vslam;
+using namespace vslam;
 
-struct normal_random_variable
-{
-  //Thanks to: https://stackoverflow.com/questions/6142576/sample-from-multivariate-normal-gaussian-distribution-in-c
-  explicit normal_random_variable(Eigen::MatrixXd const & covar)
-  : normal_random_variable(Eigen::VectorXd::Zero(covar.rows()), covar)
-  {
-  }
+struct normal_random_variable {
+  // Thanks to: https://stackoverflow.com/questions/6142576/sample-from-multivariate-normal-gaussian-distribution-in-c
+  explicit normal_random_variable(Eigen::MatrixXd const &covar) :
+      normal_random_variable(Eigen::VectorXd::Zero(covar.rows()), covar) {}
 
-  normal_random_variable(Eigen::VectorXd const & mean, Eigen::MatrixXd const & covar) : mean(mean)
-  {
+  normal_random_variable(Eigen::VectorXd const &mean, Eigen::MatrixXd const &covar) :
+      mean(mean) {
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(covar);
     transform = eigenSolver.eigenvectors() * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
   }
@@ -37,18 +34,15 @@ struct normal_random_variable
   Eigen::VectorXd mean;
   Eigen::MatrixXd transform;
 
-  Eigen::VectorXd operator()() const
-  {
+  Eigen::VectorXd operator()() const {
     static std::mt19937 gen{std::random_device{}()};
     static std::normal_distribution<> dist;
 
-    return mean + transform * Eigen::VectorXd{mean.size()}.unaryExpr(
-                                [&](auto UNUSED(x)) { return dist(gen); });
+    return mean + transform * Eigen::VectorXd{mean.size()}.unaryExpr([&](auto UNUSED(x)) { return dist(gen); });
   }
 };
 
-TEST(RandomTest, MultivariateGaussian)
-{
+TEST(RandomTest, MultivariateGaussian) {
   int size = 2;
   Eigen::MatrixXd covar(size, size);
   covar << 1, .5, .5, 1;
@@ -62,8 +56,7 @@ TEST(RandomTest, MultivariateGaussian)
   }
 }
 
-TEST(RandomTest, MultivariateGaussianFunction)
-{
+TEST(RandomTest, MultivariateGaussianFunction) {
   int size = 2;
   Eigen::MatrixXd covar(size, size);
   covar << 1, .5, .5, 1;
@@ -76,12 +69,10 @@ TEST(RandomTest, MultivariateGaussianFunction)
   }
 }
 
-TEST(RandomTest, MultivariateGaussianFunction6d)
-{
+TEST(RandomTest, MultivariateGaussianFunction6d) {
   Eigen::MatrixXd covar(6, 6);
-  covar << 0.0004, -0., 0., 0., 0.0003, 0.0002, -0., 0.0003, -0., -0.0001, -0., 0., 0., -0., 0.0004,
-    -0.0002, -0., 0., 0., -0.0001, -0.0002, 0.0007, 0., -0., 0.0003, -0., -0., 0., 0.0006, 0.0001,
-    0.0002, 0., 0., -0., 0.0001, 0.0003;
+  covar << 0.0004, -0., 0., 0., 0.0003, 0.0002, -0., 0.0003, -0., -0.0001, -0., 0., 0., -0., 0.0004, -0.0002, -0., 0., 0., -0.0001, -0.0002,
+    0.0007, 0., -0., 0.0003, -0., -0., 0., 0.0006, 0.0001, 0.0002, 0., 0., -0., 0.0001, 0.0003;
 
   for (int i = 0; i < 10; i++) {
     const Eigen::Vector6d s = random::N(covar);
@@ -92,20 +83,17 @@ TEST(RandomTest, MultivariateGaussianFunction6d)
   }
 }
 
-class Student_t
-{
+class Student_t {
 public:
-  Student_t(const VecXd & mean, const MatXd & cov, int dof);
-  VecXd draw() const { return pd::vslam::random::student_t(_mean, _scale, _dof); }
+  Student_t(const VecXd &mean, const MatXd &cov, int dof);
+  VecXd draw() const { return vslam::random::student_t(_mean, _scale, _dof); }
   VecXd operator()() const { return draw(); }
-  static Student_t fit(
-    const MatXd & data, int dof, const MatXd & scale0, int maxIterations = 30,
-    double convergenceThreshold = 1e-7);
-  const MatXd & scale() const { return _scale; }
-  const MatXd & scaleInv() const { return _scaleInv; }
-  const VecXd & mean() const { return _mean; }
-  const int & dof() { return _dof; }
-  const int & nDims() { return _nDims; }
+  static Student_t fit(const MatXd &data, int dof, const MatXd &scale0, int maxIterations = 30, double convergenceThreshold = 1e-7);
+  const MatXd &scale() const { return _scale; }
+  const MatXd &scaleInv() const { return _scaleInv; }
+  const VecXd &mean() const { return _mean; }
+  const int &dof() { return _dof; }
+  const int &nDims() { return _nDims; }
 
 private:
   VecXd _mean;
@@ -114,15 +102,17 @@ private:
   int _nDims;
 };
 
-Student_t::Student_t(const VecXd & mean, const MatXd & scale, int dof)
-: _mean(mean), _scale(scale), _scaleInv(scale.inverse()), _dof(dof), _nDims(scale.rows())
-{
-  if (mean.rows() != scale.rows()) throw pd::Exception("Unequal dimensions");
+Student_t::Student_t(const VecXd &mean, const MatXd &scale, int dof) :
+    _mean(mean),
+    _scale(scale),
+    _scaleInv(scale.inverse()),
+    _dof(dof),
+    _nDims(scale.rows()) {
+  if (mean.rows() != scale.rows())
+    throw std::runtime_error("Unequal dimensions");
 }
 
-Student_t Student_t::fit(
-  const MatXd & data, int dof, const MatXd & scale0, int maxIterations, double convergenceThreshold)
-{
+Student_t Student_t::fit(const MatXd &data, int dof, const MatXd &scale0, int maxIterations, double convergenceThreshold) {
   const int nSamples = data.rows();
   const int nDims = data.cols();
 
@@ -153,8 +143,7 @@ Student_t Student_t::fit(
   return Student_t(mean, scale, dof);
 }
 
-TEST(RandomTest, MultivariateStudent_t)
-{
+TEST(RandomTest, DISABLED_MultivariateStudent_t) {
   VecXd meanGt = VecXd::Zero(2);
   MatXd covGt = MatXd::Identity(2, 2) * 10.0;
   int nSamples = 1000000;

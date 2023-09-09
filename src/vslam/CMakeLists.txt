@@ -19,20 +19,17 @@ set( sources
     src/utils/visuals.cpp
     src/utils/utils.cpp
     src/features/keypoint_selection.cpp
-    src/features/FeatureSelection.cpp
-
+    #src/features/FeatureSelection.cpp
+    src/features/overlays.cpp
     src/evaluation/evaluation.cpp
     src/evaluation/tum.cpp
-    src/direct/AlignmentRgb.cpp
-    src/direct/AlignmentRgbPoseGraph.cpp
-    src/direct/AlignmentRgbd.cpp
-    src/direct/overlay.cpp
-    src/motion_model/ConstantVelocityModel.cpp
-    src/bundle_adjustment/BundleAdjustment.cpp
-    src/descriptor_matching/overlays.cpp
-    src/descriptor_matching/FeatureTracking.cpp
-    src/descriptor_matching/FeatureTrackingOcv.cpp
-    src/descriptor_matching/Matcher.cpp
+    src/odometry/AlignmentRgb.cpp
+    src/odometry/AlignmentRgbd.cpp
+    src/odometry/NormalEquations.cpp
+    src/keyframe_selection/DifferentialEntropy.cpp
+    src/pose_prediction/ConstantVelocityModel.cpp
+    src/pose_graph_optimization/PoseGraphOptimizer.cpp
+    src/loop_closure_detection/CandidateProposal.cpp
     #src/mapping/Map.cpp
     /usr/local/include/easylogging++.cc
    )
@@ -52,31 +49,28 @@ set( headers
     src/utils/log.h
     src/features/keypoint_selection.h
     src/features/FeatureSelection.h
+    src/features/overlays.h
     src/evaluation/evaluation.h
     src/evaluation/tum.h
-    src/direct/NormalEquations.h
-    src/direct/interpolate.h
-    src/direct/weights.h
-    src/direct/overlay.h
-    src/direct/AlignmentRgb.h
-    src/direct/AlignmentRgbPoseGraph.h
-    src/direct/AlignmentRgbd.h
-    src/motion_model/ConstantVelocityModel.h
-    src/bundle_adjustment/BundleAdjustment.h
-    src/descriptor_matching/overlays.h
-    src/descriptor_matching/FeatureTracking.h
-    src/descriptor_matching/FeatureTrackingOcv.h
-    src/descriptor_matching/Matcher.h
+    src/odometry/NormalEquations.h
+    src/odometry/interpolate.h
+    src/odometry/weights.h
+    src/odometry/AlignmentRgb.h
+    src/odometry/AlignmentRgbd.h
+    src/pose_prediction/ConstantVelocityModel.h
+    src/keyframe_selection/DifferentialEntropy.h
+    src/pose_graph_optimization/PoseGraphOptimizer.h
+    src/loop_closure_detection/CandidateProposal.h
+    src/loop_closure_detection/DifferentialEntropy.h
 
-   # src/mapping/KeyFrameSelection.h
-   # src/mapping/Map.h
     /usr/local/include/easylogging++.h 
     include/vslam/core.h
-    include/vslam/direct.h 
+    include/vslam/odometry.h 
     include/vslam/evaluation.h 
     include/vslam/utils.h 
-    include/vslam/descriptor_matching.h
     include/vslam/features.h 
+    include/vslam/pose_graph_optimization.h 
+    include/vslam/loop_closure_detection.h 
 
   )
 pd_setup_lib(${PROJECT_NAME} ${PROJECT_VERSION} "${sources}" "${headers}" pd)
@@ -138,6 +132,8 @@ endif()
 # Add tests
 option(VSLAM_BUILD_TESTS "Enable to build tests" ON)
 if(VSLAM_BUILD_TESTS)
+  SET(VSLAM_TEST_BINARY_DIR "${CMAKE_BINARY_DIR}/test" CACHE PATH "Location of test binaries")
+  set(VSLAM_TEST_RESOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/test/resource" CACHE PATH "Location of test resources")
   enable_testing()
   find_package(GTest CONFIG REQUIRED)
   option(VSLAM_TEST_VISUALIZE "Enable test visualizations." ON)
@@ -146,75 +142,16 @@ if(VSLAM_BUILD_TESTS)
   else()
       set(TEST_VISUALIZE false)
   endif()
-  pd_add_experiment(rgbd_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_simple.cpp)
-  pd_add_experiment(rgb_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_odometry_simple.cpp)
-  pd_add_experiment(rgbd_odometry_entropy ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_entropy.cpp)
-  pd_add_experiment(rgb_pose_graph_single_frame ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_pose_graph_single_frame.cpp)
-  pd_add_experiment(rgb_pose_graph ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_pose_graph.cpp)
+
+  pd_add_test(frame ${CMAKE_CURRENT_LIST_DIR}/test/core/test_frame.cpp)
+  pd_add_test(camera ${CMAKE_CURRENT_LIST_DIR}/test/core/test_camera.cpp)
+  pd_add_test(random ${CMAKE_CURRENT_LIST_DIR}/test/core/test_random.cpp)
+  pd_add_test(trajectory ${CMAKE_CURRENT_LIST_DIR}/test/core/test_trajectory.cpp)
+
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/odometry)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/pose_graph_optimization)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching)
   
-  pd_add_experiment(direct_icp ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_direct_icp.cpp)
-  pd_add_experiment(multiframe_alignment ${CMAKE_CURRENT_LIST_DIR}/test/direct/multiframe_alignment.cpp)
-
-  pd_add_test(ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ba.cpp)
-  pd_add_test(ceres_ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ceres_ba.cpp)
-  
-  pd_add_experiment(matching ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_matching.cpp)
-  pd_add_experiment(descriptor_odometry ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_odometry.cpp)
-  pd_add_experiment(match_and_optimize ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_match_and_optimize.cpp)
-
-
-  #pd_add_test(frame2 ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-  #pd_add_test(lukas_kanade_flow ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  #pd_add_test(warp ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  #pd_add_test(lukas_kanade_affine ${PROJECT_NAME})
-    #pd_add_test(lukas_kanade_se3 ${PROJECT_NAME})
-    #target_compile_definitions(lukas_kanade_affineTest PUBLIC TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource")
-    #target_compile_definitions(lukas_kanade_se3Test PUBLIC TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource")
-
-  #pd_add_test(rgbd_alignment ${PROJECT_NAME} 
-  #  TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #  TEST_VISUALIZE=${TEST_VISUALIZE})
-  
-
-  #pd_add_test(trajectory ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  #pd_add_test(ekf_se3 ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-  
-  #pd_add_test(motion_model ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  #pd_add_test(rpe ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  
-
-
-
-  #pd_add_test(ba ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  #pd_add_test(ceres_ba ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
-
-  #pd_add_test(map ${PROJECT_NAME} 
-  #TEST_RESOURCE="${CMAKE_CURRENT_LIST_DIR}/test/resource"
-  #TEST_VISUALIZE=${TEST_VISUALIZE})
 endif()
 
 # Installation

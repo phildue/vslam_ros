@@ -6,12 +6,16 @@ using namespace testing;
 #include <opencv2/highgui.hpp>
 #include <thread>
 
-#include "vslam/bundle_adjustment.h"
+#include "BundleAdjustment.h"
+#include "FeatureTracking.h"
+#include "FeatureTrackingOcv.h"
+#include "Matcher.h"
+#include "features/overlays.h"
+#include "overlays.h"
 #include "vslam/core.h"
-#include "vslam/descriptor_matching.h"
-#include "vslam/direct.h"
 #include "vslam/evaluation.h"
-#include "vslam/motion_model.h"
+#include "vslam/odometry.h"
+#include "vslam/pose_prediction.h"
 #include "vslam/utils.h"
 
 using namespace vslam;
@@ -41,8 +45,8 @@ TEST(DescriptorMatchingTest, DISABLED_EvaluateOnTum) {
   log::initialize(outPath, true);
   log::config("default")->show = 1;
 
-  auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
-  auto motionModel = std::make_shared<ConstantVelocityModel>(ConstantVelocityModel::defaultParameters());
+  auto directIcp = std::make_shared<odometry::AlignmentRgbd>(odometry::AlignmentRgbd::defaultParameters());
+  auto motionModel = std::make_shared<pose_prediction::ConstantVelocityModel>(pose_prediction::ConstantVelocityModel::defaultParameters());
   auto descriptorMatching = std::make_shared<FeatureTracking>();
   auto bundleAdjustment = std::make_shared<BundleAdjustment>(50, 30);
   auto config = el::Loggers::getLogger("bundle_adjustment")->configurations();
@@ -96,7 +100,7 @@ TEST(DescriptorMatchingTest, DISABLED_EvaluateOnTum) {
         descriptorMatching->track(kf, kfs);
         kfs.push_back(kf);
         if (kfs.size() >= 3) {
-          log::append("Track", overlay::CorrespondingPoints({kfs.end() - 3, kfs.end()}));
+          log::append("Track", overlay::CorrespondingPoints({kfs.end() - 3, kfs.end()}, 3, 3));
         }
       } else {
         f->pose() = motion;

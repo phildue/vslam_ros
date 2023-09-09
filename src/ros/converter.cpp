@@ -15,26 +15,20 @@
 
 #include "vslam_ros/converters.h"
 
-namespace vslam_ros
-{
-void convert(vslam::Timestamp t, builtin_interfaces::msg::Time & tRos)
-{
+namespace vslam_ros {
+void convert(vslam::Timestamp t, builtin_interfaces::msg::Time &tRos) {
   tRos.sec = static_cast<int32_t>(t / 1e9);
   tRos.nanosec = t - tRos.sec * 1e9;
 }
-void convert(const builtin_interfaces::msg::Time & tRos, vslam::Timestamp & t)
-{
-  t = tRos.sec * 1e9 + tRos.nanosec;
-}
-vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo & msg)
-{
+void convert(const builtin_interfaces::msg::Time &tRos, vslam::Timestamp &t) { t = tRos.sec * 1e9 + tRos.nanosec; }
+vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo &msg) {
   double fx = msg.k[0 * 3 + 0];
   double fy = msg.k[1 * 3 + 1];
   double cx = msg.k[0 * 3 + 2];
   double cy = msg.k[1 * 3 + 2];
 
   if ((fx == 0 || cx == 0) && (msg.p[0 * 4 + 0] > 0 && msg.p[1 * 4 + 3] <= 1e-3)) {
-    //seems like k is not set but instead P TODO: its a bit hacky or risky
+    // seems like k is not set but instead P TODO: its a bit hacky or risky
     /*
     P(i)rect = [[fu 0  cx  -fu*bx],
                [0  fv  cy -fv*by],
@@ -49,16 +43,14 @@ vslam::Camera::ShPtr convert(const sensor_msgs::msg::CameraInfo & msg)
   return std::make_shared<vslam::Camera>(fx, fy, cx, cy, std::ceil(cx * 2.0), std::ceil(cy * 2.0));
 }
 
-void convert(vslam::Camera::ConstShPtr cam, sensor_msgs::msg::CameraInfo & msg)
-{
+void convert(vslam::Camera::ConstShPtr cam, sensor_msgs::msg::CameraInfo &msg) {
   msg.k[0 * 3 + 0] = cam->fx();
   msg.k[1 * 3 + 1] = cam->fy();
   msg.k[0 * 3 + 2] = cam->cx();
   msg.k[1 * 3 + 2] = cam->cy();
 }
 
-geometry_msgs::msg::Pose convert(const Sophus::SE3d & se3)
-{
+geometry_msgs::msg::Pose convert(const Sophus::SE3d &se3) {
   geometry_msgs::msg::Pose pose;
 
   const auto t = se3.translation();
@@ -72,14 +64,12 @@ geometry_msgs::msg::Pose convert(const Sophus::SE3d & se3)
   pose.orientation.z = q.z();
   return pose;
 }
-Sophus::SE3d convert(const geometry_msgs::msg::Pose & ros)
-{
+Sophus::SE3d convert(const geometry_msgs::msg::Pose &ros) {
   return Sophus::SE3d(
     Eigen::Quaterniond(ros.orientation.w, ros.orientation.x, ros.orientation.y, ros.orientation.z),
     Eigen::Vector3d(ros.position.x, ros.position.y, ros.position.z));
 }
-void convert(const Sophus::SE3d & se3, geometry_msgs::msg::Twist & twist)
-{
+void convert(const Sophus::SE3d &se3, geometry_msgs::msg::Twist &twist) {
   twist.angular.x = se3.log().tail(3).x();
   twist.angular.y = se3.log().tail(3).y();
   twist.angular.z = se3.log().tail(3).z();
@@ -88,17 +78,12 @@ void convert(const Sophus::SE3d & se3, geometry_msgs::msg::Twist & twist)
   twist.linear.y = se3.log().head(3).y();
   twist.linear.z = se3.log().head(3).z();
 }
-Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped & tf)
-{
+Sophus::SE3d convert(const geometry_msgs::msg::TransformStamped &tf) {
   return Sophus::SE3d(
-    Eigen::Quaterniond(
-      tf.transform.rotation.w, tf.transform.rotation.x, tf.transform.rotation.y,
-      tf.transform.rotation.z),
-    Eigen::Vector3d(
-      tf.transform.translation.x, tf.transform.translation.y, tf.transform.translation.z));
+    Eigen::Quaterniond(tf.transform.rotation.w, tf.transform.rotation.x, tf.transform.rotation.y, tf.transform.rotation.z),
+    Eigen::Vector3d(tf.transform.translation.x, tf.transform.translation.y, tf.transform.translation.z));
 }
-void convert(const Sophus::SE3d & sophus, geometry_msgs::msg::TransformStamped & tf)
-{
+void convert(const Sophus::SE3d &sophus, geometry_msgs::msg::TransformStamped &tf) {
   const auto t = sophus.translation();
   const auto q = sophus.unit_quaternion();
   tf.transform.translation.x = t.x();
@@ -110,25 +95,23 @@ void convert(const Sophus::SE3d & sophus, geometry_msgs::msg::TransformStamped &
   tf.transform.rotation.z = q.z();
 }
 
-void convert(const vslam::Pose & p, geometry_msgs::msg::PoseWithCovariance & pRos)
-{
+void convert(const vslam::Pose &p, geometry_msgs::msg::PoseWithCovariance &pRos) {
   pRos.pose = convert(p.pose());
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 6; j++) {
       pRos.covariance[i * 6 + j] = p.cov()(i, j);
     }
   }
-  //TODO check ros2 conventions for covariance ordering
+  // TODO check ros2 conventions for covariance ordering
 }
-void convert(const vslam::Pose & p, geometry_msgs::msg::TwistWithCovariance & pRos)
-{
+void convert(const vslam::Pose &p, geometry_msgs::msg::TwistWithCovariance &pRos) {
   convert(p.pose(), pRos.twist);
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 6; j++) {
       pRos.covariance[i * 6 + j] = p.cov()(i, j);
     }
   }
-  //TODO check ros2 conventions for covariance ordering
+  // TODO check ros2 conventions for covariance ordering
 }
 #if false
 void convert(
@@ -151,18 +134,16 @@ void convert(
   pcl::toROSMsg(pclPcl, pclRos);
 }
 #endif
-void convert(const geometry_msgs::msg::PoseWithCovariance & pRos, vslam::Pose & p)
-{
+void convert(const geometry_msgs::msg::PoseWithCovariance &pRos, vslam::Pose &p) {
   p.pose() = convert(pRos.pose);
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 6; j++) {
       p.cov()(i, j) = pRos.covariance[i * 6 + j];
     }
   }
-  //TODO check ros2 conventions for covariance ordering
+  // TODO check ros2 conventions for covariance ordering
 }
-void convert(const geometry_msgs::msg::TwistWithCovariance & twistRos, vslam::Pose & p)
-{
+void convert(const geometry_msgs::msg::TwistWithCovariance &twistRos, vslam::Pose &p) {
   vslam::Vec6d twist;
   twist(0) = twistRos.twist.linear.x;
   twist(1) = twistRos.twist.linear.y;
@@ -176,21 +157,26 @@ void convert(const geometry_msgs::msg::TwistWithCovariance & twistRos, vslam::Po
       p.cov()(i, j) = twistRos.covariance[i * 6 + j];
     }
   }
-  //TODO check ros2 conventions for covariance ordering
+  // TODO check ros2 conventions for covariance ordering
 }
-void convert(const vslam::Trajectory & traj, nav_msgs::msg::Path & trajRos)
-{
+void convert(const vslam::Trajectory &traj, nav_msgs::msg::Path &trajRos) {
   trajRos.poses.reserve(traj.poses().size());
-  for (const auto& t_p : traj.poses()) {
-    auto pose = t_p.second->SE3();
-    auto t = t_p.first;
+  for (const auto &[t, pose] : traj.poses()) {
 
     geometry_msgs::msg::PoseStamped poseRos;
     convert(t, poseRos.header.stamp);
-    poseRos.pose = vslam_ros::convert(pose);
-    poseRos.header.frame_id =
-      "world";  //TODO introduces coordinate frames t trajectory and pose class
+    poseRos.pose = convert(pose->SE3());
+    poseRos.header.frame_id = "world";  // TODO introduces coordinate frames t trajectory and pose class
     trajRos.poses.push_back(poseRos);
+  }
+}
+
+void convert(const nav_msgs::msg::Path &trajRos, vslam::Trajectory &traj) {
+  for (const auto &poseRos : trajRos.poses) {
+    vslam::SE3d pose = convert(poseRos.pose);
+    vslam::Timestamp t;
+    convert(poseRos.header.stamp, t);
+    traj.append(t, pose);
   }
 }
 

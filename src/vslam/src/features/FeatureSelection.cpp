@@ -1,8 +1,8 @@
 #include "FeatureSelection.h"
 #include "core/Feature2D.h"
 #include "core/macros.h"
-#include "descriptor_matching/overlays.h"
 #include "keypoint_selection.h"
+#include "overlays.h"
 #include "utils/log.h"
 #include <functional>
 #define LOG_NAME "features"

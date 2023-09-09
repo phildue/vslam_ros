@@ -102,6 +102,7 @@ class TumRgbd(Dataset):
             "rgbd_dataset_freiburg1_teddy",
             "rgbd_dataset_freiburg1_xyz",
             "rgbd_dataset_freiburg1_360",
+            "rgbd_dataset_freiburg1_plant",
             "rgbd_dataset_freiburg2_desk",
             "rgbd_dataset_freiburg2_desk_validation",
             "rgbd_dataset_freiburg2_pioneer_360",

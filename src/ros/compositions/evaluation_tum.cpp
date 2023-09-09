@@ -23,8 +23,7 @@
 
 using namespace std::chrono_literals;
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char *argv[]) {
   // Force flush of the stdout buffer.
   setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
@@ -41,9 +40,14 @@ int main(int argc, char * argv[])
 
   // Add some nodes to the executor which provide work for the executor during its "spin" function.
   // An example of available work is executing a subscription callback, or a timer callback.
-  auto nodeAlgo = std::make_shared<vslam_ros::NodeRgbdAlignment>(options);
-  exec.add_node(nodeAlgo);
+  auto odom = std::make_shared<vslam_ros::NodeOdometry>(options);
+  exec.add_node(odom);
 
+  auto poseGraph = std::make_shared<vslam_ros::NodePoseGraph>(options);
+  exec.add_node(poseGraph);
+
+  auto loopClosure = std::make_shared<vslam_ros::NodeLoopClosures>(options);
+  exec.add_node(loopClosure);
   auto evaluator = std::make_shared<vslam_ros::NodeEvaluation>(options);
   exec.add_node(evaluator);
   auto replayer = std::make_shared<vslam_ros::NodeReplayer>(options);

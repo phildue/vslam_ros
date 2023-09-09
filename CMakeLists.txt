@@ -31,12 +31,15 @@ find_package(rosbag2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(stereo_image_proc REQUIRED)
+find_package(vslam_ros_interfaces REQUIRED)
 option(VSLAM_BUILD_TESTS "Enable unit test build" ${BUILD_TESTING})
 add_subdirectory(src/vslam)
+
 
 add_library(${PROJECT_NAME} STATIC
     src/ros/converter.cpp
     src/ros/Associator.cpp)
+
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
@@ -51,10 +54,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 add_library(vslam_ros_nodes SHARED
   src/ros/nodes/NodeStereoDepth.cpp
-  src/ros/nodes/NodeRgbdAlignment.cpp
+  src/ros/nodes/NodeOdometry.cpp
   src/ros/nodes/NodeEvaluation.cpp
   src/ros/nodes/NodeReplayer.cpp
-  src/ros/nodes/NodeReplayerExtracted.cpp)
+  src/ros/nodes/NodeReplayerExtracted.cpp
+  src/ros/nodes/NodePoseGraph.cpp
+  src/ros/nodes/NodeLoopClosures.cpp)
+  
 
 target_link_libraries(vslam_ros_nodes ${PROJECT_NAME})
 set_property(TARGET vslam_ros_nodes PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -72,9 +78,21 @@ rclcpp_components_register_nodes(
     EXECUTABLE node_replayer_extracted
 )
 
+rclcpp_components_register_nodes(
+    vslam_ros_nodes
+    PLUGIN "vslam_ros::NodePoseGraph"
+    EXECUTABLE node_pose_graph
+)
+
+rclcpp_components_register_nodes(
+    vslam_ros_nodes
+    PLUGIN "vslam_ros::NodeLoopClosures"
+    EXECUTABLE node_loop_closures
+)
+
 rclcpp_components_register_node(
     vslam_ros_nodes
-    PLUGIN "vslam_ros::NodeRgbdAlignment"
+    PLUGIN "vslam_ros::NodeOdometry"
     EXECUTABLE node_rgbd_alignment
 )
 rclcpp_components_register_node(
@@ -113,6 +131,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rosbag2_cpp
   pcl_conversions
   stereo_image_proc
+  vslam_ros_interfaces
   )
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})

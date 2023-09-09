@@ -16,53 +16,48 @@
 //
 // Created by phil on 10.10.20.
 //
-
-#include <core/core.h>
+#include "core/Camera.h"
+#include "core/Frame.h"
+#include "core/Point3D.h"
 #include <gtest/gtest.h>
 
 using namespace testing;
-using namespace pd;
-using namespace pd::vslam;
+using namespace vslam;
 
-TEST(FrameTest, BadDimensions)
-{
-  Image img = Image::Random(640, 480);
+TEST(FrameTest, BadDimensions) {
+  cv::Mat img(110, 640, CV_8UC1);
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
-  EXPECT_ANY_THROW(std::make_shared<Frame>(img, cam))
-    << "Should throw because image dimensions don't match with camera parameters";
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
+  EXPECT_ANY_THROW(std::make_shared<Frame>(img, cam)) << "Should throw because image dimensions don't match with camera parameters";
 
-  DepthMap depth = DepthMap::Ones(520, 640) * 20;
-  Image img1 = Image::Random(480, 640);
-  EXPECT_ANY_THROW(std::make_shared<Frame>(img1, depth, cam))
-    << "Should throw because image dimensions don't match depth dimensions";
+  cv::Mat depth(520, 640, CV_32FC1);
+  cv::Mat img1(480, 640, CV_8UC1);
+
+  EXPECT_ANY_THROW(std::make_shared<Frame>(img1, depth, cam)) << "Should throw because image dimensions don't match depth dimensions";
 }
-TEST(FrameTest, BadAccessDepth)
-{
-  Image img = Image::Random(480, 640);
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+TEST(FrameTest, BadAccessDepth) {
+  cv::Mat img(480, 640, CV_8UC1);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, cam);
 
-  EXPECT_EQ(-1, f->depth()(10, 10));
+  EXPECT_ANY_THROW(f->depth(10, 10));
 }
 
-TEST(FrameTest, GoodAccessDepth)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, GoodAccessDepth) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, depth, cam);
 
-  EXPECT_EQ(20, f->depth()(10, 10));
+  EXPECT_EQ(20, f->depth(10, 10));
 }
 
-TEST(FrameTest, AccessPcl)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, AccessPcl) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, depth, cam);
 
   EXPECT_ANY_THROW(f->pcl());
@@ -71,12 +66,11 @@ TEST(FrameTest, AccessPcl)
   EXPECT_FALSE(f->pcl().empty());
 }
 
-TEST(FrameTest, Pyramid)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, Pyramid) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, cam);
 
   EXPECT_ANY_THROW(f->intensity(2));
@@ -84,32 +78,29 @@ TEST(FrameTest, Pyramid)
   f->intensity(2);
 }
 
-TEST(FrameTest, BadAccessDerivative)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, BadAccessDerivative) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, cam);
 
-  EXPECT_ANY_THROW(f->dIx());
+  EXPECT_ANY_THROW(f->dI());
 }
-TEST(FrameTest, GoodAccessDerivative)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, GoodAccessDerivative) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, cam);
   f->computeDerivatives();
-  f->dIx();
+  f->dI();
 }
-TEST(FrameTest, Pcl)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, Pcl) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5);
+  auto cam = std::make_shared<Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f = std::make_shared<Frame>(img, depth, cam);
   f->computePyramid(3);
   f->computePcl();
@@ -119,29 +110,27 @@ TEST(FrameTest, Pcl)
     auto pcl = f->pcl(i, true);
     EXPECT_FALSE(pcl.empty());
 
-    for (const auto & p : pcl) {
-      auto uv = f->camera2image(p, i);
+    for (const auto &p : pcl) {
+      auto uv = f->project(p, i);
       EXPECT_GE(uv.x(), 0);
       EXPECT_GE(uv.y(), 0);
       EXPECT_LE(uv.x(), f->width(i));
       EXPECT_LE(uv.y(), f->height(i));
-      const double z = f->depth(i)(uv.y(), uv.x());
+      const double z = f->depth(uv.y(), uv.x(), i);
       EXPECT_TRUE(std::isfinite(z) && z > 0);
       EXPECT_NEAR(p.z(), z, 0.001);
-      EXPECT_NEAR((f->image2camera(uv, z, i) - p).norm(), 0.0, 0.001);
+      EXPECT_NEAR((f->reconstruct(uv, z, i) - p).norm(), 0.0, 0.001);
 
-      EXPECT_NEAR((f->p3d(uv.y(), uv.x(), i) - p).norm(), 0.0, 0.001)
-        << "Failed for uv=" << uv.transpose();
+      EXPECT_NEAR((f->p3d(std::round(uv.y()), std::round(uv.x()), i) - p).norm(), 0.0, 0.001) << "Failed for uv=" << uv.transpose();
       EXPECT_NEAR((f->world2image(f->image2world(uv, z, i), i) - uv).norm(), 0.0, 0.001);
     }
   }
 }
-TEST(FrameTest, AddDeleteFeatures)
-{
-  DepthMap depth = DepthMap::Ones(480, 640) * 20;
-  Image img = Image::Random(480, 640);
+TEST(FrameTest, AddDeleteFeatures) {
+  cv::Mat img(480, 640, CV_8UC1);
+  cv::Mat depth(480, 640, CV_32FC1, cv::Scalar(20));
 
-  auto cam = Camera::TUM_RGBD();
+  auto cam = std::make_shared<vslam::Camera>(525.0, 525.0, 319.5, 239.5, 640, 480);
   auto f0 = std::make_shared<Frame>(img, depth, cam);
   auto f1 = std::make_shared<Frame>(img, depth, cam);
 
@@ -160,7 +149,8 @@ TEST(FrameTest, AddDeleteFeatures)
     ft0->point() = std::make_shared<Point3D>(Vec3d::Random(), Feature2D::VecShPtr({ft0, ft1}));
     ft1->point() = ft0->point();
   }
+  EXPECT_EQ(f0->features().size(), 6);
+  EXPECT_EQ(f1->featuresWithPoints().size(), 3);
   f0->removeFeatures();
   EXPECT_EQ(f0->features().size(), 0);
-  EXPECT_EQ(f1->featuresWithPoints().size(), 0);
 }
