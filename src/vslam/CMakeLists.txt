@@ -28,11 +28,6 @@ set( sources
     src/direct/overlays.cpp
     src/direct/NormalEquations.cpp
     src/pose_prediction/ConstantVelocityModel.cpp
-    src/descriptor_matching/bundle_adjustment/BundleAdjustment.cpp
-    src/descriptor_matching/overlays.cpp
-    src/descriptor_matching/FeatureTracking.cpp
-    src/descriptor_matching/FeatureTrackingOcv.cpp
-    src/descriptor_matching/Matcher.cpp
     src/pose_graph_optimization/PoseGraphOptimizer.cpp
     src/loop_closure_detection/CandidateProposal.cpp
     src/loop_closure_detection/DifferentialEntropy.cpp
@@ -65,11 +60,6 @@ set( headers
     src/direct/odometry/AlignmentRgb.h
     src/direct/odometry/AlignmentRgbd.h
     src/pose_prediction/ConstantVelocityModel.h
-    src/descriptor_matching/bundle_adjustment/BundleAdjustment.h
-    src/descriptor_matching/overlays.h
-    src/descriptor_matching/FeatureTracking.h
-    src/descriptor_matching/FeatureTrackingOcv.h
-    src/descriptor_matching/Matcher.h
     src/pose_graph_optimization/PoseGraphOptimizer.h
     src/loop_closure_detection/CandidateProposal.h
     src/loop_closure_detection/DifferentialEntropy.h
@@ -79,7 +69,6 @@ set( headers
     include/vslam/direct.h 
     include/vslam/evaluation.h 
     include/vslam/utils.h 
-    include/vslam/descriptor_matching.h
     include/vslam/features.h 
     include/vslam/pose_graph_optimization.h 
     include/vslam/loop_closure_detection.h 
@@ -154,28 +143,24 @@ if(VSLAM_BUILD_TESTS)
   else()
       set(TEST_VISUALIZE false)
   endif()
+
+  pd_add_test(frame ${CMAKE_CURRENT_LIST_DIR}/test/core/test_frame.cpp)
+  pd_add_test(camera ${CMAKE_CURRENT_LIST_DIR}/test/core/test_camera.cpp)
+  pd_add_test(random ${CMAKE_CURRENT_LIST_DIR}/test/core/test_random.cpp)
+  pd_add_test(trajectory ${CMAKE_CURRENT_LIST_DIR}/test/core/test_trajectory.cpp)
+  pd_add_test(jacobians ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_jacobians.cpp)
+
   pd_add_experiment(rgbd_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_simple.cpp)
   pd_add_experiment(rgb_odometry_simple ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgb_odometry_simple.cpp)
   pd_add_experiment(rgbd_odometry_entropy ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_entropy.cpp)
   
   pd_add_experiment(direct_icp ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_direct_icp.cpp)
 
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/pose_graph_optimization)
-
   pd_add_experiment(rgbd_odometry_local_map ${CMAKE_CURRENT_LIST_DIR}/test/direct/rgbd_odometry_local_map.cpp)
+
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/pose_graph_optimization)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching)
   
-  pd_add_experiment(matching ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_matching.cpp)
-  pd_add_experiment(descriptor_odometry ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_odometry.cpp)
-  pd_add_experiment(match_and_optimize ${CMAKE_CURRENT_LIST_DIR}/test/descriptor_matching/test_match_and_optimize.cpp)
-
-  pd_add_test(frame ${CMAKE_CURRENT_LIST_DIR}/test/core/test_frame.cpp)
-  pd_add_test(camera ${CMAKE_CURRENT_LIST_DIR}/test/core/test_camera.cpp)
-  pd_add_test(random ${CMAKE_CURRENT_LIST_DIR}/test/core/test_random.cpp)
-  pd_add_test(trajectory ${CMAKE_CURRENT_LIST_DIR}/test/core/test_trajectory.cpp)
-
-  pd_add_test(ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ba.cpp)
-  pd_add_test(ceres_ba ${CMAKE_CURRENT_LIST_DIR}/test/bundle_adjustment/test_ceres_ba.cpp)
-  pd_add_test(jacobians ${CMAKE_CURRENT_LIST_DIR}/test/direct/test_jacobians.cpp)
 endif()
 
 # Installation
