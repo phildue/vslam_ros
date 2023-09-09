@@ -7,9 +7,9 @@
 #include "AlignmentRgb.h"
 #include "core/Feature2D.h"
 #include "core/random.h"
+#include "direct/interpolate.h"
+#include "direct/jacobians.h"
 #include "features/FeatureSelection.h"
-#include "interpolate.h"
-#include "jacobians.h"
 #include "utils/log.h"
 #define PERFORMANCE_RGBD_ALIGNMENT false
 #define LOG_NAME "direct_odometry"
@@ -147,8 +147,16 @@ AlignmentRgb::Results::UnPtr AlignmentRgb::align(const Feature2D::VecConstShPtr 
     MLOG(DEBUG) << format(
       "Done: {}, level: {}, iteration: {}, error: {}, #: {},", reason, _level, _iteration, error, constraints[_level].size());
   }
-  return std::make_unique<Results>(
-    Results{Pose(pose.cast<double>(), covariance.cast<double>()), constraints, scale, iterations, normalEquations});
+  auto r = std::make_unique<Results>(Results{
+    Pose(pose.cast<double>(), covariance.cast<double>()),
+    std::vector<Constraint::VecConstShPtr>(constraints.size()),
+    scale,
+    iterations,
+    normalEquations});
+  std::transform(constraints.begin(), constraints.end(), r->constraints.begin(), [](auto c) {
+    return Constraint::VecConstShPtr{c.begin(), c.end()};
+  });
+  return r;
 }
 
 AlignmentRgb::Constraint::VecShPtr
@@ -252,8 +260,8 @@ NormalEquations AlignmentRgb::computeNormalEquations(const std::vector<Alignment
   TIMED_SCOPE_IF(timer2, format("computeNormalEquations{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
   NormalEquations ne = std::transform_reduce(
     std::execution::par_unseq,
-    constraints.begin(),
-    constraints.end(),
+    std::begin(constraints),
+    std::end(constraints),
     NormalEquations({Mat6f::Zero(), Vec6f::Zero(), 0.0, 0}),
     std::plus<NormalEquations>{},
     [](auto c) {

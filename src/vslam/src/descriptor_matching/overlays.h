@@ -43,24 +43,7 @@ private:
   const int _idx;
 };
 
-class CorrespondingPoints {
-public:
-  CorrespondingPoints(const std::vector<Frame::ConstShPtr> &frames, int rows, int cols, int h = 240, int w = 320, bool legend = false) :
-      _frames(frames),
-      _rows(rows),
-      _cols(cols),
-      _h(h),
-      _w(w),
-      _legend(legend) {}
 
-  cv::Mat draw() const;
-  cv::Mat operator()() const { return draw(); }
-
-private:
-  const std::vector<Frame::ConstShPtr> _frames;
-  const int _rows, _cols, _h, _w;
-  const bool _legend;
-};
 
 class Matches {
 public:

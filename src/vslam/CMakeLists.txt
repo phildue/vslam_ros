@@ -23,12 +23,12 @@ set( sources
     src/features/overlays.cpp
     src/evaluation/evaluation.cpp
     src/evaluation/tum.cpp
-    src/direct/AlignmentRgb.cpp
-    src/direct/AlignmentRgbd.cpp
-    src/direct/overlay.cpp
+    src/direct/odometry/AlignmentRgb.cpp
+    src/direct/odometry/AlignmentRgbd.cpp
+    src/direct/overlays.cpp
     src/direct/NormalEquations.cpp
-    src/motion_model/ConstantVelocityModel.cpp
-    src/bundle_adjustment/BundleAdjustment.cpp
+    src/pose_prediction/ConstantVelocityModel.cpp
+    src/descriptor_matching/bundle_adjustment/BundleAdjustment.cpp
     src/descriptor_matching/overlays.cpp
     src/descriptor_matching/FeatureTracking.cpp
     src/descriptor_matching/FeatureTrackingOcv.cpp
@@ -61,11 +61,11 @@ set( headers
     src/direct/NormalEquations.h
     src/direct/interpolate.h
     src/direct/weights.h
-    src/direct/overlay.h
-    src/direct/AlignmentRgb.h
-    src/direct/AlignmentRgbd.h
-    src/motion_model/ConstantVelocityModel.h
-    src/bundle_adjustment/BundleAdjustment.h
+    src/direct/overlays.h
+    src/direct/odometry/AlignmentRgb.h
+    src/direct/odometry/AlignmentRgbd.h
+    src/pose_prediction/ConstantVelocityModel.h
+    src/descriptor_matching/bundle_adjustment/BundleAdjustment.h
     src/descriptor_matching/overlays.h
     src/descriptor_matching/FeatureTracking.h
     src/descriptor_matching/FeatureTrackingOcv.h

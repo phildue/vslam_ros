@@ -9,8 +9,8 @@
 
 #include "utils/log.h"
 
-#include "interpolate.h"
-#include "jacobians.h"
+#include "direct/interpolate.h"
+#include "direct/jacobians.h"
 #define PERFORMANCE_RGBD_ALIGNMENT false
 #define LOG_NAME "direct_odometry"
 #define MLOG(level) CLOG(level, LOG_NAME)

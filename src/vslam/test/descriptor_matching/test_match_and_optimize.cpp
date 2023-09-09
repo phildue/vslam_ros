@@ -6,12 +6,12 @@ using namespace testing;
 #include <opencv2/highgui.hpp>
 #include <thread>
 
-#include "vslam/bundle_adjustment.h"
+#include "features/overlays.h"
 #include "vslam/core.h"
 #include "vslam/descriptor_matching.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
-#include "vslam/motion_model.h"
+#include "vslam/pose_prediction.h"
 #include "vslam/utils.h"
 
 using namespace vslam;
@@ -42,7 +42,7 @@ TEST(DescriptorMatchingTest, DISABLED_EvaluateOnTum) {
   log::config("default")->show = 1;
 
   auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
-  auto motionModel = std::make_shared<ConstantVelocityModel>(ConstantVelocityModel::defaultParameters());
+  auto motionModel = std::make_shared<pose_prediction::ConstantVelocityModel>(pose_prediction::ConstantVelocityModel::defaultParameters());
   auto descriptorMatching = std::make_shared<FeatureTracking>();
   auto bundleAdjustment = std::make_shared<BundleAdjustment>(50, 30);
   auto config = el::Loggers::getLogger("bundle_adjustment")->configurations();

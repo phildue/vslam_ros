@@ -23,24 +23,21 @@
 
 #include <sophus/ceres_manifold.hpp>
 
-#include "bundle_adjustment/BundleAdjustment.h"
+#include "descriptor_matching/bundle_adjustment/BundleAdjustment.h"
 #include "vslam/core.h"
 #include "vslam/evaluation.h"
 #include "vslam/utils.h"
 using namespace testing;
 using namespace vslam;
 
-class ReprojectionErrorManifold
-{
+class ReprojectionErrorManifold {
 public:
-  ReprojectionErrorManifold(double observedX, double observedY, const Eigen::Matrix3d & K)
-  : _observedX{observedX}, _observedY{observedY}, _K{K}
-  {
-  }
+  ReprojectionErrorManifold(double observedX, double observedY, const Eigen::Matrix3d &K) :
+      _observedX{observedX},
+      _observedY{observedY},
+      _K{K} {}
 
-  template <typename T>
-  bool operator()(const T * const poseData, const T * const pointData, T * residuals) const
-  {
+  template <typename T> bool operator()(const T *const poseData, const T *const pointData, T *residuals) const {
     Eigen::Map<Sophus::SE3<T> const> const pose(poseData);
     Eigen::Map<Eigen::Matrix<T, 3, 1> const> pWcs(pointData);
 
@@ -57,10 +54,8 @@ public:
     }
     return true;
   }
-  static ceres::CostFunction * Create(double observed_x, double observed_y, const Eigen::MatrixXd K)
-  {
-    return new ceres::AutoDiffCostFunction<
-      ReprojectionErrorManifold, 2, Sophus::SE3d::num_parameters, 3>(
+  static ceres::CostFunction *Create(double observed_x, double observed_y, const Eigen::MatrixXd K) {
+    return new ceres::AutoDiffCostFunction<ReprojectionErrorManifold, 2, Sophus::SE3d::num_parameters, 3>(
       new ReprojectionErrorManifold(observed_x, observed_y, K));
   }
 
@@ -69,17 +64,14 @@ private:
   const Eigen::Matrix3d _K;
 };
 
-class ReprojectionError
-{
+class ReprojectionError {
 public:
-  ReprojectionError(double observedX, double observedY, const Eigen::Matrix3d & K)
-  : _observedX{observedX}, _observedY{observedY}, _K{K}
-  {
-  }
+  ReprojectionError(double observedX, double observedY, const Eigen::Matrix3d &K) :
+      _observedX{observedX},
+      _observedY{observedY},
+      _K{K} {}
 
-  template <typename T>
-  bool operator()(const T * const pose, const T * const pWcs, T * residuals) const
-  {
+  template <typename T> bool operator()(const T *const pose, const T *const pWcs, T *residuals) const {
     T pCcs[3];
     ceres::AngleAxisRotatePoint(pose, pWcs, pCcs);
     pCcs[0] += pose[3];
@@ -101,10 +93,8 @@ public:
     return true;
   }
 
-  static ceres::CostFunction * Create(double observed_x, double observed_y, const Eigen::MatrixXd K)
-  {
-    return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3>(
-      new ReprojectionError(observed_x, observed_y, K));
+  static ceres::CostFunction *Create(double observed_x, double observed_y, const Eigen::MatrixXd K) {
+    return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3>(new ReprojectionError(observed_x, observed_y, K));
   }
 
 private:
@@ -112,11 +102,9 @@ private:
   const Eigen::Matrix3d _K;
 };
 
-class TestBundleAdjustment : public Test
-{
+class TestBundleAdjustment : public Test {
 public:
-  TestBundleAdjustment()
-  {
+  TestBundleAdjustment() {
     _poses.resize(2);
     _posesv.resize(_poses.size());
     _poses[0] = SE3d();
@@ -135,15 +123,12 @@ public:
       _pcl[i].z() += random::U(-1.0, 1.0);
     }
     _observations.resize(_poses.size());
-    _observations[0] =
-      utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(TEST_RESOURCE "/observations1.csv");
-    _observations[1] =
-      utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(TEST_RESOURCE "/observations2.csv");
+    _observations[0] = utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(TEST_RESOURCE "/observations1.csv");
+    _observations[1] = utils::loadMatCsv<Eigen::Matrix<double, 100, 2>>(TEST_RESOURCE "/observations2.csv");
 
     _cam = evaluation::tum::Camera();
   }
-  double computeReprojectionError() const
-  {
+  double computeReprojectionError() const {
     double error = 0.0;
     for (size_t idxF = 0; idxF < _poses.size(); ++idxF) {
       for (size_t idxP = 0; idxP < _pcl.size(); ++idxP) {
@@ -166,16 +151,16 @@ protected:
   Camera::ConstShPtr _cam;
 };
 
-TEST_F(TestBundleAdjustment, DISABLED_BA)
-{
+TEST_F(TestBundleAdjustment, DISABLED_BA) {
   ceres::Problem problem;
 
   for (size_t idxF = 0; idxF < _poses.size(); ++idxF) {
     for (int idxP = 0; idxP < _observations[idxF].rows(); ++idxP) {
       problem.AddResidualBlock(
-        ReprojectionError::Create(
-          _observations[idxF].row(idxP).x(), _observations[idxF].row(idxP).y(), _cam->K()),
-        nullptr /* squared loss */, _posesv[idxF].data(), _pcl[idxP].data());
+        ReprojectionError::Create(_observations[idxF].row(idxP).x(), _observations[idxF].row(idxP).y(), _cam->K()),
+        nullptr /* squared loss */,
+        _posesv[idxF].data(),
+        _pcl[idxP].data());
     }
   }
   ceres::Solver::Options options;
@@ -191,21 +176,20 @@ TEST_F(TestBundleAdjustment, DISABLED_BA)
   std::cout << "Before: " << errorPrev << " -->  " << errorAfter << std::endl;
 }
 
-TEST_F(TestBundleAdjustment, BAManifold)
-{
+TEST_F(TestBundleAdjustment, BAManifold) {
   ceres::Problem problem;
 
   for (size_t i = 0; i < _poses.size(); ++i) {
-    problem.AddParameterBlock(
-      _poses[i].data(), SE3d::num_parameters, new Sophus::Manifold<Sophus::SE3>());
+    problem.AddParameterBlock(_poses[i].data(), SE3d::num_parameters, new Sophus::Manifold<Sophus::SE3>());
   }
 
   for (size_t idxF = 0; idxF < _poses.size(); ++idxF) {
     for (int idxP = 0; idxP < _observations[idxF].rows(); ++idxP) {
       problem.AddResidualBlock(
-        ReprojectionErrorManifold::Create(
-          _observations[idxF].row(idxP).x(), _observations[idxF].row(idxP).y(), _cam->K()),
-        nullptr /* squared loss */, _poses[idxF].data(), _pcl[idxP].data());
+        ReprojectionErrorManifold::Create(_observations[idxF].row(idxP).x(), _observations[idxF].row(idxP).y(), _cam->K()),
+        nullptr /* squared loss */,
+        _poses[idxF].data(),
+        _pcl[idxP].data());
     }
   }
   ceres::Solver::Options options;
@@ -221,14 +205,12 @@ TEST_F(TestBundleAdjustment, BAManifold)
   std::cout << "Before: " << errorPrev << " -->  " << errorAfter << std::endl;
 }
 
-TEST_F(TestBundleAdjustment, BAClass)
-{
+TEST_F(TestBundleAdjustment, BAClass) {
   std::vector<Frame::ShPtr> frames;
 
   std::vector<Point3D::ShPtr> points;
   for (size_t i = 0U; i < _poses.size(); ++i) {
-    frames.push_back(std::make_shared<Frame>(
-      cv::Mat(480, 640, CV_8UC1), _cam, i, Pose(_poses[i], MatXd::Identity(6, 6))));
+    frames.push_back(std::make_shared<Frame>(cv::Mat(480, 640, CV_8UC1), _cam, i, Pose(_poses[i], MatXd::Identity(6, 6))));
   }
   for (size_t i = 0U; i < _pcl.size(); ++i) {
     std::shared_ptr<Point3D> point;

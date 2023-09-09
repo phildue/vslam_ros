@@ -18,5 +18,7 @@
 #include "descriptor_matching/FeatureTracking.h"
 #include "descriptor_matching/FeatureTrackingOcv.h"
 #include "descriptor_matching/Matcher.h"
+#include "descriptor_matching/bundle_adjustment/BundleAdjustment.h"
 #include "descriptor_matching/overlays.h"
+
 #endif  // VSLAM_DESCRIPTOR_MATCHING_PACKAGE_H__

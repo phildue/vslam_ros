@@ -87,4 +87,41 @@ cv::Mat ReprojectedFeatures::draw() const {
   return mat;
 }
 
+cv::Mat CorrespondingPoints::draw() const {
+  std::vector<cv::Mat> mats;
+  for (const auto &f : _frames) {
+    cv::Mat mat;
+    cv::cvtColor(f->intensity(), mat, cv::COLOR_GRAY2BGR);
+    cv::rectangle(mat, cv::Point(0, 0), cv::Point(20, 20), cv::Scalar(0, 0, 0), -1);
+    cv::putText(mat, std::to_string(f->id()), cv::Point(5, 12), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 255));
+    mats.push_back(mat);
+  }
+
+  std::set<uint64_t> points;
+  for (size_t i = 0U; i < _frames.size(); i++) {
+    for (auto ftRef : _frames[i]->featuresWithPoints()) {
+      auto p = ftRef->point();
+      if (points.find(p->id()) != points.end()) {
+        continue;
+      }
+      points.insert(p->id());
+      cv::Scalar color((double)std::rand() / RAND_MAX * 255, (double)std::rand() / RAND_MAX * 255, (double)std::rand() / RAND_MAX * 255);
+      for (size_t j = 0U; j < _frames.size(); j++) {
+        auto ft = _frames[j]->observationOf(p->id());
+        if (ft) {
+          cv::Point center(ft->position().x(), ft->position().y());
+          const double radius = 2;
+          cv::circle(mats[j], center, radius, color, 2);
+          if (_legend) {
+            std::stringstream ss;
+            ss << ft->point()->id();
+            cv::putText(mats[j], ss.str(), center, cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 255));
+          }
+        }
+      }
+    }
+  }
+  return arrangeInGrid(mats, _rows, _cols, _h, _w);
+}
+
 }  // namespace vslam::overlay

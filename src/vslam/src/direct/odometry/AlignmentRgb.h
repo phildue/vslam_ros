@@ -1,51 +1,58 @@
-#ifndef VSLAM_DIRECT_ICP_H__
-#define VSLAM_DIRECT_ICP_H__
+#pragma once
 #include <map>
 #include <memory>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <string>
 #include <vector>
 
-#include "NormalEquations.h"
 #include "core/Camera.h"
 #include "core/Frame.h"
-#include "core/Point3D.h"
 #include "core/Pose.h"
 #include "core/macros.h"
 #include "core/types.h"
-#include "weights.h"
+
+#include "direct/NormalEquations.h"
+#include "direct/weights.h"
 namespace vslam {
-class AlignmentRgbd {
+class AlignmentRgb {
 public:
-  TYPEDEF_PTR(AlignmentRgbd)
+  typedef std::shared_ptr<AlignmentRgb> ShPtr;
+
   struct Constraint {
     TYPEDEF_PTR(Constraint)
 
     size_t fId;
     Vec2f uv0, uv1;
     Vec3f p0;
-    Vec2f iz0;
-    Matf<1, 6> JZJw;
-    Matf<2, 6> J;
-    Mat2f weight;
-    Vec2f residual;
+    float i0;
+    Vec6f J;
+    float weight;
+    float residual;
     bool valid;
   };
 
   struct Results {
     TYPEDEF_PTR(Results)
+
     Pose pose;
     std::vector<Constraint::VecConstShPtr> constraints;
-    std::vector<Mat2d> scale;
-    std::vector<int> iteration, levels;
+    std::vector<double> scale;
+    std::vector<int> iteration;
     std::vector<NormalEquations> normalEquations;
   };
 
   static std::map<std::string, double> defaultParameters();
 
-  AlignmentRgbd(const std::map<std::string, double> params);
-  AlignmentRgbd(int nLevels = 4, double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
-  AlignmentRgbd(const std::vector<int> &levels, double maxIterations, double minParameterUpdate, double maxErrorIncrease);
+  AlignmentRgb(const std::map<std::string, double> params);
+  AlignmentRgb(int nLevels = 4, double maxIterations = 100, double minParameterUpdate = 1e-4, double maxErrorIncrease = 1.1);
+
+  Pose align(
+    Camera::ConstShPtr cam,
+    const cv::Mat &intensity0,
+    const cv::Mat &depth0,
+    const cv::Mat &intensity1,
+    const SE3d &guess,
+    const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
 
   Pose align(
     Camera::ConstShPtr cam,
@@ -57,15 +64,13 @@ public:
     const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
 
   Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1);
-  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior);
-  Results::UnPtr align(Feature2D::VecConstShPtr features, Frame::ConstShPtr frame1);
-  Results::UnPtr align(Feature2D::VecConstShPtr features, Frame::ConstShPtr frame1, const Pose &prior);
+  Results::UnPtr align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1);
 
-  int nLevels() { return *std::max_element(_levels.begin(), _levels.end()) + 1; }
+  int nLevels() { return _nLevels; }
 
 private:
-  const TDistributionBivariate<Constraint>::ShPtr _weightFunction;
-  std::vector<int> _levels;
+  const TDistribution<Constraint>::ShPtr _weightFunction;
+  const int _nLevels;
   const double _maxIterations, _minParameterUpdate, _maxErrorIncrease;
 
   int _level, _iteration;
@@ -81,4 +86,3 @@ private:
 };
 
 }  // namespace vslam
-#endif

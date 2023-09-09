@@ -19,7 +19,7 @@
 
 #define LOG_NAME "motion_model"
 #define MLOG(level) CLOG(level, LOG_NAME)
-namespace vslam {
+namespace vslam::pose_prediction {
 ConstantVelocityModel::ConstantVelocityModel(const std::map<std::string, double> &params) :
     ConstantVelocityModel(params.at("information"), params.at("maxTranslationalVelocity"), params.at("maxAngularVelocity")) {
   log::create(LOG_NAME);
@@ -85,4 +85,4 @@ Pose ConstantVelocityModel::predict(Timestamp from, Timestamp to) const {
   return Pose(predict(to).SE3() * predict(from).SE3().inverse(), _covariance);
 }
 
-}  // namespace vslam
+}  // namespace vslam::pose_prediction

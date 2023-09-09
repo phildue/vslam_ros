@@ -1,9 +1,10 @@
 #pragma once
 #include "core/Feature2D.h"
 #include "core/Frame.h"
+#include "core/Point3D.h"
 #include "core/macros.h"
-#include "descriptor_matching/overlays.h"
 #include "keypoint_selection.h"
+#include "overlays.h"
 #include "utils/log.h"
 namespace vslam {
 

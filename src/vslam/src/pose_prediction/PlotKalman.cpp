@@ -18,41 +18,39 @@ using fmt::format;
 #include "PlotKalman.h"
 #include "utils/utils.h"
 
-namespace pd::vslam
-{
-PlotKalman::PlotKalman() : _plot(std::make_shared<PlotKalman::Plot>()) { LOG_IMG("Kalman"); }
-void PlotKalman::append(const Entry & e)
-{
+namespace vslam {
+PlotKalman::PlotKalman() :
+    _plot(std::make_shared<PlotKalman::Plot>()) {
+  LOG_IMG("Kalman");
+}
+void PlotKalman::append(const Entry &e) {
   _plot->append(e);
   if (_plot->timestamps().size() > 10) {
     LOG_IMG("Kalman") << _plot;
   }
 }
 
-void PlotKalman::Plot::append(const Entry & e)
-{
-  //TODO avoid memory leak;
+void PlotKalman::Plot::append(const Entry &e) {
+  // TODO avoid memory leak;
   _entries.push_back(e);
   _timestamps.push_back(e.t);
   _t = e.t;
 }
-void PlotKalman::Plot::plot(matplot::figure_handle f)
-{
+void PlotKalman::Plot::plot(matplot::figure_handle f) {
   _f = f;
 
   if (_timestamps.empty()) {
     vis::plt::figure();
-    return;  //TODO warn? except?
+    return;  // TODO warn? except?
   }
   const Timestamp t0 = _timestamps[0];
   std::vector<double> t, tz;
-  std::transform(_timestamps.begin(), _timestamps.end(), std::back_inserter(t), [&](auto tt) {
-    return static_cast<double>(tt - t0) / 1e9;
-  });
+  std::transform(
+    _timestamps.begin(), _timestamps.end(), std::back_inserter(t), [&](auto tt) { return static_cast<double>(tt - t0) / 1e9; });
   std::vector<std::string> names = {"tx", "ty", "tz", "rx", "ry", "rz"};
 
   std::map<std::string, std::vector<double>> x, ex, m, c, u, cx, cex, cm, k;
-  for (const auto & e : _entries) {
+  for (const auto &e : _entries) {
     x["tx"].push_back(e.state(6));
     x["ty"].push_back(e.state(7));
     x["tz"].push_back(e.state(8));
@@ -112,9 +110,7 @@ void PlotKalman::Plot::plot(matplot::figure_handle f)
   }
 }
 void PlotKalman::Plot::createExpMeasPlot(
-  const std::vector<double> & t, const std::vector<double> & e, const std::vector<double> & m,
-  const std::string & name) const
-{
+  const std::vector<double> &t, const std::vector<double> &e, const std::vector<double> &m, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 3, true);
   ax->title("Expectation / Measurement");
   ax->ylabel(format("${}$", name));
@@ -125,9 +121,7 @@ void PlotKalman::Plot::createExpMeasPlot(
   ax->legend(std::vector<std::string>({"Expectation", "Measurement"}));
   ax->grid(true);
 }
-void PlotKalman::Plot::createVelocityPlot(
-  const std::vector<double> & t, const std::vector<double> & x, const std::string & name) const
-{
+void PlotKalman::Plot::createVelocityPlot(const std::vector<double> &t, const std::vector<double> &x, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 1, true);
   ax->title("State");
   ax->ylabel(format("${}$", name));
@@ -135,9 +129,7 @@ void PlotKalman::Plot::createVelocityPlot(
   ax->plot(t, x);
   ax->grid(true);
 }
-void PlotKalman::Plot::createCorrectionPlot(
-  const std::vector<double> & t, const std::vector<double> & c, const std::string & name) const
-{
+void PlotKalman::Plot::createCorrectionPlot(const std::vector<double> &t, const std::vector<double> &c, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 5, true);
   ax->title("Innovation");
   ax->ylabel(format("{}", name));
@@ -145,9 +137,7 @@ void PlotKalman::Plot::createCorrectionPlot(
   ax->grid(true);
   ax->plot(t, c);
 }
-void PlotKalman::Plot::createUpdatePlot(
-  const std::vector<double> & t, const std::vector<double> & u, const std::string & name) const
-{
+void PlotKalman::Plot::createUpdatePlot(const std::vector<double> &t, const std::vector<double> &u, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 7, true);
   ax->title("Update");
   ax->ylabel(format("{}", name));
@@ -156,27 +146,21 @@ void PlotKalman::Plot::createUpdatePlot(
   ax->plot(t, u);
 }
 
-void PlotKalman::Plot::plotStateCov(
-  const std::vector<double> & t, const std::vector<double> & cx, const std::string & name) const
-{
+void PlotKalman::Plot::plotStateCov(const std::vector<double> &t, const std::vector<double> &cx, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 2, true);
   ax->ylabel(format("$| \\Sigma_x |$ {}", name));
   ax->xlabel("$t-t_0 [s]$");
   ax->grid(true);
   ax->plot(t, cx);
 }
-void PlotKalman::Plot::plotExpectationCov(
-  const std::vector<double> & t, const std::vector<double> & ce, const std::string & name) const
-{
+void PlotKalman::Plot::plotExpectationCov(const std::vector<double> &t, const std::vector<double> &ce, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 4, true);
   ax->ylabel(format("$| \\Sigma_e |$ {}", name));
   ax->xlabel("$t-t_0 [s]$");
   ax->grid(true);
   ax->plot(t, ce);
 }
-void PlotKalman::Plot::plotMeasurementCov(
-  const std::vector<double> & t, const std::vector<double> & ce, const std::string & name) const
-{
+void PlotKalman::Plot::plotMeasurementCov(const std::vector<double> &t, const std::vector<double> &ce, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 6, true);
 
   ax->ylabel(format("$| \\Sigma_m |$ {}", name));
@@ -184,24 +168,18 @@ void PlotKalman::Plot::plotMeasurementCov(
   ax->grid(true);
   ax->plot(t, ce);
 }
-void PlotKalman::Plot::plotKalmanGain(
-  const std::vector<double> & t, const std::vector<double> & k, const std::string & name) const
-{
+void PlotKalman::Plot::plotKalmanGain(const std::vector<double> &t, const std::vector<double> &k, const std::string &name) const {
   auto ax = _f->add_subplot(4, 2, 8, true);
   ax->ylabel(format("$| K |$ {}", name));
   ax->xlabel("$t-t_0 [s]$");
   ax->grid(true);
   ax->plot(t, k);
 }
-void operator<<(PlotKalman::ShPtr log, const PlotKalman::Entry & e) { log->append(e); }
+void operator<<(PlotKalman::ShPtr log, const PlotKalman::Entry &e) { log->append(e); }
 
-PlotKalman::ShPtr PlotKalman::make()
-{
-  return Log::DISABLED ? std::make_shared<PlotKalmanNull>() : std::make_shared<PlotKalman>();
-}
+PlotKalman::ShPtr PlotKalman::make() { return Log::DISABLED ? std::make_shared<PlotKalmanNull>() : std::make_shared<PlotKalman>(); }
 
-std::string PlotKalman::Plot::csv() const
-{
+std::string PlotKalman::Plot::csv() const {
   std::stringstream ss;
   ss << "Timestamp,px,py,pz,rx,ry,rz,vtx,vty,vtz,vrx,vry,vrz";
   for (int i = 0; i < 12; i++) {
@@ -224,7 +202,7 @@ std::string PlotKalman::Plot::csv() const
   }
   ss << "\r\n";
 
-  for (const auto & e : _entries) {
+  for (const auto &e : _entries) {
     ss << e.t << ",";
     ss << utils::toCsv(e.state, ",") << ",";
     ss << utils::toCsv(e.covState, ",") << ",";
@@ -239,4 +217,4 @@ std::string PlotKalman::Plot::csv() const
 }
 std::string PlotKalman::Plot::id() const { return format("{}", _t); }
 
-}  // namespace pd::vslam
+}  // namespace vslam

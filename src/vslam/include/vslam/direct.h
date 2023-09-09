@@ -15,8 +15,8 @@
 
 #ifndef VSLAM_DIRECT_PACKAGE_H__
 #define VSLAM_DIRECT_PACKAGE_H__
-#include "direct/AlignmentRgb.h"
-#include "direct/AlignmentRgbPoseGraph.h"
-#include "direct/AlignmentRgbd.h"
+#include "direct/bundle_adjustment/AlignmentRgbPoseGraph.h"
+#include "direct/odometry/AlignmentRgb.h"
+#include "direct/odometry/AlignmentRgbd.h"
 
 #endif  // VSLAM_DIRECT_ICP_PACKAGE_H__

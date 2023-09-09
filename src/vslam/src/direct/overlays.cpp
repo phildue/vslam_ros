@@ -3,7 +3,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "core/random.h"
-#include "overlay.h"
+#include "overlays.h"
 #include "utils/log.h"
 #include "utils/visuals.h"
 

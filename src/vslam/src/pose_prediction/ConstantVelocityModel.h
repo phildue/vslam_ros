@@ -22,7 +22,7 @@
 #include "core/Trajectory.h"
 #include "core/macros.h"
 #include "core/types.h"
-namespace vslam {
+namespace vslam::pose_prediction {
 class ConstantVelocityModel {
 public:
   TYPEDEF_PTR(ConstantVelocityModel)

@@ -10,7 +10,7 @@ using namespace testing;
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
-#include "vslam/motion_model.h"
+#include "vslam/pose_prediction.h"
 #include "vslam/utils.h"
 using namespace vslam;
 
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   log::config("Frame")->show = 1;
 
   auto directIcp = std::make_shared<AlignmentRgbd>(AlignmentRgbd::defaultParameters());
-  auto motionModel = std::make_shared<ConstantVelocityModel>(10.0, INFd, INFd);
+  auto motionModel = std::make_shared<pose_prediction::ConstantVelocityModel>(10.0, INFd, INFd);
   auto featureSelection = std::make_shared<FeatureSelection<FiniteGradient>>(FiniteGradient{5, 0.01, 0.3, 0, 8.0}, 10, 4);
 
   Trajectory::ShPtr traj = std::make_shared<Trajectory>();

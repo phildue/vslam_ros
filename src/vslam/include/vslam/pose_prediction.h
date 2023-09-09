@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef VSLAM_MOTION_MODEL_PACKAGE_H__
-#define VSLAM_MOTION_MODEL_PACKAGE_H__
-#include "motion_model/ConstantVelocityModel.h"
+#ifndef VSLAM_POSE_PREDICTION_PACKAGE_H__
+#define VSLAM_POSE_PREDICTION_PACKAGE_H__
+#include "pose_prediction/ConstantVelocityModel.h"
 
-#endif  // VSLAM_MOTION_MODEL_PACKAGE_H__
+#endif  // VSLAM_POSE_PREDICTION_PACKAGE_H__

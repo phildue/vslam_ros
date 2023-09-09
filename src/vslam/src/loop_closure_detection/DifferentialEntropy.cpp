@@ -11,7 +11,7 @@ DifferentialEntropy::DifferentialEntropy(double minRatio, AlignmentRgbd::UnPtr f
   log::create(LOG_NAME);
 }
 LoopClosure::UnPtr DifferentialEntropy::isLoopClosure(Frame::ConstShPtr f0, double entropyRef, Frame::ConstShPtr f1) const {
-
+  // TODO can't we align on level 4 first and then continue on level 3 and so forth?..
   return isLoopClosure(f0, entropyRef, f1, _minRatio * 0.9, _coarseAligner) ? isLoopClosure(f0, entropyRef, f1, _minRatio, _fineAligner)
                                                                             : nullptr;
   // return isLoopClosure(f0, entropyRef, f1, _fineAligner);

@@ -21,26 +21,21 @@
 #include "utils/utils.h"
 #define LOG_ODOM(level) CLOG(level, "odometry")
 
-namespace pd::vslam
-{
-EKFConstantVelocitySE3::EKFConstantVelocitySE3(
-  const Matd<12, 12> & covarianceProcess, Timestamp t0, const Matd<12, 12> & covState)
-: _t(t0),
-  _state(std::make_unique<State>(Vec6d::Zero(), Vec6d::Zero(), covState)),
-  _covProcess(covarianceProcess),
-  _K(Matd<12, 6>::Zero()),
-  _q(_covProcess(0, 0)),
-  _windowSize(100),
-  _stateTransitionMats(_windowSize, Matd<12, 12>::Identity()),
-  _innovMats(_windowSize, Matd<6, 6>::Identity()),
-  _nSamples(0U),
-  _log(PlotKalman::make())
-{
+namespace vslam::pose_prediction {
+EKFConstantVelocitySE3::EKFConstantVelocitySE3(const Matd<12, 12> &covarianceProcess, Timestamp t0, const Matd<12, 12> &covState) :
+    _t(t0),
+    _state(std::make_unique<State>(Vec6d::Zero(), Vec6d::Zero(), covState)),
+    _covProcess(covarianceProcess),
+    _K(Matd<12, 6>::Zero()),
+    _q(_covProcess(0, 0)),
+    _windowSize(100),
+    _stateTransitionMats(_windowSize, Matd<12, 12>::Identity()),
+    _innovMats(_windowSize, Matd<6, 6>::Identity()),
+    _nSamples(0U),
+    _log(PlotKalman::make()) {
   Log::get("odometry");
 }
-EKFConstantVelocitySE3::State::UnPtr EKFConstantVelocitySE3::predict(
-  Timestamp t, Mat12d & J_f_x) const
-{
+EKFConstantVelocitySE3::State::UnPtr EKFConstantVelocitySE3::predict(Timestamp t, Mat12d &J_f_x) const {
   const double dt = (t - _t) / 1e9;
   // Prediction
   manif::SE3d Xp = manif::SE3Tangentd(_state->pose()).exp();
@@ -61,28 +56,22 @@ EKFConstantVelocitySE3::State::UnPtr EKFConstantVelocitySE3::predict(
 
   return std::make_unique<State>(Xp.log().coeffs(), Xv.log().coeffs(), P);
 }
-EKFConstantVelocitySE3::State::State(
-  const Vec6d & pose, const Vec6d & velocity, const Mat12d & covariance)
-: _covariance(covariance)
-{
+EKFConstantVelocitySE3::State::State(const Vec6d &pose, const Vec6d &velocity, const Mat12d &covariance) :
+    _covariance(covariance) {
   _state << pose, velocity;
 }
 
-EKFConstantVelocitySE3::State::UnPtr EKFConstantVelocitySE3::predict(Timestamp t) const
-{
+EKFConstantVelocitySE3::State::UnPtr EKFConstantVelocitySE3::predict(Timestamp t) const {
   Mat12d J;
   return predict(t, J);
 }
 
-void EKFConstantVelocitySE3::update(
-  const Vec6d & measurement, const Matd<6, 6> & covMeasurement, Timestamp t)
-{
+void EKFConstantVelocitySE3::update(const Vec6d &measurement, const Matd<6, 6> &covMeasurement, Timestamp t) {
   const double dt = (t - _t) / 1e9;
 
   auto statePred = predict(t);
   LOG_ODOM(DEBUG) << "dt: " << dt;
-  LOG_ODOM(DEBUG) << "Prediction. Pose: " << statePred->pose().transpose()
-                  << " Velocity: " << statePred->velocity().transpose();
+  LOG_ODOM(DEBUG) << "Prediction. Pose: " << statePred->pose().transpose() << " Velocity: " << statePred->velocity().transpose();
   LOG_ODOM(DEBUG) << "Prediction. Uncertainty: " << statePred->covariance().diagonal().transpose();
 
   // Expectation
@@ -109,47 +98,40 @@ void EKFConstantVelocitySE3::update(
   MatXd dx = _K * y;
   LOG_ODOM(DEBUG) << "State Update. Dx: = " << dx.transpose();
 
-  const manif::SE3d pose =
-    manif::SE3Tangentd(statePred->pose()).exp() + manif::SE3Tangentd(dx.block(0, 0, 6, 1));
-  const manif::SE3d velocity =
-    manif::SE3Tangentd(statePred->velocity()).exp() + manif::SE3Tangentd(dx.block(6, 0, 6, 1));
+  const manif::SE3d pose = manif::SE3Tangentd(statePred->pose()).exp() + manif::SE3Tangentd(dx.block(0, 0, 6, 1));
+  const manif::SE3d velocity = manif::SE3Tangentd(statePred->velocity()).exp() + manif::SE3Tangentd(dx.block(6, 0, 6, 1));
   const Mat12d P = statePred->covariance() - _K * Z * _K.transpose();
   _state = std::make_unique<State>(pose.log().coeffs(), velocity.log().coeffs(), P);
   _covProcess = computeProcessNoise(dt);
   _t = t;
-  LOG_ODOM(DEBUG) << "State. Pose = " << _state->pose().transpose()
-                  << " Twist = " << _state->velocity().transpose()
+  LOG_ODOM(DEBUG) << "State. Pose = " << _state->pose().transpose() << " Twist = " << _state->velocity().transpose()
                   << " |XX|: " << _state->covariance().determinant();
 
-  //TODO avoid singleton? nicer api?
-  _log << PlotKalman::Entry(
-    {t, _state->x(), e, measurement, y, dx, _state->covariance(), E, covMeasurement, _K});
+  // TODO avoid singleton? nicer api?
+  _log << PlotKalman::Entry({t, _state->x(), e, measurement, y, dx, _state->covariance(), E, covMeasurement, _K});
 }
 
-void EKFConstantVelocitySE3::reset(Timestamp t, const EKFConstantVelocitySE3::State & state)
-{
+void EKFConstantVelocitySE3::reset(Timestamp t, const EKFConstantVelocitySE3::State &state) {
   _t = t;
   _state = std::make_unique<State>(state);
   LOG_ODOM(DEBUG) << "Reset at t: " << _t;
-  LOG_ODOM(DEBUG) << "Prediction. Pose: " << _state->pose().transpose()
-                  << " Velocity: " << _state->velocity().transpose();
+  LOG_ODOM(DEBUG) << "Prediction. Pose: " << _state->pose().transpose() << " Velocity: " << _state->velocity().transpose();
   LOG_ODOM(DEBUG) << "Prediction. Uncertainty: " << _state->covariance().diagonal().transpose();
 }
-Matd<12, 12> EKFConstantVelocitySE3::computeJ_f_x(const SE3d & pose, const SE3d & vdt) const
-{
+Matd<12, 12> EKFConstantVelocitySE3::computeJ_f_x(const SE3d &pose, const SE3d &vdt) const {
   /*
-  * Compute Jacobian of f(x):   [f1(x);f2(x)]' = [pose,twist]' = [pose * exp(twist * dt),twist]'
-  * J_f_x =  |J_f1_pose,  J_f2_pose |
-  *          |J_f2_twist, J_f2_twist|
-  *
-  * J_f1_pose:         Ad_Exp(v*dt)^(-1)
-  * J_f1_twist:        
-  * J_f2_pose:         0
-  * J_f2_twist:        0
-  *
-  * 
-  * 
-  */
+   * Compute Jacobian of f(x):   [f1(x);f2(x)]' = [pose,twist]' = [pose * exp(twist * dt),twist]'
+   * J_f_x =  |J_f1_pose,  J_f2_pose |
+   *          |J_f2_twist, J_f2_twist|
+   *
+   * J_f1_pose:         Ad_Exp(v*dt)^(-1)
+   * J_f1_twist:
+   * J_f2_pose:         0
+   * J_f2_twist:        0
+   *
+   *
+   *
+   */
 
   Matd<12, 12> J_f_x = MatXd::Zero(12, 12);
 #if 0
@@ -179,15 +161,13 @@ Matd<12, 12> EKFConstantVelocitySE3::computeJ_f_x(const SE3d & pose, const SE3d 
   LOG_ODOM(DEBUG) << "J_f_x = \n" << J_f_x;
   return J_f_x;
 }
-Matd<6, 12> EKFConstantVelocitySE3::computeJ_h_x(double dt) const
-{
-  //Compute Jacobian of h(x) = twist * dt.
+Matd<6, 12> EKFConstantVelocitySE3::computeJ_h_x(double dt) const {
+  // Compute Jacobian of h(x) = twist * dt.
   Matd<6, 12> J_h_x;
   J_h_x << MatXd::Zero(6, 6), MatXd::Identity(6, 6) * dt;
   return J_h_x;
 }
-Matd<12, 12> EKFConstantVelocitySE3::computeProcessNoise(double dt) const
-{
+Matd<12, 12> EKFConstantVelocitySE3::computeProcessNoise(double dt) const {
   Mat<double, 12, 12> Q = Mat<double, 12, 12>::Identity();
 
 //
@@ -217,14 +197,14 @@ C = [1 0]
 #elif 0
   // Approach 2 - Innovation based adaptive method
   Matd<6, 6> sum = Matd<6, 6>::Zero();
-  for (const auto & i : _innovMats) {
+  for (const auto &i : _innovMats) {
     sum += i;
   }
   Q = K * (sum / _innovMats.size()) * K.transpose();
 #elif 0
   // Approach 3- Generative
   Matd<12, 12> sum = Matd<12, 12>::Zero();
-  for (const auto & xx : _stateTransitionMats) {
+  for (const auto &xx : _stateTransitionMats) {
     sum += xx;
   }
   Q = sum / _stateTransitionMats.size();
@@ -234,4 +214,4 @@ C = [1 0]
   return Q;
 }
 
-}  // namespace pd::vslam
+}  // namespace vslam::pose_prediction

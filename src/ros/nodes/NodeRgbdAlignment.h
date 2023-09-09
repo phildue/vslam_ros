@@ -97,8 +97,8 @@ private:
 
   // Algorithm
   vslam::FeatureSelection<vslam::FiniteGradient>::UnPtr _featureSelection;
-  std::function<vslam::Pose(vslam::Frame::ConstShPtr, vslam::Frame::ConstShPtr)> _odom;
-  vslam::ConstantVelocityModel::ShPtr _motionModel;
+  std::function<vslam::Pose(vslam::Frame::ConstShPtr, vslam::Frame::ConstShPtr)> _align;
+  vslam::pose_prediction::ConstantVelocityModel::ShPtr _prediction;
   vslam::Camera::ShPtr _camera;
   vslam::Pose _motion;
   vslam::Trajectory _trajectory;
@@ -111,8 +111,6 @@ private:
 
   // Buffers
   geometry_msgs::msg::TransformStamped _world2origin;  // transforms from fixed frame to initial pose of optical frame
-
-  vslam::evaluation::tum::DataLoader::ConstShPtr _dl;
 
   void cameraCallback(sensor_msgs::msg::CameraInfo::ConstSharedPtr msg);
   void imageCallback(sensor_msgs::msg::Image::ConstSharedPtr msgImg, sensor_msgs::msg::Image::ConstSharedPtr msgDepth);

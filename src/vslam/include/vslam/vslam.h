@@ -16,11 +16,12 @@
 #ifndef VSLAM_H__
 #define VSLAM_H__
 #include "vslam/core.h"
+#include "vslam/descriptor_matching.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"
-#include "vslam/motion_model.h"
 #include "vslam/pose_graph_optimization.h"
+#include "vslam/pose_prediction.h"
 #include "vslam/utils.h"
 
 #endif

@@ -67,7 +67,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
       declare_parameter("odometry.max_iterations", 50),
       declare_parameter("odometry.min_parameter_update", 0.0001),
       declare_parameter("odometry.max_error_increase", 10));
-    _odom = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
+    _align = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
       auto r = aligner->align(f0, f1);
       return r->pose;
     };
@@ -77,7 +77,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
       declare_parameter("odometry.max_iterations", 50),
       declare_parameter("odometry.min_parameter_update", 0.0001),
       declare_parameter("odometry.max_error_increase", 10));
-    _odom = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
+    _align = [aligner](Frame::ConstShPtr f0, Frame::ConstShPtr f1) {
       auto r = aligner->align(f0, f1);
       return r->pose;
     };
@@ -86,7 +86,7 @@ NodeRgbdAlignment::NodeRgbdAlignment(const rclcpp::NodeOptions &options) :
   }
 
   _nLevels = std::max(get_parameter("features.n_levels").as_int(), get_parameter("odometry.n_levels").as_int());
-  _motionModel = std::make_shared<ConstantVelocityModel>(declare_parameter("motion_model.information", 10.0), INFd, INFd);
+  _prediction = std::make_shared<pose_prediction::ConstantVelocityModel>(declare_parameter("motion_model.information", 10.0), INFd, INFd);
 
   _maxEntropyReduction = declare_parameter("keyframe_selection.max_entropy_reduction", 0.05);
   vslam::log::configure(declare_parameter("log.config_directory", "/home/ros/vslam_ros/config/log/"));
@@ -149,7 +149,7 @@ void NodeRgbdAlignment::initialize() {
     _kf->computePcl();
     _featureSelection->select(_kf);
 
-    _motionModel->update(_cf->pose(), _cf->t());
+    _prediction->update(_cf->pose(), _cf->t());
     _trajectory.append(_cf->t(), _cf->pose());
 
     publish(img->header.stamp);
@@ -166,8 +166,8 @@ void NodeRgbdAlignment::process() {
 
     _cf->computePyramid(_nLevels);
 
-    _cf->pose() = _motionModel->predict(_cf->t());
-    _cf->pose() = _odom(_kf, _cf);
+    _cf->pose() = _prediction->predict(_cf->t());
+    _cf->pose() = _align(_kf, _cf);
 
     // TODO keyframe handling should be in own class
     _newKeyFrame = _lf != _kf && 1.0 - std::log(_cf->pose().cov().determinant()) / _entropyRef > _maxEntropyReduction;
@@ -177,11 +177,11 @@ void NodeRgbdAlignment::process() {
       _kf->computeDerivatives();
       _kf->computePcl();
       _featureSelection->select(_kf);
-      _cf->pose() = _motionModel->predict(_cf->t());
-      _cf->pose() = _odom(_kf, _cf);
+      _cf->pose() = _prediction->predict(_cf->t());
+      _cf->pose() = _align(_kf, _cf);
       _entropyRef = std::log(_cf->pose().cov().determinant());
     }
-    _motionModel->update(_cf->pose(), _cf->t());
+    _prediction->update(_cf->pose(), _cf->t());
     _motion = _cf->pose() * _lf->pose().inverse();
 
     _trajectory.append(_cf->t(), _cf->pose());

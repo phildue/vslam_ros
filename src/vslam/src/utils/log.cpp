@@ -17,7 +17,7 @@ void initialize(const std::string &folder, bool clean) {
   el::Loggers::reconfigureLogger("performance", el::ConfigurationType::Filename, format("{}/runtime.log", folder));
 }
 void configure(const std::string &directory) {
-  for (const auto &name : {"direct_odometry", "features", "direct_pose_graph"}) {
+  for (const auto &name : {"direct_odometry", "features", "direct_pose_graph", "loop_closure_detection", "pose_graph_optimization"}) {
     const std::string filepath = format("{}/{}.conf", directory, name);
     LOG(INFO) << format("Loading config for {} at {}", name, filepath);
     el::Loggers::reconfigureLogger(name, el::Configurations(filepath));

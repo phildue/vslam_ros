@@ -4,6 +4,8 @@ using namespace testing;
 #include <opencv2/highgui.hpp>
 #include <thread>
 
+#include "descriptor_matching/overlays.h"
+#include "motion_model/ConstantVelocityModel.h"
 #include "vslam/core.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
