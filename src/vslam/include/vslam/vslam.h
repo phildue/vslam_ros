@@ -16,7 +16,6 @@
 #ifndef VSLAM_H__
 #define VSLAM_H__
 #include "vslam/core.h"
-#include "vslam/descriptor_matching.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
 #include "vslam/features.h"

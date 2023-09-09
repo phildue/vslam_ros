@@ -23,7 +23,7 @@
 
 #include <sophus/ceres_manifold.hpp>
 
-#include "descriptor_matching/bundle_adjustment/BundleAdjustment.h"
+#include "../BundleAdjustment.h"
 #include "vslam/core.h"
 #include "vslam/evaluation.h"
 #include "vslam/utils.h"

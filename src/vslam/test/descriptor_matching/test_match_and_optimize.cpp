@@ -6,9 +6,13 @@ using namespace testing;
 #include <opencv2/highgui.hpp>
 #include <thread>
 
+#include "BundleAdjustment.h"
+#include "FeatureTracking.h"
+#include "FeatureTrackingOcv.h"
+#include "Matcher.h"
 #include "features/overlays.h"
+#include "overlays.h"
 #include "vslam/core.h"
-#include "vslam/descriptor_matching.h"
 #include "vslam/direct.h"
 #include "vslam/evaluation.h"
 #include "vslam/pose_prediction.h"
