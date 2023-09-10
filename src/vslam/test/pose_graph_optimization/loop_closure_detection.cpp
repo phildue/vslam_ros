@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
       f->pose() = motionModel->predict(f->t());
       log::append("Frame", [&]() { return overlay::frames({kf, lf, f}); });
       log::append("FrameFeatures", overlay::Hstack(overlay::Features(kf, 10), overlay::ReprojectedFeatures(kf, f, 10)));
-      auto results = directIcp->align(kf, f);
+      auto results = directIcp->align(kf, f, f->pose());
       f->pose() = results->pose;
       log::append("FrameFeatures", overlay::Hstack(overlay::Features(kf, 10), overlay::ReprojectedFeatures(kf, f, 10)));
       const double entropyRatio = std::log(results->pose.cov().determinant()) / entropyRef;
@@ -179,8 +179,7 @@ int main(int argc, char **argv) {
 
         log::append("KeyFrame", [&]() { return overlay::frames({kf, lf, f}); });
 
-        f->pose() = motionModel->predict(f->t());
-        results = directIcp->align(kf, f);
+        results = directIcp->align(kf, f, motionModel->predict(f->t()));
         f->pose() = results->pose;
         log::append("Frame", overlay::Hstack(overlay::Features(kf, 10), overlay::ReprojectedFeatures(kf, f, 10)));
 

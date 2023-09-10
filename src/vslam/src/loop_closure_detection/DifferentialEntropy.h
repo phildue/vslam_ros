@@ -52,7 +52,7 @@ public:
   }
 
 private:
-  LoopClosure::UnPtr isLoopClosure(Frame::ConstShPtr f0, Frame::ConstShPtr f1, Pose prior, double minEntropy, Aligner &aligner) {
+  LoopClosure::UnPtr isLoopClosure(Frame::ConstShPtr f0, Frame::ConstShPtr f1, Pose prior, double minEntropy, const Aligner &aligner) {
     LoopClosure::UnPtr result = std::make_unique<LoopClosure>();
     result->t0 = f0->t();
     result->t1 = f1->t();
@@ -81,7 +81,7 @@ private:
     return isLoopClosure ? std::move(result) : nullptr;
   }
   const double _minRatioFine, _minRatioCoarse;
-  Aligner _fineAligner, _coarseAligner;
+  const Aligner _fineAligner, _coarseAligner;
   struct Entropy {
     vslam::Timestamp t;
     double entropy;

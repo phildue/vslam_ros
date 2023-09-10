@@ -87,7 +87,7 @@ TEST(DescriptorMatchingTest, DISABLED_EvaluateOnTum) {
       f->pose() = motionModel->predict(f->t());
       log::append("Frame", [&]() { return visualizeFramePair(kf, f); });
       TIMED_SCOPE(timer, "computeFrame");
-      f->pose() = directIcp->align(kf, f)->pose;
+      f->pose() = directIcp->align(kf, f, f->pose())->pose;
       motionModel->update(f->pose(), f->t());
       trajectory->append(f->t(), f->pose().inverse());
 

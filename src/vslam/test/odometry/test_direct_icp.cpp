@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
       f->computePyramid(directIcp->nLevels());
       f->pose() = motionModel->predict(f->t());
       log::append("Frame", [&]() { return overlay::frames({kf, lf, f}); });
-      auto results = directIcp->align(kf, f);
+      auto results = directIcp->align(kf, f, f->pose());
       f->pose() = results->pose;
 
       const double entropyRatio = std::log(f->pose().cov().determinant()) / entropyRef;
@@ -88,8 +88,7 @@ int main(int argc, char **argv) {
         kf->computeDerivatives();
         kf->computePcl();
         featureSelection->select(kf);
-        f->pose() = motionModel->predict(f->t());
-        results = directIcp->align(kf, f);
+        results = directIcp->align(kf, f, motionModel->predict(f->t()));
         f->pose() = results->pose;
         errorRef = results->normalEquations[0].error;
         nConstraintsRef = results->constraints.size();

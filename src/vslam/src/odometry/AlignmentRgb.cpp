@@ -47,8 +47,7 @@ Pose AlignmentRgb::align(
   featureSelection->select(f0);
   auto f1 = std::make_shared<Frame>(intensity1, cam);
   f1->computePyramid(_nLevels);
-  f1->pose() = Pose(guess, guessCovariance);
-  Pose pose = align(f0, f1)->pose;
+  Pose pose = align(f0, f1, {guess, guessCovariance})->pose;
   f0->removeFeatures();
   return pose;
 }
@@ -70,18 +69,17 @@ Pose AlignmentRgb::align(
   featureSelection->select(f0);
   auto f1 = std::make_shared<Frame>(intensity1, depth1, cam);
   f1->computePyramid(_nLevels);
-  f1->pose() = Pose(guess, guessCovariance);
-  Pose pose = align(f0, f1)->pose;
+  Pose pose = align(f0, f1, {guess, guessCovariance})->pose;
   f0->removeFeatures();
   return pose;
 }
-AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1) {
-  return align(frame0->features(), frame1);
+AlignmentRgb::Results::UnPtr AlignmentRgb::align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior) const {
+  return align(frame0->features(), frame1, prior);
 }
-AlignmentRgb::Results::UnPtr AlignmentRgb::align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1) {
+AlignmentRgb::Results::UnPtr
+AlignmentRgb::align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1, const Pose &prior) const {
   TIMED_SCOPE(timer, "align");
 
-  const Pose &prior = frame1->pose();
   SE3f pose = prior.SE3().cast<float>();
   Mat6f covariance;
   Frame::VecConstShPtr framesRef;
@@ -92,60 +90,60 @@ AlignmentRgb::Results::UnPtr AlignmentRgb::align(const Feature2D::VecConstShPtr 
   std::vector<NormalEquations> normalEquations(_nLevels);
   std::vector<int> iterations(_nLevels);
   std::vector<double> scale(_nLevels);
-  for (_level = _nLevels - 1; _level >= 0; _level--) {
-    TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
-    auto constraintsAll = setupConstraints(framesRef, features);
+  for (int level = _nLevels - 1; level >= 0; level--) {
+    TIMED_SCOPE_IF(timerLevel, format("computeLevel{}", level), PERFORMANCE_RGBD_ALIGNMENT);
+    auto constraintsAll = setupConstraints(framesRef, features, level);
 
     std::string reason = "Max iterations exceeded";
     double error = INFd;
     Vec6f dx = Vec6f::Zero();
-    for (_iteration = 0; _iteration < _maxIterations; _iteration++) {
-      iterations[_level] = _iteration;
-      TIMED_SCOPE_IF(timerIter, format("computeIteration{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
+    for (int iter = 0; iter < _maxIterations; iter++) {
+      iterations[level] = iter;
+      TIMED_SCOPE_IF(timerIter, format("computeIteration{}", level), PERFORMANCE_RGBD_ALIGNMENT);
       std::transform(framesRef.begin(), framesRef.end(), motions.begin(), [&](const Frame::ConstShPtr &f) {
         return SE3f(pose * f->pose().SE3().inverse().cast<float>());
       });
 
-      constraints[_level] = computeResidualsAndJacobian(constraintsAll, frame1, motions);
+      constraints[level] = computeResidualsAndJacobian(constraintsAll, frame1, motions, level);
 
-      if (constraints[_level].size() < 6) {
-        reason = format("Not enough constraints: {}", constraints[_level].size());
+      if (constraints[level].size() < 6) {
+        reason = format("Not enough constraints: {}", constraints[level].size());
         MLOG(WARNING) << reason;
         pose = SE3f();
         break;
       }
       {
-        TIMED_SCOPE_IF(timer3, format("computeWeights{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
-        _weightFunction->computeWeights(constraints[_level]);
-        scale[_level] = _weightFunction->scale();
+        TIMED_SCOPE_IF(timer3, format("computeWeights{}", level), PERFORMANCE_RGBD_ALIGNMENT);
+        _weightFunction->computeWeights(constraints[level]);
+        scale[level] = _weightFunction->scale();
       }
 
-      normalEquations[_level] = computeNormalEquations(constraints[_level]);
+      normalEquations[level] = computeNormalEquations(constraints[level], level);
 
       if (prior.cov().allFinite()) {
-        normalEquations[_level] += computeNormalEquations(prior, pose);
+        normalEquations[level] += computeNormalEquations(prior, pose);
       }
 
-      if (normalEquations[_level].error / error > _maxErrorIncrease) {
-        reason = format("Error increased: {:.2f}/{:.2f}", normalEquations[_level].error, error);
+      if (normalEquations[level].error / error > _maxErrorIncrease) {
+        reason = format("Error increased: {:.2f}/{:.2f}", normalEquations[level].error, error);
         pose = SE3f::exp(dx) * pose;
         break;
       }
-      error = normalEquations[_level].error;
+      error = normalEquations[level].error;
 
-      dx = normalEquations[_level].A.ldlt().solve(normalEquations[_level].b);
+      dx = normalEquations[level].A.ldlt().solve(normalEquations[level].b);
 
       pose = SE3f::exp(-dx) * pose;
-      covariance = normalEquations[_level].A.inverse();
+      covariance = normalEquations[level].A.inverse();
 
       if (dx.norm() < _minParameterUpdate) {
         reason = format("Minimum step size reached: {:.5f}/{:.5f}", dx.norm(), _minParameterUpdate);
         break;
       }
-      MLOG(DEBUG) << format("level: {}, iteration: {}, error: {}, #: {},", _level, _iteration, error, constraints[_level].size());
+      MLOG(DEBUG) << format("level: {}, iteration: {}, error: {}, #: {},", level, iter, error, constraints[level].size());
     }
     MLOG(DEBUG) << format(
-      "Done: {}, level: {}, iteration: {}, error: {}, #: {},", reason, _level, _iteration, error, constraints[_level].size());
+      "Done: {}, level: {}, iteration: {}, error: {}, #: {},", reason, level, iterations[level], error, constraints[level].size());
   }
   auto r = std::make_unique<Results>(Results{
     Pose(pose.cast<double>(), covariance.cast<double>()),
@@ -160,17 +158,17 @@ AlignmentRgb::Results::UnPtr AlignmentRgb::align(const Feature2D::VecConstShPtr 
 }
 
 AlignmentRgb::Constraint::VecShPtr
-AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features) const {
-  TIMED_SCOPE_IF(timer2, format("setupConstraints{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
+AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features, int level) const {
+  TIMED_SCOPE_IF(timer2, format("setupConstraints{}", level), PERFORMANCE_RGBD_ALIGNMENT);
 
   // TODO we could also first stack all features and then do one transform..
 
   std::vector<Constraint::ShPtr> constraints(features.size());
   std::transform(std::execution::par_unseq, features.begin(), features.end(), constraints.begin(), [&](const auto &ft) {
     const Frame::ConstShPtr frame = ft->frame();
-    const cv::Mat &intensity = frame->intensity(_level);
-    const cv::Mat &dI = frame->dI(_level);
-    const double scale = 1.0 / std::pow(2.0, _level);
+    const cv::Mat &intensity = frame->intensity(level);
+    const cv::Mat &dI = frame->dI(level);
+    const double scale = 1.0 / std::pow(2.0, level);
 
     const Vec2d uv = ft->position() * scale;
     const float i = intensity.at<uint8_t>(uv(1), uv(0));
@@ -183,7 +181,7 @@ AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feat
       }
     }
     c->uv0 = uv.cast<float>();
-    c->p0 = frame->p3d(uv(1), uv(0), _level).cast<float>();
+    c->p0 = frame->p3d(uv(1), uv(0), level).cast<float>();
     c->i0 = i;
 
     /*TODO
@@ -191,7 +189,7 @@ AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feat
     */
     const Mat<float, 1, 2> JI(dIuv[0], dIuv[1]);
 
-    c->J = JI * jacobian::project_p<float>(c->p0, frame->camera(_level)->fx(), frame->camera(_level)->fy()) *
+    c->J = JI * jacobian::project_p<float>(c->p0, frame->camera(level)->fx(), frame->camera(level)->fy()) *
            jacobian::transform_se3(SE3f(), c->p0);
     return c;
   });
@@ -200,11 +198,11 @@ AlignmentRgb::setupConstraints(const Frame::VecConstShPtr &framesRef, const Feat
 }
 
 AlignmentRgb::Constraint::VecShPtr AlignmentRgb::computeResidualsAndJacobian(
-  const AlignmentRgb::Constraint::VecShPtr &constraints, Frame::ConstShPtr f1, const std::vector<SE3f> &motion) const {
-  TIMED_SCOPE_IF(timer1, format("computeResidualAndJacobian{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
+  const AlignmentRgb::Constraint::VecShPtr &constraints, Frame::ConstShPtr f1, const std::vector<SE3f> &motion, int level) const {
+  TIMED_SCOPE_IF(timer1, format("computeResidualAndJacobian{}", level), PERFORMANCE_RGBD_ALIGNMENT);
 
   /*Cache some constants for faster loop*/
-  const Camera::ConstShPtr cam = f1->camera(_level);
+  const Camera::ConstShPtr cam = f1->camera(level);
 
   const Mat3f K = cam->K().cast<float>();
   std::vector<Mat3f> R(motion.size());
@@ -219,9 +217,9 @@ AlignmentRgb::Constraint::VecShPtr AlignmentRgb::computeResidualsAndJacobian(
   std::vector<Vec3f> tinv(motion.size());
   std::transform(motionInv.begin(), motionInv.end(), tinv.begin(), [](auto m) { return m.translation(); });
 
-  const cv::Mat &I1 = f1->I(_level);
-  const float h = f1->height(_level);
-  const float w = f1->width(_level);
+  const cv::Mat &I1 = f1->I(level);
+  const float h = f1->height(level);
+  const float w = f1->width(level);
   const int bh = std::max<int>(1, (int)(0.01f * h));
   const int bw = std::max<int>(1, (int)(0.01f * w));
 
@@ -234,7 +232,7 @@ AlignmentRgb::Constraint::VecShPtr AlignmentRgb::computeResidualsAndJacobian(
     sample = [&](const Vec2f &uv) -> float {
       return interpolate(uv, [&](int v, int u) {
         const float i1 = I1.at<uint8_t>(v, u);
-        const float z1 = f1->depth(_level).at<float>(v, u);
+        const float z1 = f1->depth(level).at<float>(v, u);
         return z1 > 0 ? Vec2f(i1, z1) : Vec2f::Constant(NANf);
       })(0);
     };
@@ -256,8 +254,8 @@ AlignmentRgb::Constraint::VecShPtr AlignmentRgb::computeResidualsAndJacobian(
   return constraintsValid;
 }
 
-NormalEquations AlignmentRgb::computeNormalEquations(const std::vector<AlignmentRgb::Constraint::ShPtr> &constraints) const {
-  TIMED_SCOPE_IF(timer2, format("computeNormalEquations{}", _level), PERFORMANCE_RGBD_ALIGNMENT);
+NormalEquations AlignmentRgb::computeNormalEquations(const std::vector<AlignmentRgb::Constraint::ShPtr> &constraints, int level) const {
+  TIMED_SCOPE_IF(timer2, format("computeNormalEquations{}", level), PERFORMANCE_RGBD_ALIGNMENT);
   NormalEquations ne = std::transform_reduce(
     std::execution::par_unseq,
     std::begin(constraints),
@@ -272,7 +270,7 @@ NormalEquations AlignmentRgb::computeNormalEquations(const std::vector<Alignment
   return ne;
 }
 
-NormalEquations AlignmentRgb::computeNormalEquations(const Pose &prior, const SE3f &pose) {
+NormalEquations AlignmentRgb::computeNormalEquations(const Pose &prior, const SE3f &pose) const {
   const Mat6f priorInformation = prior.cov().inverse().cast<float>();
   const Vec6f priorError = priorInformation * ((pose * prior.SE3().inverse().cast<float>()).log());
   return {priorInformation, priorError, priorError.norm(), 1};

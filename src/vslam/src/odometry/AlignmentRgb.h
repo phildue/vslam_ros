@@ -52,7 +52,7 @@ public:
     const cv::Mat &depth0,
     const cv::Mat &intensity1,
     const SE3d &guess,
-    const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
+    const Mat6d &guessCovariance = Mat6d::Identity() * NANd);
 
   Pose align(
     Camera::ConstShPtr cam,
@@ -61,10 +61,10 @@ public:
     const cv::Mat &intensity1,
     const cv::Mat &depth1,
     const SE3d &guess,
-    const Mat6d &guessCovariance = Mat6d::Identity() * INFd);
+    const Mat6d &guessCovariance = Mat6d::Identity() * NANd);
 
-  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1);
-  Results::UnPtr align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1);
+  Results::UnPtr align(Frame::ConstShPtr frame0, Frame::ConstShPtr frame1, const Pose &prior) const;
+  Results::UnPtr align(const Feature2D::VecConstShPtr &features, Frame::ConstShPtr frame1, const Pose &prior) const;
 
   int nLevels() { return _nLevels; }
 
@@ -73,16 +73,14 @@ private:
   const int _nLevels;
   const double _maxIterations, _minParameterUpdate, _maxErrorIncrease;
 
-  int _level, _iteration;
+  Constraint::VecShPtr setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features, int level) const;
 
-  Constraint::VecShPtr setupConstraints(const Frame::VecConstShPtr &framesRef, const Feature2D::VecConstShPtr &features) const;
+  Constraint::VecShPtr computeResidualsAndJacobian(
+    const Constraint::VecShPtr &constraints, Frame::ConstShPtr f1, const std::vector<SE3f> &motion, int level) const;
 
-  Constraint::VecShPtr
-  computeResidualsAndJacobian(const Constraint::VecShPtr &constraints, Frame::ConstShPtr f1, const std::vector<SE3f> &motion) const;
+  NormalEquations computeNormalEquations(const std::vector<Constraint::ShPtr> &constraints, int level) const;
 
-  NormalEquations computeNormalEquations(const std::vector<Constraint::ShPtr> &constraints) const;
-
-  NormalEquations computeNormalEquations(const Pose &prior, const SE3f &pose);
+  NormalEquations computeNormalEquations(const Pose &prior, const SE3f &pose) const;
 };
 
-}  // namespace vslam
+}  // namespace vslam::odometry
